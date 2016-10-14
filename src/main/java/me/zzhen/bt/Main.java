@@ -21,8 +21,6 @@ import java.util.ArrayList;
 import java.util.Map;
 
 public class Main extends Application {
-
-
     private TorrentFile mTorrent;
     TorrentProcessor processor = new TorrentProcessor();
     FileChooser chooser = new FileChooser();
@@ -35,28 +33,32 @@ public class Main extends Application {
         MenuBar menuBar = new MenuBar();
         HBox top = new HBox();
         VBox center = new VBox();
-        Menu file = new Menu("文件");
+        ListView<TextField> texts = new ListView<>();
+        Menu fileMenu = new Menu("文件");
         MenuItem openFile = new MenuItem("打开");
         MenuItem saveFile = new MenuItem("保存");
-        file.getItems().add(saveFile);
-        file.getItems().add(openFile);
-        menuBar.getMenus().add(file);
+        fileMenu.getItems().add(openFile);
+        fileMenu.getItems().add(saveFile);
+        menuBar.getMenus().add(fileMenu);
         top.getChildren().add(menuBar);
         root.setTop(top);
         root.setCenter(center);
+        center.getChildren().add(texts);
         openFile.setOnAction(event -> {
             chooser.setTitle("选择文件");
-            File file1 = chooser.showOpenDialog(null);
-            Map map = processor.parseTorrent(file1);
+            File file = chooser.showOpenDialog(null);
+            if (file == null || !file.exists()) {
+                System.out.println("没有选择文件");
+                return;
+            }
+            Map map = processor.parseTorrent(file);
             mTorrent = processor.getTorrentFile(map);
-            System.out.println(mTorrent.name.size());
-            mTorrent.name.remove(0);
-            mTorrent.name.add("test.txt");
-//            ArrayList<String> name = mTorrent.name;
-//            for (int i = 0; i < name.size(); i++) {
-//                TextField text = new TextField(name.get(i));
+            ArrayList<String> name = mTorrent.name;
+            for (int i = 0; i < name.size(); i++) {
+                TextField text = new TextField(name.get(i));
 //                center.getChildren().add(text);
-//            }
+                texts.getItems().add(text);
+            }
         });
         saveFile.setOnAction((event) -> {
             byte[] bytes = processor.generateTorrent(mTorrent);
@@ -67,6 +69,7 @@ public class Main extends Application {
                 out.flush();
                 out.close();
             } catch (FileNotFoundException e) {
+
                 e.printStackTrace();
             } catch (IOException e) {
 
