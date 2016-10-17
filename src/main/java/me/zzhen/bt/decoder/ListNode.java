@@ -6,7 +6,10 @@ import java.util.List;
 /**
  * Created by zzhen on 2016/10/16.
  */
-public class ListNode extends Node {
+public class ListNode implements Node {
+
+    static final char LIST_START = 'l';
+    static final char LIST_END = 'e';
 
     List<Node> mValue = new ArrayList<>();
 
@@ -33,6 +36,16 @@ public class ListNode extends Node {
             sb.append(node.toString() + ',');
         }
         sb.deleteCharAt(sb.length() - 1);
+        return mValue.toString();
+    }
+
+    @Override
+    public String encode() {
+        return null;
+    }
+
+    @Override
+    public String decode() {
         return mValue.toString();
     }
 }

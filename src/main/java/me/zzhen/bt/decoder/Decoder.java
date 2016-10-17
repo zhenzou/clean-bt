@@ -9,40 +9,35 @@ import java.util.List;
  */
 public class Decoder {
 
-    private Reader mReader;
-
-    private static final char INT_START = 'i';
-    private static final char INT_END = 'e';
-    private static final char LIST_START = 'l';
-    private static final char LIST_END = 'e';
-    private static final char LIST_VALUE_START = ':';
-    private static final char DIC_START = 'd';
-    private static final char DIC_END = 'e';
-
+    private InputStream mInput;
+    private EventHandler mHandler;
     private List<Node> mValues = new ArrayList<>();
 
+    private Decoder(byte[] input) {
+        mInput = new ByteArrayInputStream(input);
+    }
 
     public Decoder(String file) throws FileNotFoundException {
-        mReader = new FileReader(file);
+        mInput = new BufferedInputStream(new FileInputStream(file));
     }
 
     public Decoder(InputStream input) throws FileNotFoundException {
-        mReader = new InputStreamReader(input);
+        mInput = new BufferedInputStream(input);
     }
 
     public void parse() throws IOException {
         int c;
-        while ((c = mReader.read()) != -1) {
+        while ((c = mInput.read()) != -1) {
             Node node = null;
             char cur = (char) c;
             switch (c) {
-                case INT_START:
+                case IntNode.INT_START:
                     node = parseInt();
                     break;
-                case LIST_START:
+                case ListNode.LIST_START:
                     node = parseList();
                     break;
-                case DIC_START:
+                case DictionaryNode.DIC_START:
                     node = parseDic();
                     break;
                 default:
@@ -62,20 +57,24 @@ public class Decoder {
         int c;
         StringBuilder len = new StringBuilder();
         len.append((char) cur);
-        while ((c = mReader.read()) != -1 && (char) c != LIST_VALUE_START) {
+        while ((c = mInput.read()) != -1 && (char) c != StringNode.STRING_VALUE_START) {
             len.append((char) c);
         }
         int length = Integer.parseInt(len.toString().trim());
         int i = 1;
-        while ((c = mReader.read()) != -1 && i < length) {
+        while ((c = mInput.read()) != -1 && i < length) {
             sb.append((char) c);
             i++;
         }
         sb.append((char) c);
+        i++;
         if (i < length) {
-            throw new DecoderExecption("illegal string node , except " + length + " char but found" + i);
+            throw new DecoderExecption("illegal string node , except " + length + " char but found " + i);
         }
-        System.out.println(sb.toString());
+        //TODO 设计更好用的API 但是现在还是就是将这个东西做出来 能用吧
+//        if (mHandler != null) {
+//            mHandler.handleStringNode(sb.toString());
+//        }
         return new StringNode(sb.toString());
     }
 
@@ -84,7 +83,7 @@ public class Decoder {
         String key = "";
         DictionaryNode dic = new DictionaryNode();
         boolean inKey = true;
-        while ((c = mReader.read()) != -1 && (char) c != DIC_END) {
+        while ((c = mInput.read()) != -1 && (char) c != DictionaryNode.DIC_END) {
             Node node = null;
             char cur = (char) c;
             if (inKey) {
@@ -96,13 +95,13 @@ public class Decoder {
                 }
             } else {
                 switch (cur) {
-                    case INT_START:
+                    case IntNode.INT_START:
                         node = parseInt();
                         break;
-                    case LIST_START:
+                    case ListNode.LIST_START:
                         node = parseList();
                         break;
-                    case DIC_START:
+                    case DictionaryNode.DIC_START:
                         node = parseDic();
                         break;
                     default:
@@ -113,28 +112,28 @@ public class Decoder {
                         }
                         break;
                 }
+
                 inKey = true;
             }
             dic.addNode(key, node);
         }
-        System.out.println(dic.toString());
         return dic;
     }
 
     private Node parseList() throws IOException {
         ListNode list = new ListNode();
         int c;
-        while ((c = mReader.read()) != -1 && (char) c != LIST_END) {
+        while ((c = mInput.read()) != -1 && (char) c != ListNode.LIST_END) {
             Node node = null;
             char cur = (char) c;
             switch (cur) {
-                case INT_START:
+                case IntNode.INT_START:
                     node = parseInt();
                     break;
-                case LIST_START:
+                case ListNode.LIST_START:
                     node = parseList();
                     break;
-                case DIC_START:
+                case DictionaryNode.DIC_START:
                     node = parseDic();
                     break;
                 default:
@@ -147,17 +146,15 @@ public class Decoder {
             }
             list.addNode(node);
         }
-        System.out.println(list.toString());
         return list;
     }
 
     private Node parseInt() throws IOException {
         StringBuilder sb = new StringBuilder();
         int c = -1;
-        while ((c = mReader.read()) != -1 && c != INT_END) {
+        while ((c = mInput.read()) != -1 && c != IntNode.INT_END) {
             sb.append((char) c);
         }
-        System.out.println(sb.toString());
         return new IntNode(sb.toString());
     }
 
@@ -171,6 +168,7 @@ public class Decoder {
             decoder.parse();
             List<Node> value = decoder.getValue();
             value.forEach(System.out::println);
+            System.out.println(value.size());
         } catch (IOException e) {
             e.printStackTrace();
         }

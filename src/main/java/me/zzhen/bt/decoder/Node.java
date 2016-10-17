@@ -3,11 +3,9 @@ package me.zzhen.bt.decoder;
 /**
  * Created by zzhen on 2016/10/16.
  */
-public class Node {
+public interface Node {
 
+    String encode();
 
-    public Node (){
-
-    }
-
+    String decode();
 }
