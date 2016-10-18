@@ -5,8 +5,8 @@ package me.zzhen.bt.decoder;
  */
 public class IntNode implements Node {
 
-    static final char INT_START = 'i';
-    static final char INT_END = 'e';
+    public static final char INT_START = 'i';
+    public static final char INT_END = 'e';
 
     String mValue;
 
@@ -17,7 +17,7 @@ public class IntNode implements Node {
 
     @Override
     public String encode() {
-        return "" + INT_START + mValue + INT_END;
+        return new StringBuilder().append(INT_START).append(mValue).append(INT_END).toString();
     }
 
     @Override

@@ -45,11 +45,16 @@ public class ListNode implements Node {
 
     @Override
     public String encode() {
-        return null;
+        StringBuilder sb = new StringBuilder();
+        sb.append(LIST_START);
+        mValue.forEach(node -> sb.append(node.encode()));
+        sb.append(LIST_END);
+        return sb.toString();
     }
 
     @Override
     public String decode() {
         return mValue.toString();
     }
+
 }

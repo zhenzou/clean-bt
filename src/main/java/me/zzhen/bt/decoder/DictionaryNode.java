@@ -36,10 +36,6 @@ public class DictionaryNode implements Node {
         return mValue.remove(key);
     }
 
-    @Override
-    public String toString() {
-        return mValue.toString();
-    }
 
     public Node getNode(String key) {
         return mValue.get(key);
@@ -47,11 +43,22 @@ public class DictionaryNode implements Node {
 
     @Override
     public String encode() {
-        return null;
+        StringBuilder sb = new StringBuilder();
+        sb.append(DIC_START);
+        mValue.forEach((key, node) -> sb.append(new StringNode(key).encode() + node.encode()));
+        sb.append(DIC_END);
+        return sb.toString();
     }
 
     @Override
     public String decode() {
         return mValue.toString();
     }
+
+    @Override
+    public String toString() {
+        return mValue.toString();
+    }
+
+
 }

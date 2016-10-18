@@ -13,19 +13,21 @@ public class StringNode implements Node {
         mValue = value;
     }
 
-    @Override
-    public String toString() {
-
-        return mValue;
-    }
 
     @Override
     public String encode() {
-        return "" + mValue.length() + STRING_VALUE_START + mValue;
+        return new StringBuilder().append(mValue.length()).append(STRING_VALUE_START).append(mValue).toString();
     }
 
     @Override
     public String decode() {
         return mValue;
     }
+
+    @Override
+    public String toString() {
+
+        return mValue;
+    }
+
 }

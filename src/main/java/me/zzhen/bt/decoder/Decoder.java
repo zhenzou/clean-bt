@@ -13,11 +13,11 @@ public class Decoder {
     private EventHandler mHandler;
     private List<Node> mValues = new ArrayList<>();
 
-    private Decoder(byte[] input) {
+    public Decoder(byte[] input) {
         mInput = new ByteArrayInputStream(input);
     }
 
-    private Decoder(File file) throws FileNotFoundException {
+    public Decoder(File file) throws FileNotFoundException {
         mInput = new BufferedInputStream(new FileInputStream(file));
     }
 
@@ -95,7 +95,7 @@ public class Decoder {
                     key = parseString(c).toString();
                     inKey = false;
                 } else {
-                    throw new DecoderExecption("key of dic must be string,except digital");
+                    throw new DecoderExecption("key of dic must be string,found digital");
                 }
             } else {
                 switch (cur) {
@@ -180,10 +180,10 @@ public class Decoder {
     public static void main(String[] args) {
         try {
             Decoder decoder = new Decoder("D:/Chicago.Med.torrent");
-            decoder.setHandler(new DefaultHandler());
+//            Decoder decoder = new Decoder("E:/test.torrent");
             decoder.parse();
             List<Node> value = decoder.getValue();
-//            value.forEach(System.out::println);
+            value.forEach(System.out::println);
         } catch (IOException e) {
             e.printStackTrace();
         }

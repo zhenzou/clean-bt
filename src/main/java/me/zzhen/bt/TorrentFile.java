@@ -41,34 +41,21 @@ public class TorrentFile {
     public static final String FILEHASH = "filehash";//可选， 文件 hash。
     public static final String ED2K = "ed2k";
 
-    enum Test {
-        ANNOUNCE,
-        ANNOUNCE_LIST,
-        CREATION_DATE,
-        COMMENT,
-        CREATED_BY,
-        ENCODING,
 
-        INFO,
-        PIECE_LENGTH,
-        PIECES,
-        PUBLISHER,
-        PUBLISHER_UTF8,
-        PUBLISHER_URL,
-        PUBLISHER_URL_UTF8,
+    public static List<Node> mValues;
 
-        NAME,
-        NAME_UTF8,
-        LENGTH,
-
-        FILES,
-        PATH,
-        PATH_UTF8,
-        FILEHASH,
-        ED2K
+    public static TorrentFile fromString(String bytes) throws IOException {
+        Decoder decoder = new Decoder(bytes.getBytes());
+        TorrentFile ret = new TorrentFile();
+        decoder.setHandler(new TorrentFileHandler(ret));
+        decoder.parse();
+        List<Node> value = decoder.getValue();
+        DictionaryNode map = (DictionaryNode) value.get(0);
+        ret.setAnnounce(map.getNode(ANNOUNCE).decode());
+        return ret;
     }
 
-    public static TorrentFile fromFile(String file) throws IOException {
+    public static TorrentFile fromFile(File file) throws IOException {
         Decoder decoder = new Decoder(file);
         TorrentFile ret = new TorrentFile();
         decoder.setHandler(new TorrentFileHandler(ret));
@@ -87,6 +74,7 @@ public class TorrentFile {
     private StringNode mCreatedBy;
     private StringNode mEncoding;
     private DictionaryNode mInfo;
+
 
     public String getAnnounce() {
         return mAnnounce.decode();
@@ -234,7 +222,7 @@ public class TorrentFile {
         mInfo.addNode(PATH, new StringNode(value));
     }
 
-    public static class TorrentFileHandler extends DefaultHandler {
+    public static class TorrentFileHandler implements EventHandler {
 
         private TorrentFile mTorrentFile;
 
@@ -243,23 +231,7 @@ public class TorrentFile {
         }
 
         @Override
-        public Node handleIntNode(IntNode value) {
-            return super.handleIntNode(value);
-        }
-
-        @Override
-        public Node handleStringNode(StringNode value) {
-            return super.handleStringNode(value);
-        }
-
-        @Override
-        public Node handleListNode(ListNode value) {
-            return super.handleListNode(value);
-        }
-
-        @Override
         public Node handleDictionaryNode(String key, Node value) {
-            super.handleDictionaryNode(key, value);
             switch (key) {
                 case ANNOUNCE:
                     mTorrentFile.setAnnounce(value.decode());
@@ -316,9 +288,62 @@ public class TorrentFile {
     }
 
 
+    /**
+     * @return
+     */
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        DictionaryNode bt = new DictionaryNode();
+//        if (mAnnounce != null) {
+//            sb.append(mAnnounce.encode());
+//        }
+//        if (mAnnounceList != null) {
+//            sb.append(mAnnounceList.encode());
+//        }
+//        if (mEncoding != null) {
+//            sb.append(mEncoding.encode());
+//        }
+//        if (mComment != null) {
+//            sb.append(mComment.encode());
+//        }
+//        if (mCreationDate != null) {
+//            sb.append(mCreationDate.encode());
+//        }
+//        if (mCreatedBy != null) {
+//            sb.append(mCreatedBy.encode());
+//        }
+//        if (mInfo != null) {
+//            sb.append(mInfo.encode());
+//        }
+        if (mAnnounce != null) {
+            bt.addNode(ANNOUNCE, mAnnounce);
+        }
+        if (mAnnounceList != null) {
+            bt.addNode(ANNOUNCE_LIST, mAnnounceList);
+        }
+        if (mEncoding != null) {
+            bt.addNode(ENCODING, mEncoding);
+        }
+        if (mComment != null) {
+            bt.addNode(COMMENT, mComment);
+        }
+        if (mCreationDate != null) {
+            bt.addNode(CREATION_DATE, mCreationDate);
+        }
+        if (mCreatedBy != null) {
+            bt.addNode(CREATED_BY, mCreatedBy);
+        }
+        if (mInfo != null) {
+            bt.addNode(INFO, mInfo);
+        }
+
+        return bt.encode();
+    }
+
     public static void main(String[] args) {
         try {
-            TorrentFile torrentFile = TorrentFile.fromFile("D:/Chicago.Med.torrent");
+            TorrentFile torrentFile = TorrentFile.fromString("D:/Chicago.Med.torrent");
             System.out.println(torrentFile.getAnnounce());
             System.out.println(torrentFile.getInfoFiles());
         } catch (IOException e) {
