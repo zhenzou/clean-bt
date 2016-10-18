@@ -5,25 +5,25 @@ package me.zzhen.bt.decoder;
  */
 public class DefaultHandler implements EventHandler {
     @Override
-    public int handleIntNode(IntNode value) {
-        System.out.println(value);
-        return Integer.parseInt(value.mValue);
+    public Node handleIntNode(IntNode value) {
+//        System.out.println(value);
+        return value;
     }
 
     @Override
-    public String handleStringNode(StringNode value) {
-        System.out.println(value);
-        return value.mValue;
+    public Node handleStringNode(StringNode value) {
+//        System.out.println(value);
+        return value;
     }
 
     @Override
-    public String handleListNode(ListNode value) {
-        System.out.println(value);
-        return value.toString();
+    public Node handleListNode(ListNode value) {
+//        System.out.println(value);
+        return value;
     }
 
     @Override
-    public void handleDictionaryNode(String key, Node value) {
-        System.out.println(value);
+    public Node handleDictionaryNode(String key, Node value) {
+        return value;
     }
 }

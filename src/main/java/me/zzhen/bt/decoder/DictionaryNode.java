@@ -24,6 +24,10 @@ public class DictionaryNode implements Node {
         mValue = map;
     }
 
+    public Map<String, Node> getValue() {
+        return mValue;
+    }
+
     public void addNode(String key, Node value) {
         mValue.put(key, value);
     }

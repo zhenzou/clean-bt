@@ -21,6 +21,10 @@ public class ListNode implements Node {
         mValue = value;
     }
 
+    public List<Node> getValue() {
+        return mValue;
+    }
+
     public void addNode(Node node) {
         mValue.add(node);
     }

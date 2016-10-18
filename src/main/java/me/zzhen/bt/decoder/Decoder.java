@@ -17,6 +17,10 @@ public class Decoder {
         mInput = new ByteArrayInputStream(input);
     }
 
+    private Decoder(File file) throws FileNotFoundException {
+        mInput = new BufferedInputStream(new FileInputStream(file));
+    }
+
     public Decoder(String file) throws FileNotFoundException {
         mInput = new BufferedInputStream(new FileInputStream(file));
     }
@@ -112,9 +116,12 @@ public class Decoder {
                         }
                         break;
                 }
-
+                if (mHandler != null) {
+                    mHandler.handleDictionaryNode(key, node);
+                }
                 inKey = true;
             }
+
             dic.addNode(key, node);
         }
         return dic;
@@ -162,13 +169,21 @@ public class Decoder {
         return mValues;
     }
 
+    public EventHandler getHandler() {
+        return mHandler;
+    }
+
+    public void setHandler(EventHandler handler) {
+        mHandler = handler;
+    }
+
     public static void main(String[] args) {
         try {
             Decoder decoder = new Decoder("D:/Chicago.Med.torrent");
+            decoder.setHandler(new DefaultHandler());
             decoder.parse();
             List<Node> value = decoder.getValue();
-            value.forEach(System.out::println);
-            System.out.println(value.size());
+//            value.forEach(System.out::println);
         } catch (IOException e) {
             e.printStackTrace();
         }
