@@ -9,11 +9,9 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import me.zzhen.bt.decoder.DictionaryNode;
-import me.zzhen.bt.decoder.ListNode;
-import me.zzhen.bt.decoder.Node;
-import me.zzhen.bt.decoder.StringNode;
+import me.zzhen.bt.decoder.*;
 
+import javax.swing.plaf.metal.MetalRootPaneUI;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -77,27 +75,59 @@ public class Main extends Application {
                 e.printStackTrace();
             }
             Node infoName = mTorrent.getInfoFiles();
+//            System.out.println(mTorrent.getInfo());
+//            System.out.println(mTorrent.getInfoPieces());
+            try {
+                OutputStream out = new FileOutputStream("D:/test.test");
+                byte[] bytes = mTorrent.getInfoPieces().getBytes();
+                for (byte aByte : bytes) {
+                    System.out.println((int) aByte);
+                    out.write((int) aByte);
+                }
+//                out.write(mTorrent.getInfoPieces().getBytes());
+                out.flush();
+                out.close();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             List<String> names = new ArrayList<>();
             if (infoName instanceof ListNode) {
-                System.out.println();
-                ListNode node = (ListNode) infoName;
-                List<Node> value = node.getValue();
-                List<DictionaryNode> collect = value.stream().map(fileNode -> (DictionaryNode) fileNode).collect(Collectors.toList());
-                collect.forEach(tt -> System.out.println(tt.getNode("path") instanceof ListNode));
-                collect.forEach(name -> names.add(name.getNode("path").decode()));
-                mTorrent.setInfoFiles(new ListNode(names.stream().map(name -> {
-                    ListNode node1 = new ListNode();
-                    node.addNode(new StringNode(name));
-                    return node1;
-                }).collect(Collectors.toList())));
+                List<Node> files = ((ListNode) infoName).getValue();
+                List<DictionaryNode> collect = files.stream().map(fileNode -> (DictionaryNode) fileNode).collect(Collectors.toList());
+
+//                collect.forEach(tt -> System.out.println(tt.getNode("path") instanceof ListNode));
+                collect.forEach(name -> names.add(((ListNode) name.getNode("path")).getValue().get(0).decode()));
+
+                ListNode list = new ListNode();
+                for (Node node : files) {
+                    DictionaryNode node3 = (DictionaryNode) node;
+                    DictionaryNode dic = new DictionaryNode();
+                    ListNode node2 = new ListNode();
+                    node2.addNode(new StringNode((((ListNode) node3.getNode("path")).getValue().get(0).decode() + "Test").getBytes()));
+                    dic.addNode("path", node2);
+                    dic.addNode("length", new IntNode(node3.getNode("length").decode()));
+                    list.addNode(dic);
+                }
+//                value.stream().map(val -> (DictionaryNode) val).forEach(var -> {
+//
+//                });
+                mTorrent.setInfoFiles(list);
+
+//                System.out.println(mTorrent.getInfo());
+//
+//                mTorrent.setInfoFiles(new ListNode(names.stream().map(name -> {
+//
+//                }).collect(Collectors.toList())));
             } else {
                 names.add(infoName.decode());
             }
-            for (int i = 0; i < names.size(); i++) {
-                TextField text = new TextField(names.get(i));
-//                center.getChildren().add(text);
-                texts.getItems().add(text);
-            }
+//            for (int i = 0; i < names.size(); i++) {
+//                TextField text = new TextField(names.get(i));
+////                center.getChildren().add(text);
+//                texts.getItems().add(text);
+//            }
         });
         saveFile.setOnAction((event) -> {
             try {
@@ -106,8 +136,8 @@ public class Main extends Application {
                     return;
                 } else {
                     OutputStream out = new FileOutputStream(file);
-                    String s = mTorrent.toString();
-                    out.write(s.getBytes());
+//                    String s = ;
+                    out.write(mTorrent.encode());
                     out.flush();
                     out.close();
                 }

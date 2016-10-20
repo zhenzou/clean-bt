@@ -49,9 +49,9 @@ public class TorrentFile {
         TorrentFile ret = new TorrentFile();
         decoder.setHandler(new TorrentFileHandler(ret));
         decoder.parse();
-        List<Node> value = decoder.getValue();
-        DictionaryNode map = (DictionaryNode) value.get(0);
-        ret.setAnnounce(map.getNode(ANNOUNCE).decode());
+//        List<Node> value = decoder.getValue();
+//        DictionaryNode map = (DictionaryNode) value.get(0);
+//        ret.setAnnounce(map.getNode(ANNOUNCE).decode());
         return ret;
     }
 
@@ -60,9 +60,9 @@ public class TorrentFile {
         TorrentFile ret = new TorrentFile();
         decoder.setHandler(new TorrentFileHandler(ret));
         decoder.parse();
-        List<Node> value = decoder.getValue();
-        DictionaryNode map = (DictionaryNode) value.get(0);
-        ret.setAnnounce(map.getNode(ANNOUNCE).decode());
+//        List<Node> value = decoder.getValue();
+//        DictionaryNode map = (DictionaryNode) value.get(0);
+//        ret.setAnnounce(map.getNode(ANNOUNCE).decode());
         return ret;
     }
 
@@ -81,7 +81,7 @@ public class TorrentFile {
     }
 
     public void setAnnounce(String announce) {
-        this.mAnnounce = new StringNode(announce);
+        this.mAnnounce = new StringNode(announce.getBytes());
     }
 
     public List<String> getAnnounceList() {
@@ -90,7 +90,7 @@ public class TorrentFile {
     }
 
     public void setAnnounceList(List<String> announceList) {
-        List<Node> list = announceList.stream().map(StringNode::new).collect(Collectors.toList());
+        List<Node> list = announceList.stream().map(str -> new StringNode(str.getBytes())).collect(Collectors.toList());
         mAnnounceList = new ListNode(list);
     }
 
@@ -99,7 +99,7 @@ public class TorrentFile {
     }
 
     public void setEncoidng(String encoidng) {
-        mEncoding = new StringNode(encoidng);
+        mEncoding = new StringNode(encoidng.getBytes());
     }
 
     public Date getCreationDate() {
@@ -110,12 +110,16 @@ public class TorrentFile {
         mCreationDate = new IntNode(String.valueOf(date.getTime()));
     }
 
+    public void setCreationData(Node date) {
+        mCreationDate = (IntNode) date;
+    }
+
     public String getComment() {
         return mComment.decode();
     }
 
     public void setComment(String comment) {
-        mComment = new StringNode(comment);
+        mComment = new StringNode(comment.getBytes());
     }
 
     public String getCreatedBy() {
@@ -123,7 +127,7 @@ public class TorrentFile {
     }
 
     public void setCreatedBy(String created) {
-        mCreatedBy = new StringNode(created);
+        mCreatedBy = new StringNode(created.getBytes());
     }
 
     public Map<String, Node> getInfo() {
@@ -143,11 +147,11 @@ public class TorrentFile {
     }
 
     public String getInfoPieces() {
-        return String.valueOf(mInfo.getNode(PIECES));
+        return mInfo.getNode(PIECES).decode();
     }
 
     public void setInfoPieces(String value) {
-        mInfo.addNode(PIECES, new StringNode(value));
+        mInfo.addNode(PIECES, new StringNode(value.getBytes()));
     }
 
     public String getInfoPublisher() {
@@ -155,7 +159,7 @@ public class TorrentFile {
     }
 
     public void setInfoPublisher(String value) {
-        mInfo.addNode(PUBLISHER, new StringNode(value));
+        mInfo.addNode(PUBLISHER, new StringNode(value.getBytes()));
     }
 
     public String getInfoPublisherUtf8() {
@@ -163,7 +167,7 @@ public class TorrentFile {
     }
 
     public void setInfoPublisherUtf8(String value) {
-        mInfo.addNode(PUBLISHER_UTF8, new StringNode(value));
+        mInfo.addNode(PUBLISHER_UTF8, new StringNode(value.getBytes()));
     }
 
     public String getInfoPublisherUrl() {
@@ -171,7 +175,7 @@ public class TorrentFile {
     }
 
     public void setInfoPublisherUrl(String value) {
-        mInfo.addNode(PUBLISHER_URL, new StringNode(value));
+        mInfo.addNode(PUBLISHER_URL, new StringNode(value.getBytes()));
     }
 
     public String getInfoPublisherUrlUtf8() {
@@ -179,7 +183,7 @@ public class TorrentFile {
     }
 
     public void setInfoPublisherUrlUtf8(String value) {
-        mInfo.addNode(PUBLISHER_URL_UTF8, new StringNode(value));
+        mInfo.addNode(PUBLISHER_URL_UTF8, new StringNode(value.getBytes()));
     }
 
     public Node getInfoName() {
@@ -219,7 +223,7 @@ public class TorrentFile {
     }
 
     public void setInfoFilesPath(String value) {
-        mInfo.addNode(PATH, new StringNode(value));
+        mInfo.addNode(PATH, new StringNode(value.getBytes()));
     }
 
     public static class TorrentFileHandler implements EventHandler {
@@ -240,7 +244,7 @@ public class TorrentFile {
                     mTorrentFile.setAnnounceList(((ListNode) value).getValue().stream().map(Node::decode).collect(Collectors.toList()));
                     break;
                 case CREATION_DATE:
-                    mTorrentFile.setCreationData(Date.from(Instant.ofEpochSecond(Long.parseLong(value.decode()))));
+                    mTorrentFile.setCreationData(value);
                     break;
                 case COMMENT:
                     mTorrentFile.setComment(value.decode());
@@ -337,7 +341,34 @@ public class TorrentFile {
         if (mInfo != null) {
             bt.addNode(INFO, mInfo);
         }
+//        return bt.encode();
+        return "";
+    }
 
+    public byte[] encode() {
+        DictionaryNode bt = new DictionaryNode();
+
+        if (mAnnounce != null) {
+            bt.addNode(ANNOUNCE, mAnnounce);
+        }
+        if (mAnnounceList != null) {
+            bt.addNode(ANNOUNCE_LIST, mAnnounceList);
+        }
+        if (mEncoding != null) {
+            bt.addNode(ENCODING, mEncoding);
+        }
+        if (mComment != null) {
+            bt.addNode(COMMENT, mComment);
+        }
+        if (mCreationDate != null) {
+            bt.addNode(CREATION_DATE, mCreationDate);
+        }
+        if (mCreatedBy != null) {
+            bt.addNode(CREATED_BY, mCreatedBy);
+        }
+        if (mInfo != null) {
+            bt.addNode(INFO, mInfo);
+        }
         return bt.encode();
     }
 

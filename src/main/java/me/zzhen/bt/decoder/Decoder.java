@@ -5,7 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by zzhen on 2016/10/16.
+ * @author zzhen zzzhen1994@gmail.com
+ *         Created on 2016/10/16.
  */
 public class Decoder {
 
@@ -57,6 +58,7 @@ public class Decoder {
     }
 
     private Node parseString(int cur) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
         StringBuilder sb = new StringBuilder();
         int c;
         StringBuilder len = new StringBuilder();
@@ -67,19 +69,21 @@ public class Decoder {
         int length = Integer.parseInt(len.toString().trim());
         int i = 1;
         while ((c = mInput.read()) != -1 && i < length) {
-            sb.append((char) c);
+            baos.write((byte) c);
             i++;
         }
-        sb.append((char) c);
+        baos.write((byte) c);
         i++;
         if (i < length) {
             throw new DecoderExecption("illegal string node , except " + length + " char but found " + i);
         }
+
+        StringNode node = new StringNode(baos.toByteArray());
         //TODO 设计更好用的API 但是现在还是就是将这个东西做出来 能用吧
-//        if (mHandler != null) {
-//            mHandler.handleStringNode(sb.toString());
-//        }
-        return new StringNode(sb.toString());
+        if (mHandler != null) {
+            mHandler.handleStringNode(node);
+        }
+        return node;
     }
 
     private Node parseDic() throws IOException {
@@ -95,6 +99,7 @@ public class Decoder {
                     key = parseString(c).toString();
                     inKey = false;
                 } else {
+                    System.out.println(cur);
                     throw new DecoderExecption("key of dic must be string,found digital");
                 }
             } else {
@@ -119,10 +124,10 @@ public class Decoder {
                 if (mHandler != null) {
                     mHandler.handleDictionaryNode(key, node);
                 }
+                dic.addNode(key, node);
                 inKey = true;
             }
 
-            dic.addNode(key, node);
         }
         return dic;
     }
@@ -180,7 +185,6 @@ public class Decoder {
     public static void main(String[] args) {
         try {
             Decoder decoder = new Decoder("D:/Chicago.Med.torrent");
-//            Decoder decoder = new Decoder("E:/test.torrent");
             decoder.parse();
             List<Node> value = decoder.getValue();
             value.forEach(System.out::println);

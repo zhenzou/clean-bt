@@ -1,5 +1,8 @@
 package me.zzhen.bt.decoder;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,12 +47,19 @@ public class ListNode implements Node {
     }
 
     @Override
-    public String encode() {
+    public byte[] encode() throws UnsupportedEncodingException {
         StringBuilder sb = new StringBuilder();
-        sb.append(LIST_START);
-        mValue.forEach(node -> sb.append(node.encode()));
-        sb.append(LIST_END);
-        return sb.toString();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        baos.write((byte) LIST_START);
+        mValue.forEach(node -> {
+            try {
+                baos.write(node.encode());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+        baos.write((byte) LIST_END);
+        return baos.toByteArray();
     }
 
     @Override

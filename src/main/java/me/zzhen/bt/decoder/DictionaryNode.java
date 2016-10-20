@@ -1,6 +1,8 @@
 package me.zzhen.bt.decoder;
 
-import javax.management.MBeanAttributeInfo;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -42,12 +44,21 @@ public class DictionaryNode implements Node {
     }
 
     @Override
-    public String encode() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(DIC_START);
-        mValue.forEach((key, node) -> sb.append(new StringNode(key).encode() + node.encode()));
-        sb.append(DIC_END);
-        return sb.toString();
+    public byte[] encode() {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        baos.write((byte) DIC_START);
+        mValue.forEach((key, node) -> {
+            try {
+                baos.write(new StringNode(key.getBytes()).encode());
+                baos.write(node.encode());
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+        baos.write((byte) DIC_END);
+        return baos.toByteArray();
     }
 
     @Override
