@@ -59,12 +59,18 @@ public class Decoder {
 
     private Node parseString(int cur) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        StringBuilder sb = new StringBuilder();
         int c;
         StringBuilder len = new StringBuilder();
         len.append((char) cur);
-        while ((c = mInput.read()) != -1 && (char) c != StringNode.STRING_VALUE_START) {
-            len.append((char) c);
+        while ((c = mInput.read()) != -1) {
+            char cc = (char) c;
+            if (cc == StringNode.STRING_VALUE_START) {
+                break;
+            } else if (Character.isDigit(cc)) {
+                len.append(c);
+            } else {
+                throw new DecoderExecption("expect a digital but found " + cc);
+            }
         }
         int length = Integer.parseInt(len.toString().trim());
         int i = 1;
@@ -121,13 +127,12 @@ public class Decoder {
                         }
                         break;
                 }
+                dic.addNode(key, node);
+                inKey = true;
                 if (mHandler != null) {
                     mHandler.handleDictionaryNode(key, node);
                 }
-                dic.addNode(key, node);
-                inKey = true;
             }
-
         }
         return dic;
     }
@@ -137,8 +142,8 @@ public class Decoder {
         int c;
         while ((c = mInput.read()) != -1 && (char) c != ListNode.LIST_END) {
             Node node = null;
-            char cur = (char) c;
-            switch (cur) {
+            char cc = (char) c;
+            switch (cc) {
                 case IntNode.INT_START:
                     node = parseInt();
                     break;
@@ -165,7 +170,12 @@ public class Decoder {
         StringBuilder sb = new StringBuilder();
         int c = -1;
         while ((c = mInput.read()) != -1 && c != IntNode.INT_END) {
-            sb.append((char) c);
+            char cc = (char) c;
+            if (Character.isDigit(cc)) {
+                sb.append(cc);
+            } else {
+                throw new DecoderExecption("expect a digital but found " + cc);
+            }
         }
         return new IntNode(sb.toString());
     }

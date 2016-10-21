@@ -13,6 +13,11 @@ public class StringNode implements Node {
 
     byte[] mValue;
 
+    /**
+     * 不用处理编码问题
+     *
+     * @param value
+     */
     public StringNode(byte[] value) {
         mValue = value;
     }
