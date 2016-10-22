@@ -1,7 +1,13 @@
 package me.zzhen.bt.decoder;
 
 /**
- * Created by zzhen on 2016/10/17.
+ * /**
+ * Project:CleanBT
+ *
+ * @author zzhen zzzhen1994@gmail.com
+ *         Create Time: 2016/10/17.
+ *         Version :
+ *         Description:
  */
 public interface EventHandler {
     default Node handleIntNode(IntNode value) {

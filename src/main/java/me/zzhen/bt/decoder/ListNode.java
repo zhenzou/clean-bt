@@ -9,7 +9,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by zzhen on 2016/10/16.
+ * /**
+ * Project:CleanBT
+ *
+ * @author zzhen zzzhen1994@gmail.com
+ *         Create Time: 2016/10/16.
+ *         Version :
+ *         Description:
  */
 public class ListNode implements Node {
 

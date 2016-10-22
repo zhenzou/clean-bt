@@ -4,10 +4,11 @@ import java.util.logging.Level;
 
 /**
  * Project:CleanBlog
- * Author zhen
- * Create Time: 2016/8/29.
- * Version :
- * Description:
+ *
+ * @author zzhen zzzhen1994@gmail.com
+ *         Create Time: 2016/8/29.
+ *         Version :
+ *         Description:
  */
 public class Logger {
 

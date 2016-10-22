@@ -9,7 +9,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Created by zzhen on 2016/10/16.
+ * /**
+ * Project:CleanBT
+ *
+ * @author zzhen zzzhen1994@gmail.com
+ *         Create Time: 2016/10/16.
+ *         Version :
+ *         Description:
  */
 public class DictionaryNode implements Node {
 

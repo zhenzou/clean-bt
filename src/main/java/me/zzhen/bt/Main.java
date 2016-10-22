@@ -1,8 +1,6 @@
 package me.zzhen.bt;
 
 import javafx.application.Application;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -15,12 +13,20 @@ import me.zzhen.bt.decoder.*;
 import me.zzhen.bt.log.Logger;
 
 import java.io.*;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * /**
+ * Project:CleanBT
+ *
+ * @author zzhen zzzhen1994@gmail.com
+ *         Create Time: 2016/10/17.
+ *         Version :
+ *         Description:
+ */
 public class Main extends Application {
 
     private static Logger logger = Logger.getLogger(Main.class.getName());
