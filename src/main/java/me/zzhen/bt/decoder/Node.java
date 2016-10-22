@@ -7,7 +7,14 @@ import java.io.UnsupportedEncodingException;
  */
 public interface Node {
 
+    /**
+     * @return 返回最基本的byte[] 不用受编码影响
+     * @throws UnsupportedEncodingException
+     */
     byte[] encode() throws UnsupportedEncodingException;
 
+    /**
+     * @return 返回JSON数据
+     */
     String decode();
 }

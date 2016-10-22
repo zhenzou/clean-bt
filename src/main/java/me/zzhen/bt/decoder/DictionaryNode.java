@@ -1,5 +1,7 @@
 package me.zzhen.bt.decoder;
 
+import com.google.gson.Gson;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -68,7 +70,7 @@ public class DictionaryNode implements Node {
 
     @Override
     public String toString() {
-        return mValue.toString();
+        return new Gson().toJson(mValue.toString());
     }
 
 

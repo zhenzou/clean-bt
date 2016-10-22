@@ -3,6 +3,7 @@ package me.zzhen.bt.decoder;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TreeMap;
 
 /**
  * @author zzhen zzzhen1994@gmail.com
@@ -57,19 +58,21 @@ public class Decoder {
         }
     }
 
+    /**
+     * @param cur
+     * @return
+     * @throws IOException
+     */
     private Node parseString(int cur) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         int c;
         StringBuilder len = new StringBuilder();
         len.append((char) cur);
-        while ((c = mInput.read()) != -1) {
-            char cc = (char) c;
-            if (cc == StringNode.STRING_VALUE_START) {
-                break;
-            } else if (Character.isDigit(cc)) {
-                len.append(c);
+        while ((c = mInput.read()) != -1 && (char) c != StringNode.STRING_VALUE_START) {
+            if (Character.isDigit(c)) {
+                len.append((char) c);
             } else {
-                throw new DecoderExecption("expect a digital but found " + cc);
+                throw new DecoderExecption("expect a digital but found " + c);
             }
         }
         int length = Integer.parseInt(len.toString().trim());

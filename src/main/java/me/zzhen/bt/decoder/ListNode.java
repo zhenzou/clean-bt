@@ -1,5 +1,7 @@
 package me.zzhen.bt.decoder;
 
+import com.google.gson.Gson;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -38,12 +40,7 @@ public class ListNode implements Node {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        for (Node node : mValue) {
-            sb.append(node.toString() + ',');
-        }
-        sb.deleteCharAt(sb.length() - 1);
-        return mValue.toString();
+        return new Gson().toJson(mValue.toString());
     }
 
     @Override
@@ -60,6 +57,14 @@ public class ListNode implements Node {
         });
         baos.write((byte) LIST_END);
         return baos.toByteArray();
+    }
+
+    public int size() {
+        return mValue.size();
+    }
+
+    public Node get(int index) {
+        return mValue.get(index);
     }
 
     @Override
