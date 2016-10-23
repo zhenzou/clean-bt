@@ -14,10 +14,7 @@ import me.zzhen.bt.decoder.*;
 import me.zzhen.bt.log.Logger;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -48,12 +45,13 @@ public class Main extends Application {
     private Stage mPrimaryStage;
 
 
-    private List<Integer> mLengthList = new ArrayList<>();//Temp solution to record length
+    private List<Integer> mLengthList = new ArrayList<>();//Temp solution to record mLength
 
     @Override
     public void start(Stage primaryStage) throws Exception {
 //        Parent mRoot = FXMLLoader.load(getClass().getResource("sample.fxml"));
 
+//        mFileTree.setCellFactory();
         mPrimaryStage = primaryStage;
         initView();
 
@@ -123,7 +121,7 @@ public class Main extends Application {
 //                        ListNode node2 = new ListNode();
 //                        node2.addNode(new StringNode((((ListNode) node3.getNode("path")).getValue().get(0).decode() + "Test").getBytes()));
 //                        dic.addNode("path", node2);
-//                        dic.addNode("length", new IntNode(node3.getNode("length").decode()));
+//                        dic.addNode("mLength", new IntNode(node3.getNode("mLength").decode()));
 //                        list.addNode(dic);
 //                    }
 //                    mTorrent.setInfoFiles(list);
@@ -225,6 +223,94 @@ public class Main extends Application {
             });
         } else {
             mRootItem.getChildren().add(new TreeItem<>(new TextField(infoName.decode())));
+        }
+    }
+
+
+    private final class TreeFileItemCell extends TreeCell<String> {
+        private TextField mTextField;
+        private int mLength;
+
+        public TreeFileItemCell() {
+        }
+
+        public TreeFileItemCell(int length, String text) {
+            mTextField = new TextField(text);
+            mLength = length;
+        }
+
+        @Override
+        public void startEdit() {
+            super.startEdit();
+            if (mTextField == null) {
+                mTextField = new TextField();
+                mTextField.setText(null);
+            }
+            setGraphic(mTextField);
+            mTextField.selectAll();
+        }
+
+        @Override
+        public void commitEdit(String s) {
+            super.commitEdit(s);
+        }
+
+        @Override
+        public void cancelEdit() {
+            super.cancelEdit();
+            setText(getItem());
+            setGraphic(getTreeItem().getGraphic());
+        }
+
+        @Override
+        protected void updateItem(String item, boolean empty) {
+            super.updateItem(item, empty);
+
+            if (empty) {
+                setText(null);
+                setGraphic(null);
+            } else {
+                if (isEditing()) {
+                    if (mTextField != null) {
+                        mTextField.setText(getString());
+                    }
+                    setText(null);
+                    setGraphic(getTreeItem().getGraphic());
+                } else {
+                    setText(getString());
+                    setGraphic(getTreeItem().getGraphic());
+                }
+            }
+        }
+
+        private String getString() {
+            return getItem() == null ? "" : getItem().toString();
+        }
+    }
+
+    private final class FileTreeItemModel {
+        private String mName;
+        private String mLength;
+
+        public FileTreeItemModel(String name, String length) {
+            mName = name;
+            mLength = length;
+        }
+
+        public String getName() {
+            return mName;
+        }
+
+        public void setName(String name) {
+            mName = name;
+        }
+
+        public String getLength() {
+            return mLength;
+        }
+
+        public void setLength(String length) {
+            mLength = length;
         }
     }
 
