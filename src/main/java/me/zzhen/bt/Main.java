@@ -1,6 +1,7 @@
 package me.zzhen.bt;
 
 import javafx.application.Application;
+import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -13,6 +14,7 @@ import me.zzhen.bt.decoder.*;
 import me.zzhen.bt.log.Logger;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +47,9 @@ public class Main extends Application {
 
     private Stage mPrimaryStage;
 
+
+    private List<Integer> mLengthList = new ArrayList<>();//Temp solution to record length
+
     @Override
     public void start(Stage primaryStage) throws Exception {
 //        Parent mRoot = FXMLLoader.load(getClass().getResource("sample.fxml"));
@@ -65,6 +70,8 @@ public class Main extends Application {
     private void initView() {
         mCenter.getChildren().add(mInitLabel);
         mCenter.setAlignment(Pos.CENTER);
+        mCenter.getChildren().add(mFileTree);
+        mFileTree.setVisible(false);
         mRoot.setTop(mTop);
         mRoot.setCenter(mCenter);
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("All Torrent", "*.torrent"));
@@ -76,6 +83,7 @@ public class Main extends Application {
         MenuItem saveFile = new MenuItem(Config.MENU_FILE_SAVE);
         fileMenu.getItems().add(openFile);
         fileMenu.getItems().add(saveFile);
+        saveFile.setDisable(true);
         mMenu.getMenus().add(fileMenu);
         mTop.getChildren().add(mMenu);
 
@@ -86,12 +94,14 @@ public class Main extends Application {
                 logger.info("没有选择文件");
                 return;
             }
+
             try {
                 mTorrent = TorrentFile.fromFile(file);
             } catch (IOException e) {
                 logger.error(e.getMessage());
                 e.printStackTrace();
             }
+            saveFile.setDisable(false);
             getFileTree();
         });
 
@@ -100,35 +110,68 @@ public class Main extends Application {
                 chooser.setTitle("保存Torrent文件");
                 File file = chooser.showSaveDialog(mPrimaryStage);
                 if (file == null) {
+                    logger.info("没有选择保存文件");
                     return;
                 } else {
-                    Node infoName = mTorrent.getInfoFiles();
-                    List<Node> files = ((ListNode) infoName).getValue();
-                    List<DictionaryNode> collect = files.stream().map(fileNode -> (DictionaryNode) fileNode).collect(Collectors.toList());
+//                    Node infoName = mTorrent.getInfoFiles();
+//                    List<Node> files = ((ListNode) infoName).getValue();
+//                    List<DictionaryNode> collect = files.stream().map(fileNode -> (DictionaryNode) fileNode).collect(Collectors.toList());
+//                    ListNode list = new ListNode();
+//                    for (Node node : files) {
+//                        DictionaryNode node3 = (DictionaryNode) node;
+//                        DictionaryNode dic = new DictionaryNode();
+//                        ListNode node2 = new ListNode();
+//                        node2.addNode(new StringNode((((ListNode) node3.getNode("path")).getValue().get(0).decode() + "Test").getBytes()));
+//                        dic.addNode("path", node2);
+//                        dic.addNode("length", new IntNode(node3.getNode("length").decode()));
+//                        list.addNode(dic);
+//                    }
+//                    mTorrent.setInfoFiles(list);
+//                    mTorrent.setInfoFiles(new ListNode(collect.stream().map(name -> {
+//                        ListNode fileNode = new ListNode();
+//                        fileNode.addNode(new StringNode(name.encode()));
+//                        return fileNode;
+//                    }).collect(Collectors.toList())));
 
-                    ListNode list = new ListNode();
-                    for (Node node : files) {
-                        DictionaryNode node3 = (DictionaryNode) node;
+                    ListNode infoRoot = new ListNode();
+                    final int[] index = {0};
+                    mRootItem.getChildren().forEach(item -> {
+                        ObservableList<TreeItem<TextField>> children = item.getChildren();
+                        IntNode length = new IntNode(mLengthList.get(index[0]) + "");
                         DictionaryNode dic = new DictionaryNode();
-                        ListNode node2 = new ListNode();
-                        node2.addNode(new StringNode((((ListNode) node3.getNode("path")).getValue().get(0).decode() + "Test").getBytes()));
-                        dic.addNode("path", node2);
-                        dic.addNode("length", new IntNode(node3.getNode("length").decode()));
-                        list.addNode(dic);
-                    }
-                    mTorrent.setInfoFiles(list);
-
-                    mTorrent.setInfoFiles(new ListNode(collect.stream().map(name -> {
-                        ListNode fileNode = new ListNode();
-                        fileNode.addNode(new StringNode(name.encode()));
-                        return fileNode;
-                    }).collect(Collectors.toList())));
+                        if (children.size() > 0) {
+                            String dir = item.getValue().getText();
+                            System.out.println(dir);
+                            StringNode dirNode = new StringNode(dir.getBytes());
+                            children.forEach(fileItem -> {
+                                String name = fileItem.getValue().getText();
+                                System.out.println(name);
+                                ListNode cur = new ListNode();
+                                cur.addNode(dirNode);
+                                cur.addNode(new StringNode(name.getBytes()));
+                                dic.addNode("path", cur);
+                                dic.addNode("length", length);
+                                infoRoot.addNode(dic);
+                                index[0]++;
+                            });
+                        } else {
+                            String name = item.getValue().getText();
+                            ListNode cur = new ListNode();
+                            cur.addNode(new StringNode(name.getBytes()));
+                            dic.addNode("path", cur);
+                            dic.addNode("length", length);
+                            infoRoot.addNode(dic);
+                            index[0]++;
+                        }
+                    });
+                    System.out.println(mTorrent.getInfoFiles());
+                    System.out.println(infoRoot);
+                    mTorrent.setInfoFiles(infoRoot);
                     OutputStream out = new FileOutputStream(file);
                     out.write(mTorrent.encode());
                     out.flush();
                     out.close();
                 }
-
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
             } catch (IOException e) {
@@ -142,10 +185,14 @@ public class Main extends Application {
      */
     private void getFileTree() {
         Node infoName = mTorrent.getInfoFiles();
-        mCenter.getChildren().remove(mInitLabel);
-        mCenter.getChildren().add(mFileTree);
-        mFileTree.setRoot(mRootItem);
+//        mCenter.getChildren().remove(mInitLabel);
+        mInitLabel.setVisible(false);
+        mFileTree.setVisible(true);
         mRootItem.setValue(new TextField(mTorrent.getInfoName().decode()));
+//        mCenter.getChildren().add(mFileTree);
+        mFileTree.setRoot(mRootItem);
+//        mFileTree.getRoot().getChildren().clear();
+
         logger.debug(mTorrent.getInfoName().decode());
         logger.debug(mTorrent.getInfoFiles().decode());
         //暂时只管两级文件夹吧，不定级文件夹再说吧
@@ -166,12 +213,15 @@ public class Main extends Application {
                         mRootItem.getChildren().get(i).getChildren().add(new TreeItem<>(new TextField(path.get(1).decode())));
                     } else {
                         dirRecord.put(dir, index[0]);
-                        mRootItem.getChildren().add(new TreeItem<>(new TextField(path.get(1).decode())));
+                        TreeItem<TextField> curDir = new TreeItem<>(new TextField(dir));
+                        mRootItem.getChildren().add(curDir);
+                        curDir.getChildren().add(new TreeItem<>(new TextField(path.get(1).decode())));
                         index[0]++;
                     }
                 } else {
                     mRootItem.getChildren().add(new TreeItem<>(new TextField(path.get(0).decode())));
                 }
+                mLengthList.add(Integer.parseInt(file.getNode("length").decode()));
             });
         } else {
             mRootItem.getChildren().add(new TreeItem<>(new TextField(infoName.decode())));
