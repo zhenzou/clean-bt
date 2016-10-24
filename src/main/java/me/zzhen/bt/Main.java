@@ -14,7 +14,9 @@ import me.zzhen.bt.decoder.*;
 import me.zzhen.bt.log.Logger;
 
 import java.io.*;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -39,24 +41,19 @@ public class Main extends Application {
 
     private Label mInitLabel = new Label("请选择Torrent文件");
 
-    private TreeView<TextField> mFileTree = new TreeView<>();
-    private TreeItem<TextField> mRootItem = new TreeItem<>();
+    private TreeView<FileTreeItemModel> mFileTree = new TreeView<>();
+    private TreeItem<FileTreeItemModel> mRootItem = new TreeItem<>();
 
     private Stage mPrimaryStage;
 
-
-    private List<Integer> mLengthList = new ArrayList<>();//Temp solution to record mLength
 
     @Override
     public void start(Stage primaryStage) throws Exception {
 //        Parent mRoot = FXMLLoader.load(getClass().getResource("sample.fxml"));
 
-//        mFileTree.setCellFactory();
         mPrimaryStage = primaryStage;
         initView();
-
         initMenu();
-
         Scene scene = new Scene(mRoot, Config.WINDOW_WIDTH, Config.WINDOW_HEIGHT);
         primaryStage.setResizable(false);
         primaryStage.setTitle(Config.APP_NAME);
@@ -70,9 +67,14 @@ public class Main extends Application {
         mCenter.setAlignment(Pos.CENTER);
         mCenter.getChildren().add(mFileTree);
         mFileTree.setVisible(false);
+        mFileTree.setEditable(true);
+        mFileTree.setCellFactory((TreeView<FileTreeItemModel> tree) -> new FileTreeItemCell());
         mRoot.setTop(mTop);
         mRoot.setCenter(mCenter);
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("All Torrent", "*.torrent"));
+
+        //将菜单栏添加到顶部
+        mTop.getChildren().add(mMenu);
     }
 
     private void initMenu() {
@@ -83,7 +85,6 @@ public class Main extends Application {
         fileMenu.getItems().add(saveFile);
         saveFile.setDisable(true);
         mMenu.getMenus().add(fileMenu);
-        mTop.getChildren().add(mMenu);
 
         openFile.setOnAction(event -> {
             chooser.setTitle("选择文件");
@@ -111,59 +112,36 @@ public class Main extends Application {
                     logger.info("没有选择保存文件");
                     return;
                 } else {
-//                    Node infoName = mTorrent.getInfoFiles();
-//                    List<Node> files = ((ListNode) infoName).getValue();
-//                    List<DictionaryNode> collect = files.stream().map(fileNode -> (DictionaryNode) fileNode).collect(Collectors.toList());
-//                    ListNode list = new ListNode();
-//                    for (Node node : files) {
-//                        DictionaryNode node3 = (DictionaryNode) node;
-//                        DictionaryNode dic = new DictionaryNode();
-//                        ListNode node2 = new ListNode();
-//                        node2.addNode(new StringNode((((ListNode) node3.getNode("path")).getValue().get(0).decode() + "Test").getBytes()));
-//                        dic.addNode("path", node2);
-//                        dic.addNode("mLength", new IntNode(node3.getNode("mLength").decode()));
-//                        list.addNode(dic);
-//                    }
-//                    mTorrent.setInfoFiles(list);
-//                    mTorrent.setInfoFiles(new ListNode(collect.stream().map(name -> {
-//                        ListNode fileNode = new ListNode();
-//                        fileNode.addNode(new StringNode(name.encode()));
-//                        return fileNode;
-//                    }).collect(Collectors.toList())));
-
                     ListNode infoRoot = new ListNode();
-                    final int[] index = {0};
                     mRootItem.getChildren().forEach(item -> {
-                        ObservableList<TreeItem<TextField>> children = item.getChildren();
-                        IntNode length = new IntNode(mLengthList.get(index[0]) + "");
-                        DictionaryNode dic = new DictionaryNode();
+                        ObservableList<TreeItem<FileTreeItemModel>> children = item.getChildren();
                         if (children.size() > 0) {
-                            String dir = item.getValue().getText();
-                            System.out.println(dir);
+                            String dir = item.getValue().getName();
+                            logger.debug("cur dir is " + dir);
                             StringNode dirNode = new StringNode(dir.getBytes());
                             children.forEach(fileItem -> {
-                                String name = fileItem.getValue().getText();
-                                System.out.println(name);
+                                DictionaryNode dic = new DictionaryNode();
+                                String name = fileItem.getValue().getName();
+                                int length = fileItem.getValue().getLength();
+                                logger.debug("length of " + name + " is" + length);
                                 ListNode cur = new ListNode();
                                 cur.addNode(dirNode);
                                 cur.addNode(new StringNode(name.getBytes()));
                                 dic.addNode("path", cur);
-                                dic.addNode("length", length);
+                                dic.addNode("length", new IntNode(length));
                                 infoRoot.addNode(dic);
-                                index[0]++;
                             });
                         } else {
-                            String name = item.getValue().getText();
+                            DictionaryNode dic = new DictionaryNode();
+                            String name = item.getValue().getName();
+                            logger.debug("cur dir is " + name);
                             ListNode cur = new ListNode();
                             cur.addNode(new StringNode(name.getBytes()));
                             dic.addNode("path", cur);
-                            dic.addNode("length", length);
+                            dic.addNode("length", new IntNode(item.getValue().getLength()));
                             infoRoot.addNode(dic);
-                            index[0]++;
                         }
                     });
-                    System.out.println(mTorrent.getInfoFiles());
-                    System.out.println(infoRoot);
                     mTorrent.setInfoFiles(infoRoot);
                     OutputStream out = new FileOutputStream(file);
                     out.write(mTorrent.encode());
@@ -183,10 +161,10 @@ public class Main extends Application {
      */
     private void getFileTree() {
         Node infoName = mTorrent.getInfoFiles();
-//        mCenter.getChildren().remove(mInitLabel);
+//        mCenter.getChildren().removeNode(mInitLabel);
         mInitLabel.setVisible(false);
         mFileTree.setVisible(true);
-        mRootItem.setValue(new TextField(mTorrent.getInfoName().decode()));
+        mRootItem.setValue(new FileTreeItemModel((mTorrent.getInfoName() != null) ? mTorrent.getInfoName().decode() : mTorrent.getFileName(), 0));
 //        mCenter.getChildren().add(mFileTree);
         mFileTree.setRoot(mRootItem);
 //        mFileTree.getRoot().getChildren().clear();
@@ -208,35 +186,29 @@ public class Main extends Application {
                     String dir = path.get(0).decode();
                     if (dirRecord.containsKey(dir)) {
                         int i = dirRecord.get(dir);
-                        mRootItem.getChildren().get(i).getChildren().add(new TreeItem<>(new TextField(path.get(1).decode())));
+                        mRootItem.getChildren().get(i).getChildren().add(new TreeItem<>(new FileTreeItemModel(path.get(1).decode(), file.getNode("length").decode())));
                     } else {
                         dirRecord.put(dir, index[0]);
-                        TreeItem<TextField> curDir = new TreeItem<>(new TextField(dir));
+                        TreeItem<FileTreeItemModel> curDir = new TreeItem<>(new FileTreeItemModel(dir, file.getNode("length").decode()));
                         mRootItem.getChildren().add(curDir);
-                        curDir.getChildren().add(new TreeItem<>(new TextField(path.get(1).decode())));
+                        curDir.getChildren().add(new TreeItem<>(new FileTreeItemModel(path.get(1).decode(), file.getNode("length").decode())));
                         index[0]++;
                     }
                 } else {
-                    mRootItem.getChildren().add(new TreeItem<>(new TextField(path.get(0).decode())));
+                    mRootItem.getChildren().add(new TreeItem<>(new FileTreeItemModel(path.get(0).decode(), file.getNode("length").decode())));
                 }
-                mLengthList.add(Integer.parseInt(file.getNode("length").decode()));
             });
         } else {
-            mRootItem.getChildren().add(new TreeItem<>(new TextField(infoName.decode())));
+            mRootItem.getChildren().add(new TreeItem<>(new FileTreeItemModel(infoName.decode(), 0)));
         }
     }
 
 
-    private final class TreeFileItemCell extends TreeCell<String> {
+    private final class FileTreeItemCell extends TreeCell<FileTreeItemModel> {
+
         private TextField mTextField;
-        private int mLength;
 
-        public TreeFileItemCell() {
-        }
-
-        public TreeFileItemCell(int length, String text) {
-            mTextField = new TextField(text);
-            mLength = length;
+        public FileTreeItemCell() {
         }
 
         @Override
@@ -244,57 +216,62 @@ public class Main extends Application {
             super.startEdit();
             if (mTextField == null) {
                 mTextField = new TextField();
-                mTextField.setText(null);
+                mTextField.setText(getString());
             }
             setGraphic(mTextField);
             mTextField.selectAll();
         }
 
         @Override
-        public void commitEdit(String s) {
-            super.commitEdit(s);
-        }
-
-        @Override
         public void cancelEdit() {
             super.cancelEdit();
-            setText(getItem());
+            setText(getItem().getName());
             setGraphic(getTreeItem().getGraphic());
+//            getTreeItem().setGraphic(mTextField);
         }
 
         @Override
-        protected void updateItem(String item, boolean empty) {
+        protected void updateItem(FileTreeItemModel item, boolean empty) {
             super.updateItem(item, empty);
-
             if (empty) {
-                setText(null);
+                setText("");
                 setGraphic(null);
             } else {
                 if (isEditing()) {
                     if (mTextField != null) {
-                        mTextField.setText(getString());
+                        mTextField.setText(item.getName());
                     }
                     setText(null);
                     setGraphic(getTreeItem().getGraphic());
                 } else {
-                    setText(getString());
+                    if (mTextField != null) {
+                        setText(mTextField.getText());
+                        item.setName(mTextField.getText());
+                    } else {
+                        setText(item.getName());
+                    }
                     setGraphic(getTreeItem().getGraphic());
                 }
             }
         }
 
         private String getString() {
-            return getItem() == null ? "" : getItem().toString();
+            return getItem() == null ? "" : getItem().getName();
         }
     }
 
     private final class FileTreeItemModel {
         private String mName;
-        private String mLength;
+        private int mLength;
+
+        public FileTreeItemModel(String name, int length) {
+            mName = name;
+            mLength = length;
+        }
 
         public FileTreeItemModel(String name, String length) {
             mName = name;
-            mLength = length;
+            mLength = Integer.parseInt(length);
         }
 
         public String getName() {
@@ -305,11 +282,11 @@ public class Main extends Application {
             mName = name;
         }
 
-        public String getLength() {
+        public int getLength() {
             return mLength;
         }
 
-        public void setLength(String length) {
+        public void setLength(int length) {
             mLength = length;
         }
     }

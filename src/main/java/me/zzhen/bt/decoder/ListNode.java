@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * /**
  * Project:CleanBT
  *
  * @author zzhen zzzhen1994@gmail.com
@@ -40,8 +39,16 @@ public class ListNode implements Node {
         mValue.add(node);
     }
 
-    public Node remove(int index) {
+    public Node removeNode(int index) {
         return mValue.remove(index);
+    }
+
+    public Node get(int index) {
+        return mValue.get(index);
+    }
+
+    public int size() {
+        return mValue.size();
     }
 
     @Override
@@ -63,14 +70,6 @@ public class ListNode implements Node {
         });
         baos.write((byte) LIST_END);
         return baos.toByteArray();
-    }
-
-    public int size() {
-        return mValue.size();
-    }
-
-    public Node get(int index) {
-        return mValue.get(index);
     }
 
     @Override

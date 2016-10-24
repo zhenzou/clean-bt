@@ -53,6 +53,7 @@ public class TorrentFile {
     public static TorrentFile fromString(String bytes) throws IOException {
         Decoder decoder = new Decoder(bytes.getBytes());
         TorrentFile ret = new TorrentFile();
+        ret.setFileName("String");
         decoder.setHandler(new TorrentFileHandler(ret));
         decoder.parse();
         return ret;
@@ -61,12 +62,14 @@ public class TorrentFile {
     public static TorrentFile fromFile(File file) throws IOException {
         Decoder decoder = new Decoder(file);
         TorrentFile ret = new TorrentFile();
+        ret.setFileName(file.getName());
         decoder.setHandler(new TorrentFileHandler(ret));
         decoder.parse();
         return ret;
     }
 
 
+    private String mFileName;
     private StringNode mAnnounce;
     private ListNode mAnnounceList;
     private IntNode mCreationDate;
@@ -75,6 +78,14 @@ public class TorrentFile {
     private StringNode mEncoding;
     private DictionaryNode mInfo;
 
+
+    public String getFileName() {
+        return mFileName;
+    }
+
+    public void setFileName(String fileName) {
+        mFileName = fileName;
+    }
 
     public String getAnnounce() {
         return mAnnounce.decode();

@@ -16,10 +16,14 @@ public class IntNode implements Node {
     public static final char INT_START = 'i';
     public static final char INT_END = 'e';
 
-    String mValue;
+    private String mValue;
 
     public IntNode(String value) {
         mValue = value;
+    }
+
+    public IntNode(int value) {
+        mValue = value + "";
     }
 
 
@@ -37,20 +41,6 @@ public class IntNode implements Node {
     @Override
     public String toString() {
         return mValue;
-    }
-
-    public static void main(String[] args) throws UnsupportedEncodingException {
-        IntNode intNode = new IntNode("123456789");
-        try {
-            OutputStream out = new FileOutputStream("d:/test.text");
-            out.write(intNode.encode());
-            out.flush();
-            out.close();
-        } catch (FileNotFoundException e) {
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
 }

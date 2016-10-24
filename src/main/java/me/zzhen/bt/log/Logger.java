@@ -26,28 +26,27 @@ public class Logger {
         proxy = java.util.logging.Logger.getLogger(name);
     }
 
-    public void warn(String msg) {
+    public void warn(Object msg) {
         if (proxy.isLoggable(Level.WARNING)) {
-            proxy.log(Level.WARNING, msg);
+            proxy.log(Level.WARNING, msg.toString());
         }
     }
 
-    public void info(String msg) {
+    public void info(Object msg) {
         if (proxy.isLoggable(Level.INFO)) {
-            proxy.log(Level.INFO, msg);
+            proxy.log(Level.INFO, msg.toString());
         }
     }
 
-    public void error(String msg) {
+    public void error(Object msg) {
         if (proxy.isLoggable(Level.SEVERE)) {
-            proxy.log(Level.SEVERE, msg);
+            proxy.log(Level.SEVERE, msg.toString());
         }
     }
 
-    public void debug(String msg) {
-
+    public void debug(Object msg) {
         if (proxy.isLoggable(Level.CONFIG)) {
-            proxy.log(Level.CONFIG, msg);
+            proxy.log(Level.CONFIG, msg.toString());
         }
     }
 }
