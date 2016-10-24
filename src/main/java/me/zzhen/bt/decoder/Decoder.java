@@ -200,8 +200,17 @@ public class Decoder {
 
     public static void main(String[] args) {
         try {
-            Decoder decoder = new Decoder("D:/Chicago.Med.torrent");
+            Decoder decoder = new Decoder("D:/Test.torrent");
+            decoder.setHandler(new EventHandler() {
+                @Override
+                public Node handleDictionaryNode(String key, Node value) {
+                    System.out.println("key--+" + key);
+                    System.out.println("value--" + value);
+                    return value;
+                }
+            });
             decoder.parse();
+
             List<Node> value = decoder.getValue();
             value.forEach(System.out::println);
         } catch (IOException e) {

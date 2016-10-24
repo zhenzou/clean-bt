@@ -17,6 +17,7 @@ import java.io.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -101,7 +102,10 @@ public class Main extends Application {
                 e.printStackTrace();
             }
             saveFile.setDisable(false);
-            getFileTree();
+            mRootItem.setValue(new FileTreeItemModel((mTorrent.getInfoName() != null) ? mTorrent.getInfoName().decode() : mTorrent.getFileName(), 0));
+            TreeNode<FileTreeItemModel> fileTree = createFileTree();
+            getFileTree(mRootItem, fileTree);
+            mFileTree.setRoot(mRootItem);
         });
 
         saveFile.setOnAction((event) -> {
@@ -156,6 +160,39 @@ public class Main extends Application {
         });
     }
 
+    private void getFileTree(TreeItem<FileTreeItemModel> rootItem, TreeNode<FileTreeItemModel> fileTree) {
+        List<TreeNode<FileTreeItemModel>> children = fileTree.getChildren();
+        TreeItem<FileTreeItemModel> treeItem = new TreeItem<>(new FileTreeItemModel(fileTree.getValue().getName(), fileTree.getValue().getLength()));
+        System.out.println(children.size());
+        if (children.size() == 0) {
+            rootItem.getChildren().add(rootItem);
+        } else {
+            children.forEach(node -> getFileTree(treeItem, node));
+        }
+    }
+
+
+    private TreeNode<FileTreeItemModel> createFileTree() {
+        ListNode infoName = (ListNode) mTorrent.getInfoFiles();
+        List<Node> value = infoName.getValue();
+        TreeNode<FileTreeItemModel> treeRoot = new TreeNode<>(new FileTreeItemModel(mTorrent.getInfoName().decode(), 0));
+        value.stream().map(item -> (DictionaryNode) item).collect(Collectors.toList()).forEach(item -> addFileToRoot(treeRoot, item));
+        System.out.println(treeRoot);
+        return treeRoot;
+    }
+
+    private void addFileToRoot(TreeNode<FileTreeItemModel> treeRoot, DictionaryNode file) {
+        int index = 0;
+        ListNode path = (ListNode) file.getNode("path");
+        int length = Integer.parseInt(file.getNode("length").decode());
+        int size = path.size();
+        while (index < size) {
+            treeRoot = treeRoot.getOrAdd(new FileTreeItemModel(path.get(index).decode(), length));
+            System.out.println(treeRoot.getValue().getName());
+            index++;
+        }
+    }
+
     /**
      * TODO 采用更加方便的数据结构，做为树的Model
      */
@@ -164,10 +201,10 @@ public class Main extends Application {
 //        mCenter.getChildren().removeNode(mInitLabel);
         mInitLabel.setVisible(false);
         mFileTree.setVisible(true);
-        mRootItem.setValue(new FileTreeItemModel((mTorrent.getInfoName() != null) ? mTorrent.getInfoName().decode() : mTorrent.getFileName(), 0));
 //        mCenter.getChildren().add(mFileTree);
         mFileTree.setRoot(mRootItem);
 //        mFileTree.getRoot().getChildren().clear();
+
 
         logger.debug(mTorrent.getInfoName().decode());
         logger.debug(mTorrent.getInfoFiles().decode());
@@ -206,6 +243,10 @@ public class Main extends Application {
 
     private final class FileTreeItemCell extends TreeCell<FileTreeItemModel> {
 
+        private HBox mHBox;
+        private Button mOkButton;
+        private Button mCancelButton;
+
         private TextField mTextField;
 
         public FileTreeItemCell() {
@@ -214,9 +255,16 @@ public class Main extends Application {
         @Override
         public void startEdit() {
             super.startEdit();
-            if (mTextField == null) {
+            if (mHBox == null) {
+                mHBox = new HBox();
+                mOkButton = new Button("确定");
+                mCancelButton = new Button("取消");
+                mHBox.getChildren();
                 mTextField = new TextField();
                 mTextField.setText(getString());
+            }
+            if (mTextField == null) {
+
             }
             setGraphic(mTextField);
             mTextField.selectAll();
@@ -261,6 +309,7 @@ public class Main extends Application {
     }
 
     private final class FileTreeItemModel {
+        private String mOriginalName;
         private String mName;
         private int mLength;
 
@@ -279,7 +328,14 @@ public class Main extends Application {
         }
 
         public void setName(String name) {
+            if (mOriginalName == null) {
+                mOriginalName = mName;
+            }
             mName = name;
+        }
+
+        public String getOriginalName() {
+            return mOriginalName;
         }
 
         public int getLength() {
@@ -288,6 +344,28 @@ public class Main extends Application {
 
         public void setLength(int length) {
             mLength = length;
+        }
+
+
+        @Override
+        public int hashCode() {
+            return mName.hashCode() + mLength;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj instanceof FileTreeItemModel) {
+                FileTreeItemModel other = (FileTreeItemModel) obj;
+                if (mName.equals(other.mName) && mLength == other.mLength) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        @Override
+        public String toString() {
+            return mName + ":" + mLength;
         }
     }
 
