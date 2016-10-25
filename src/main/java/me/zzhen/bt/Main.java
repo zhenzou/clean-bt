@@ -8,16 +8,13 @@ import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.scene.media.SubtitleTrack;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import me.zzhen.bt.decoder.*;
 import me.zzhen.bt.log.Logger;
 
 import java.io.*;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -50,8 +47,6 @@ public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-//        Parent mRoot = FXMLLoader.load(getClass().getResource("sample.fxml"));
-
         mPrimaryStage = primaryStage;
         initView();
         initMenu();
@@ -61,7 +56,6 @@ public class Main extends Application {
         primaryStage.setScene(scene);
         primaryStage.show();
     }
-
 
     private void initView() {
         mCenter.getChildren().add(mInitLabel);
@@ -94,7 +88,6 @@ public class Main extends Application {
                 logger.info("没有选择文件");
                 return;
             }
-
             try {
                 mTorrent = TorrentFile.fromFile(file);
             } catch (IOException e) {
@@ -102,15 +95,14 @@ public class Main extends Application {
                 e.printStackTrace();
             }
             saveFile.setDisable(false);
-            TreeNode<FileTreeItemModel> fileTree = createFileTree();
+            TreeNode<FileTreeItemModel> fileTree = createFileNodeTree();
             mRootItem.setValue(new FileTreeItemModel(fileTree.getValue().getName(), fileTree.getValue().getLength()));
-
-//            TreeNode.printTree(fileTree);
             getFileTree(mRootItem, fileTree);
             mInitLabel.setVisible(false);
             mFileTree.setVisible(true);
             //TODO 使用更自然的方式
-            mFileTree.setRoot(mRootItem.getChildren().get(0));
+            mRootItem = mRootItem.getChildren().get(0);
+            mFileTree.setRoot(mRootItem);
         });
 
         saveFile.setOnAction((event) -> {
@@ -124,32 +116,9 @@ public class Main extends Application {
                     ListNode infoRoot = new ListNode();
                     mRootItem.getChildren().forEach(item -> {
                         ObservableList<TreeItem<FileTreeItemModel>> children = item.getChildren();
-                        if (children.size() > 0) {
-                            String dir = item.getValue().getName();
-                            logger.debug("cur dir is " + dir);
-                            StringNode dirNode = new StringNode(dir.getBytes());
-                            children.forEach(fileItem -> {
-                                DictionaryNode dic = new DictionaryNode();
-                                String name = fileItem.getValue().getName();
-                                int length = fileItem.getValue().getLength();
-                                logger.debug("length of " + name + " is" + length);
-                                ListNode cur = new ListNode();
-                                cur.addNode(dirNode);
-                                cur.addNode(new StringNode(name.getBytes()));
-                                dic.addNode("path", cur);
-                                dic.addNode("length", new IntNode(length));
-                                infoRoot.addNode(dic);
-                            });
-                        } else {
-                            DictionaryNode dic = new DictionaryNode();
-                            String name = item.getValue().getName();
-                            logger.debug("cur dir is " + name);
-                            ListNode cur = new ListNode();
-                            cur.addNode(new StringNode(name.getBytes()));
-                            dic.addNode("path", cur);
-                            dic.addNode("length", new IntNode(item.getValue().getLength()));
-                            infoRoot.addNode(dic);
-                        }
+                        children.forEach(tt -> System.out.println(tt.getValue().getName()));
+                        ListNode path = new ListNode();
+                        getFileTreeItem(infoRoot, item, path);
                     });
                     mTorrent.setInfoFiles(infoRoot);
                     OutputStream out = new FileOutputStream(file);
@@ -158,17 +127,53 @@ public class Main extends Application {
                     out.close();
                 }
             } catch (FileNotFoundException e) {
+                logger.error(e.getMessage());
                 e.printStackTrace();
             } catch (IOException e) {
-
+                logger.error(e.getMessage());
+                e.printStackTrace();
             }
         });
     }
 
+    /**
+     * 将UI上的文件树结构恢复成BT文件中的扁平的文件树
+     *
+     * @param infoRoot BT 中的 infoFiles节点
+     * @param item     当前树的根节点
+     * @param path     BT文件的path节点
+     */
+    private void getFileTreeItem(ListNode infoRoot, TreeItem<FileTreeItemModel> item, ListNode path) {
+        ObservableList<TreeItem<FileTreeItemModel>> children = item.getChildren();
+        path.addNode(new StringNode(item.getValue().getName().getBytes()));
+
+        if (children.size() == 0) {
+            int size = path.size();
+            DictionaryNode dic = new DictionaryNode();
+            StringNode[] nodes = new StringNode[size];
+            System.arraycopy(path.getValue().toArray(), 0, nodes, 0, size);
+            dic.addNode("path", new ListNode(List.of(nodes)));
+            dic.addNode("length", new IntNode(item.getValue().getLength()));
+            infoRoot.addNode(dic);
+
+            path.removeNode(size - 1);//回退
+        } else {
+            children.forEach(node -> getFileTreeItem(infoRoot, node, path));
+            path.removeNode(path.size() - 1);//回退
+        }
+
+    }
+
+    /**
+     * 将文件树转换成FX中的TreeView的节点
+     *
+     * @param rootItem
+     * @param fileTree
+     */
     private void getFileTree(TreeItem<FileTreeItemModel> rootItem, TreeNode<FileTreeItemModel> fileTree) {
         List<TreeNode<FileTreeItemModel>> children = fileTree.getChildren();
         TreeItem<FileTreeItemModel> treeItem = new TreeItem<>(new FileTreeItemModel(fileTree.getValue().getName(), fileTree.getValue().getLength()));
-        System.out.println(children.size());
+        logger.debug(children.size());
         if (children.size() == 0) {
 //            rootItem.getChildren().add(treeItem);
         } else {
@@ -178,15 +183,26 @@ public class Main extends Application {
     }
 
 
-    private TreeNode<FileTreeItemModel> createFileTree() {
+    /**
+     * 将BT扁平的文件结构重新组装成树结构
+     *
+     * @return 文件树的根节点
+     */
+    private TreeNode<FileTreeItemModel> createFileNodeTree() {
         ListNode infoName = (ListNode) mTorrent.getInfoFiles();
         List<Node> value = infoName.getValue();
         TreeNode<FileTreeItemModel> treeRoot = new TreeNode<>(new FileTreeItemModel(mTorrent.getInfoName().decode(), 0));
-        value.stream().map(item -> (DictionaryNode) item).collect(Collectors.toList()).forEach(item -> addFileToRoot(treeRoot, item));
+        value.stream().map(item -> (DictionaryNode) item).collect(Collectors.toList()).forEach(item -> addFileToTree(treeRoot, item));
         return treeRoot;
     }
 
-    private void addFileToRoot(TreeNode<FileTreeItemModel> treeRoot, DictionaryNode file) {
+    /**
+     * 递归的将节点添加到树中
+     *
+     * @param treeRoot 当前子树的根节点
+     * @param file     当前的文件信息
+     */
+    private void addFileToTree(TreeNode<FileTreeItemModel> treeRoot, DictionaryNode file) {
         int index = 0;
         ListNode path = (ListNode) file.getNode("path");
         int length = Integer.parseInt(file.getNode("length").decode());
@@ -198,49 +214,8 @@ public class Main extends Application {
     }
 
     /**
-     * TODO 采用更加方便的数据结构，做为树的Model
+     * 文件的UI显示
      */
-    private void getFileTree() {
-        Node infoName = mTorrent.getInfoFiles();
-        mInitLabel.setVisible(false);
-        mFileTree.setVisible(true);
-        mFileTree.setRoot(mRootItem);
-
-        logger.debug(mTorrent.getInfoName().decode());
-        logger.debug(mTorrent.getInfoFiles().decode());
-        //暂时只管两级文件夹吧，不定级文件夹再说吧
-        //TODO 支持不定级文件夹
-        //TODO 支持编辑
-        Map<String, Integer> dirRecord = new HashMap<>();
-        final int[] index = {0};
-
-        if (infoName instanceof ListNode) {
-            List<Node> files = ((ListNode) infoName).getValue();
-            List<DictionaryNode> collect = files.stream().map(fileNode -> (DictionaryNode) fileNode).collect(Collectors.toList());
-            collect.forEach(file -> {
-                ListNode path = (ListNode) file.getNode("path");
-                if (path.size() > 1) {
-                    String dir = path.get(0).decode();
-                    if (dirRecord.containsKey(dir)) {
-                        int i = dirRecord.get(dir);
-                        mRootItem.getChildren().get(i).getChildren().add(new TreeItem<>(new FileTreeItemModel(path.get(1).decode(), file.getNode("length").decode())));
-                    } else {
-                        dirRecord.put(dir, index[0]);
-                        TreeItem<FileTreeItemModel> curDir = new TreeItem<>(new FileTreeItemModel(dir, file.getNode("length").decode()));
-                        mRootItem.getChildren().add(curDir);
-                        curDir.getChildren().add(new TreeItem<>(new FileTreeItemModel(path.get(1).decode(), file.getNode("length").decode())));
-                        index[0]++;
-                    }
-                } else {
-                    mRootItem.getChildren().add(new TreeItem<>(new FileTreeItemModel(path.get(0).decode(), file.getNode("length").decode())));
-                }
-            });
-        } else {
-            mRootItem.getChildren().add(new TreeItem<>(new FileTreeItemModel(infoName.decode(), 0)));
-        }
-    }
-
-
     private final class FileTreeItemCell extends TreeCell<FileTreeItemModel> {
 
         private HBox mHBox;
@@ -309,6 +284,9 @@ public class Main extends Application {
         }
     }
 
+    /**
+     * 文件信息的Model，主要保存文件名和文件大小
+     */
     private final class FileTreeItemModel {
         private String mOriginalName;
         private String mName;

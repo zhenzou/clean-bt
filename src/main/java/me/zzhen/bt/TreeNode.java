@@ -19,7 +19,6 @@ public class TreeNode<T> {
 
     public TreeNode(T value) {
         mValue = value;
-
     }
 
     public void add(T t) {
@@ -40,7 +39,6 @@ public class TreeNode<T> {
             return node;
         }
     }
-
 
     public List<TreeNode<T>> getChildren() {
         return mChildren;
@@ -75,26 +73,5 @@ public class TreeNode<T> {
             printTree(tree.getChildren().get(i));
         }
         System.out.println(tree.getValue());
-    }
-
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        int len = mChildren.size();
-        for (int i = 0; i < len; i++) {
-            getString(sb, mChildren.get(i));
-        }
-        return sb.toString();
-    }
-
-    private String getString(StringBuilder sb, TreeNode<T> children) {
-        if (children.getChildren().size() == 0) {
-            sb.append(children.getValue().toString());
-        } else {
-            children.getChildren().forEach(node -> {
-                sb.append(getString(new StringBuilder(), node));
-            });
-        }
-        return sb.toString();
     }
 }
