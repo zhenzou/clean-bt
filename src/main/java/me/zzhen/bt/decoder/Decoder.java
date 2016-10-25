@@ -34,6 +34,10 @@ public class Decoder {
         mInput = new BufferedInputStream(input);
     }
 
+    /**
+     * TODO 整理代码
+     * @throws IOException
+     */
     public void parse() throws IOException {
         int c;
         while ((c = mInput.read()) != -1) {

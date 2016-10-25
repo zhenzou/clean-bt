@@ -42,6 +42,7 @@ public class Main extends Application {
     private FileChooser chooser = new FileChooser();
 
     private Alert mErrorDialog = new Alert(Alert.AlertType.ERROR);
+    private Alert mMessageDialog = new Alert(Alert.AlertType.INFORMATION);
 
     private Label mInitLabel = new Label("请选择Torrent文件");
 
@@ -77,6 +78,7 @@ public class Main extends Application {
         //将菜单栏添加到顶部
         mTop.getChildren().add(mMenu);
         mErrorDialog.setTitle("错误");
+        mMessageDialog.setTitle("提示");
 
     }
 
@@ -113,6 +115,7 @@ public class Main extends Application {
             mFileTree.setRoot(mRootItem);
         });
 
+        //TODO 异步？
         saveFile.setOnAction((event) -> {
             try {
                 chooser.setTitle("保存Torrent文件");
@@ -132,6 +135,9 @@ public class Main extends Application {
                     out.write(mTorrent.encode());
                     out.flush();
                     out.close();
+
+                    mMessageDialog.setContentText("保存文件" + file.getName() + "成功");
+                    mMessageDialog.showAndWait();
                 }
             } catch (IOException e) {
                 logger.error(e.getMessage());
@@ -238,6 +244,9 @@ public class Main extends Application {
         @Override
         public void startEdit() {
             super.startEdit();
+            if (getTreeItem() == mRootItem) {
+                return;
+            }
             if (mHBox == null) {
                 mHBox = new HBox();
                 mOkButton = new Button("确定");

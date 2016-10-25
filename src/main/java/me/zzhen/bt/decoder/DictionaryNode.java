@@ -1,10 +1,11 @@
 package me.zzhen.bt.decoder;
 
+import javax.swing.*;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.HashMap;
-import java.util.Map;
+import java.lang.invoke.VarHandle;
+import java.util.*;
 
 /**
  * /**
@@ -22,7 +23,7 @@ public class DictionaryNode implements Node {
     static final char DIC_END = 'e';
 
 
-    Map<String, Node> mValue = new HashMap<>();
+    private Map<String, Node> mValue = new HashMap<>();
 
 
     public DictionaryNode() {
@@ -53,16 +54,17 @@ public class DictionaryNode implements Node {
     public byte[] encode() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         baos.write((byte) DIC_START);
-        mValue.forEach((key, node) -> {
+        Object[] keys = mValue.keySet().toArray();
+        Arrays.sort(keys);
+        for (int i = 0; i < keys.length; i++) {
             try {
+                String key = keys[i].toString();
                 baos.write(new StringNode(key.getBytes()).encode());
-                baos.write(node.encode());
-            } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
+                baos.write(mValue.get(key).encode());
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        });
+        }
         baos.write((byte) DIC_END);
         return baos.toByteArray();
     }

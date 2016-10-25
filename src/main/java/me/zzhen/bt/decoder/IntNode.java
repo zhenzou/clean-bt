@@ -13,8 +13,8 @@ import java.io.*;
  */
 public class IntNode implements Node {
 
-    public static final char INT_START = 'i';
-    public static final char INT_END = 'e';
+    static final char INT_START = 'i';
+    static final char INT_END = 'e';
 
     private String mValue;
 
