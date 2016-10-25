@@ -1,7 +1,5 @@
 package me.zzhen.bt.decoder;
 
-import com.google.gson.Gson;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -53,7 +51,8 @@ public class ListNode implements Node {
 
     @Override
     public String toString() {
-        return new Gson().toJson(mValue.toString());
+        return mValue.toString();//去掉Gson依赖
+//        return new Gson().toJson(mValue.toString());
     }
 
     @Override
