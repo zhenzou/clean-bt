@@ -27,16 +27,11 @@ public class TreeNode<T> {
     }
 
     public Optional<TreeNode<T>> get(T key) {
-        return mChildren.stream().filter(item -> {
-            System.out.println(key.toString());
-            System.out.println(item.toString());
-            return item.getValue().equals(key);
-        }).findFirst();
+        return mChildren.stream().filter(item -> item.getValue().equals(key)).findFirst();
     }
 
     public TreeNode<T> getOrAdd(T t) {
         Optional<TreeNode<T>> treeNode = get(t);
-        System.out.println(treeNode.isPresent());
         if (treeNode.isPresent()) {
             return treeNode.get();
         } else {
@@ -70,6 +65,17 @@ public class TreeNode<T> {
         mValue = value;
     }
 
+
+    public static <T> void printTree(TreeNode<T> tree) {
+        int len = tree.getChildren().size();
+        if (tree.getChildren().size() == 0) {
+            System.out.println(tree.getValue());
+        }
+        for (int i = 0; i < len; i++) {
+            printTree(tree.getChildren().get(i));
+        }
+        System.out.println(tree.getValue());
+    }
 
     @Override
     public String toString() {

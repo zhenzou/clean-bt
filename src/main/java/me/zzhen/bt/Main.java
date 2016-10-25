@@ -8,6 +8,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.media.SubtitleTrack;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import me.zzhen.bt.decoder.*;
@@ -17,7 +18,6 @@ import java.io.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -102,10 +102,15 @@ public class Main extends Application {
                 e.printStackTrace();
             }
             saveFile.setDisable(false);
-            mRootItem.setValue(new FileTreeItemModel((mTorrent.getInfoName() != null) ? mTorrent.getInfoName().decode() : mTorrent.getFileName(), 0));
             TreeNode<FileTreeItemModel> fileTree = createFileTree();
+            mRootItem.setValue(new FileTreeItemModel(fileTree.getValue().getName(), fileTree.getValue().getLength()));
+
+//            TreeNode.printTree(fileTree);
             getFileTree(mRootItem, fileTree);
-            mFileTree.setRoot(mRootItem);
+            mInitLabel.setVisible(false);
+            mFileTree.setVisible(true);
+            //TODO 使用更自然的方式
+            mFileTree.setRoot(mRootItem.getChildren().get(0));
         });
 
         saveFile.setOnAction((event) -> {
@@ -165,10 +170,11 @@ public class Main extends Application {
         TreeItem<FileTreeItemModel> treeItem = new TreeItem<>(new FileTreeItemModel(fileTree.getValue().getName(), fileTree.getValue().getLength()));
         System.out.println(children.size());
         if (children.size() == 0) {
-            rootItem.getChildren().add(rootItem);
+//            rootItem.getChildren().add(treeItem);
         } else {
             children.forEach(node -> getFileTree(treeItem, node));
         }
+        rootItem.getChildren().add(treeItem);
     }
 
 
@@ -177,7 +183,6 @@ public class Main extends Application {
         List<Node> value = infoName.getValue();
         TreeNode<FileTreeItemModel> treeRoot = new TreeNode<>(new FileTreeItemModel(mTorrent.getInfoName().decode(), 0));
         value.stream().map(item -> (DictionaryNode) item).collect(Collectors.toList()).forEach(item -> addFileToRoot(treeRoot, item));
-        System.out.println(treeRoot);
         return treeRoot;
     }
 
@@ -187,8 +192,7 @@ public class Main extends Application {
         int length = Integer.parseInt(file.getNode("length").decode());
         int size = path.size();
         while (index < size) {
-            treeRoot = treeRoot.getOrAdd(new FileTreeItemModel(path.get(index).decode(), length));
-            System.out.println(treeRoot.getValue().getName());
+            treeRoot = treeRoot.getOrAdd(new FileTreeItemModel(path.get(index).decode(), (index == size - 1) ? length : 0));
             index++;
         }
     }
@@ -198,13 +202,9 @@ public class Main extends Application {
      */
     private void getFileTree() {
         Node infoName = mTorrent.getInfoFiles();
-//        mCenter.getChildren().removeNode(mInitLabel);
         mInitLabel.setVisible(false);
         mFileTree.setVisible(true);
-//        mCenter.getChildren().add(mFileTree);
         mFileTree.setRoot(mRootItem);
-//        mFileTree.getRoot().getChildren().clear();
-
 
         logger.debug(mTorrent.getInfoName().decode());
         logger.debug(mTorrent.getInfoFiles().decode());
@@ -255,16 +255,17 @@ public class Main extends Application {
         @Override
         public void startEdit() {
             super.startEdit();
-            if (mHBox == null) {
-                mHBox = new HBox();
-                mOkButton = new Button("确定");
-                mCancelButton = new Button("取消");
-                mHBox.getChildren();
+//            if (mHBox == null) {
+//                mHBox = new HBox();
+//                mOkButton = new Button("确定");
+//                mCancelButton = new Button("取消");
+//                mHBox.getChildren();
+//                mTextField = new TextField();
+//                mTextField.setText(getString());
+//            }
+            if (mTextField == null) {
                 mTextField = new TextField();
                 mTextField.setText(getString());
-            }
-            if (mTextField == null) {
-
             }
             setGraphic(mTextField);
             mTextField.selectAll();
