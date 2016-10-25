@@ -13,7 +13,10 @@ import javafx.stage.Stage;
 import me.zzhen.bt.decoder.*;
 import me.zzhen.bt.log.Logger;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,6 +39,8 @@ public class Main extends Application {
     private HBox mTop = new HBox();
     private VBox mCenter = new VBox();
     private FileChooser chooser = new FileChooser();
+
+    private Alert mErrorDialog = new Alert(Alert.AlertType.ERROR);
 
     private Label mInitLabel = new Label("请选择Torrent文件");
 
@@ -70,6 +75,8 @@ public class Main extends Application {
 
         //将菜单栏添加到顶部
         mTop.getChildren().add(mMenu);
+        mErrorDialog.setTitle("错误");
+
     }
 
     private void initMenu() {
@@ -111,7 +118,6 @@ public class Main extends Application {
                 File file = chooser.showSaveDialog(mPrimaryStage);
                 if (file == null) {
                     logger.info("没有选择保存文件");
-                    return;
                 } else {
                     ListNode infoRoot = new ListNode();
                     mRootItem.getChildren().forEach(item -> {
@@ -126,11 +132,10 @@ public class Main extends Application {
                     out.flush();
                     out.close();
                 }
-            } catch (FileNotFoundException e) {
-                logger.error(e.getMessage());
-                e.printStackTrace();
             } catch (IOException e) {
                 logger.error(e.getMessage());
+                mErrorDialog.setContentText(e.getMessage());
+                mErrorDialog.showAndWait().filter(response -> response == ButtonType.OK).ifPresent(response -> System.out.println("tt"));
                 e.printStackTrace();
             }
         });
@@ -221,37 +226,50 @@ public class Main extends Application {
         private HBox mHBox;
         private Button mOkButton;
         private Button mCancelButton;
-
+        private Button mRandomButton;
         private TextField mTextField;
 
+
+        //TODO 增加 随机文件夹以及全部文件随机命名
         public FileTreeItemCell() {
         }
 
         @Override
         public void startEdit() {
             super.startEdit();
-//            if (mHBox == null) {
-//                mHBox = new HBox();
-//                mOkButton = new Button("确定");
-//                mCancelButton = new Button("取消");
-//                mHBox.getChildren();
-//                mTextField = new TextField();
-//                mTextField.setText(getString());
-//            }
-            if (mTextField == null) {
-                mTextField = new TextField();
-                mTextField.setText(getString());
+            if (mHBox == null) {
+                mHBox = new HBox();
+                mOkButton = new Button("确定");
+                mCancelButton = new Button("取消");
+                mRandomButton = new Button("随机");
+                mTextField = new TextField(getString());
+                mHBox.getChildren().addAll(mTextField, mRandomButton, mOkButton, mCancelButton);
+
+                mOkButton.setOnAction(event -> commitEdit(getItem()));
+
+                mCancelButton.setOnAction(event -> {
+                    String text = getItem().getOriginalName();
+                    if (text != null) {
+                        getItem().setName(text);
+                    }
+                    mTextField.setText(text);
+                    commitEdit(getItem());
+                });
+
+                mRandomButton.setOnAction(event -> {
+                    String extName = Utils.getExtName(getItem().getName());
+                    mTextField.setText(Utils.randomDigitalName() + "." + extName);
+                });
+
             }
-            setGraphic(mTextField);
-            mTextField.selectAll();
+            setGraphic(mHBox);
         }
 
         @Override
         public void cancelEdit() {
             super.cancelEdit();
-            setText(getItem().getName());
+            setText(getItem().getOriginalName());
             setGraphic(getTreeItem().getGraphic());
-//            getTreeItem().setGraphic(mTextField);
         }
 
         @Override
@@ -288,9 +306,10 @@ public class Main extends Application {
      * 文件信息的Model，主要保存文件名和文件大小
      */
     private final class FileTreeItemModel {
+
         private String mOriginalName;
         private String mName;
-        private int mLength;
+        private int mLength;// 0 文件夹
 
         public FileTreeItemModel(String name, int length) {
             mName = name;
