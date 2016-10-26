@@ -1,6 +1,7 @@
 
 package me.zzhen.bt;
 
+import com.sun.xml.internal.org.jvnet.mimepull.DecodingException;
 import javafx.application.Application;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
@@ -101,19 +102,23 @@ public class Main extends Application {
             }
             try {
                 mTorrent = TorrentFile.fromFile(file);
-            } catch (IOException e) {
+            } catch (IOException | DecoderExecption e) {
                 logger.error(e.getMessage());
                 e.printStackTrace();
+                mErrorDialog.setContentText(e.getMessage());
+                mErrorDialog.showAndWait();
             }
             saveFile.setDisable(false);
             TreeNode<FileTreeItemModel> fileTree = createFileNodeTree();
-            mRootItem.setValue(new FileTreeItemModel(fileTree.getValue().getName(), fileTree.getValue().getLength()));
+            //将原来的节点清空
+            mRootItem.getChildren().clear();
             getFileTree(mRootItem, fileTree);
             mInitLabel.setVisible(false);
             mFileTree.setVisible(true);
             //TODO 使用更自然的方式
             mRootItem = mRootItem.getChildren().get(0);
             mFileTree.setRoot(mRootItem);
+            mFileTree.refresh();
         });
 
         //TODO 异步？
@@ -132,18 +137,18 @@ public class Main extends Application {
                         getFileTreeItem(infoRoot, item, path);
                     });
                     mTorrent.setInfoFiles(infoRoot);
+
                     OutputStream out = new FileOutputStream(file);
                     out.write(mTorrent.encode());
                     out.flush();
                     out.close();
-
                     mMessageDialog.setContentText("保存文件" + file.getName() + "成功");
                     mMessageDialog.showAndWait();
                 }
             } catch (IOException e) {
                 logger.error(e.getMessage());
                 mErrorDialog.setContentText(e.getMessage());
-                mErrorDialog.showAndWait().filter(response -> response == ButtonType.OK).ifPresent(response -> System.out.println("tt"));
+                mErrorDialog.showAndWait();
                 e.printStackTrace();
             }
         });
@@ -195,7 +200,6 @@ public class Main extends Application {
         rootItem.getChildren().add(treeItem);
     }
 
-
     /**
      * 将BT扁平的文件结构重新组装成树结构
      *
@@ -236,7 +240,6 @@ public class Main extends Application {
         private Button mCancelButton;
         private Button mRandomButton;
         private TextField mTextField;
-
 
         //TODO 增加 随机文件夹以及全部文件随机命名
         public FileTreeItemCell() {
@@ -355,7 +358,6 @@ public class Main extends Application {
             mLength = length;
         }
 
-
         @Override
         public int hashCode() {
             return mName.hashCode() + Objects.hashCode(mLength);
@@ -376,8 +378,8 @@ public class Main extends Application {
         public String toString() {
             return mName + ":" + mLength;
         }
-    }
 
+    }
 
     public static void main(String[] args) {
         launch(args);

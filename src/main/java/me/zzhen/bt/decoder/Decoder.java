@@ -85,13 +85,11 @@ public class Decoder {
             }
         }
         long length = Long.parseLong(len.toString().trim());
-        int i = 1;
-        while ((c = mInput.read()) != -1 && i < length) {
+        long i = 0;
+        while (i < length && (c = mInput.read()) != -1) {
             baos.write((byte) c);
             i++;
         }
-        baos.write((byte) c);
-        i++;
         if (i < length) {
             throw new DecoderExecption("illegal string node , except " + length + " char but found " + i);
         }
@@ -206,10 +204,12 @@ public class Decoder {
 
     public static void main(String[] args) {
         try {
-            Decoder decoder = new Decoder("D:/Chicago.Med.torrent");
+//            Decoder decoder = new Decoder("D:/Chicago.Med.torrent");
+            Decoder decoder = new Decoder("d4:test0:e".getBytes());
             decoder.parse();
             List<Node> value = decoder.getValue();
-            System.out.println(value.get(0) instanceof DictionaryNode);
+            value.forEach(item -> System.out.println(item.decode()));
+
         } catch (IOException e) {
             e.printStackTrace();
         }

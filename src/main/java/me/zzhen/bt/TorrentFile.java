@@ -50,7 +50,7 @@ public class TorrentFile {
 
     public static List<Node> mValues;
 
-    public static TorrentFile fromString(String bytes) throws IOException {
+    public static TorrentFile fromString(String bytes) throws IOException, DecoderExecption {
         Decoder decoder = new Decoder(bytes.getBytes());
         TorrentFile ret = new TorrentFile();
         ret.setFileName("String");
@@ -59,7 +59,7 @@ public class TorrentFile {
         return ret;
     }
 
-    public static TorrentFile fromFile(File file) throws IOException {
+    public static TorrentFile fromFile(File file) throws IOException,DecoderExecption {
         Decoder decoder = new Decoder(file);
         TorrentFile ret = new TorrentFile();
         ret.setFileName(file.getName());
