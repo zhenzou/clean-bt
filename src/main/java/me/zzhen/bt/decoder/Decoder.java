@@ -22,12 +22,12 @@ public class Decoder {
         mInput = new ByteArrayInputStream(input);
     }
 
-    public Decoder(File file) throws FileNotFoundException {
-        mInput = new BufferedInputStream(new FileInputStream(file));
+    public Decoder(String file) throws FileNotFoundException {
+        this(new FileInputStream(file));
     }
 
-    public Decoder(String file) throws FileNotFoundException {
-        mInput = new BufferedInputStream(new FileInputStream(file));
+    public Decoder(File file) throws FileNotFoundException {
+        this(new FileInputStream(file));
     }
 
     public Decoder(InputStream input) throws FileNotFoundException {
@@ -36,6 +36,7 @@ public class Decoder {
 
     /**
      * TODO 整理代码
+     *
      * @throws IOException
      */
     public void parse() throws IOException {
@@ -63,6 +64,7 @@ public class Decoder {
             }
             mValues.add(node);
         }
+        mInput.close();
     }
 
     /**
@@ -82,7 +84,7 @@ public class Decoder {
                 throw new DecoderExecption("expect a digital but found " + c);
             }
         }
-        int length = Integer.parseInt(len.toString().trim());
+        long length = Long.parseLong(len.toString().trim());
         int i = 1;
         while ((c = mInput.read()) != -1 && i < length) {
             baos.write((byte) c);
@@ -204,19 +206,10 @@ public class Decoder {
 
     public static void main(String[] args) {
         try {
-            Decoder decoder = new Decoder("D:/Test.torrent");
-            decoder.setHandler(new EventHandler() {
-                @Override
-                public Node handleDictionaryNode(String key, Node value) {
-                    System.out.println("key--+" + key);
-                    System.out.println("value--" + value);
-                    return value;
-                }
-            });
+            Decoder decoder = new Decoder("D:/Chicago.Med.torrent");
             decoder.parse();
-
             List<Node> value = decoder.getValue();
-            value.forEach(System.out::println);
+            System.out.println(value.get(0) instanceof DictionaryNode);
         } catch (IOException e) {
             e.printStackTrace();
         }

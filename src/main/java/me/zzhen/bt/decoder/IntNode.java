@@ -22,7 +22,7 @@ public class IntNode implements Node {
         mValue = value;
     }
 
-    public IntNode(int value) {
+    public IntNode(long value) {
         mValue = value + "";
     }
 

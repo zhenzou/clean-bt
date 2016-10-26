@@ -181,8 +181,8 @@ public class TorrentFile {
         mInfo = info;
     }
 
-    public int getInfoPieceLength() {
-        return Integer.parseInt(String.valueOf(mInfo.getNode(PIECE_LENGTH)));
+    public long getInfoPieceLength() {
+        return Long.parseLong(String.valueOf(mInfo.getNode(PIECE_LENGTH)));
     }
 
     public void setInfoPieceLength(int len) {
@@ -251,8 +251,8 @@ public class TorrentFile {
         mInfo.addNode(FILES, node);
     }
 
-    public int getInfoLength() {
-        return Integer.parseInt(mInfo.getNode(LENGTH).decode());
+    public long getInfoLength() {
+        return Long.parseLong(mInfo.getNode(LENGTH).decode());
     }
 
     public String getInfoFilesPath() {

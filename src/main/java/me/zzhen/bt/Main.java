@@ -19,6 +19,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -217,7 +218,7 @@ public class Main extends Application {
     private void addFileToTree(TreeNode<FileTreeItemModel> treeRoot, DictionaryNode file) {
         int index = 0;
         ListNode path = (ListNode) file.getNode("path");
-        int length = Integer.parseInt(file.getNode("length").decode());
+        long length = Long.parseLong(file.getNode("length").decode());
         int size = path.size();
         while (index < size) {
             treeRoot = treeRoot.getOrAdd(new FileTreeItemModel(path.get(index).decode(), (index == size - 1) ? length : 0));
@@ -319,16 +320,16 @@ public class Main extends Application {
 
         private String mOriginalName;
         private String mName;
-        private int mLength;// 0 文件夹
+        private long mLength;// 0 文件夹
 
-        public FileTreeItemModel(String name, int length) {
+        public FileTreeItemModel(String name, long length) {
             mName = name;
             mLength = length;
         }
 
         public FileTreeItemModel(String name, String length) {
             mName = name;
-            mLength = Integer.parseInt(length);
+            mLength = Long.parseLong(length);
         }
 
         public String getName() {
@@ -346,7 +347,7 @@ public class Main extends Application {
             return mOriginalName;
         }
 
-        public int getLength() {
+        public long getLength() {
             return mLength;
         }
 
@@ -357,7 +358,7 @@ public class Main extends Application {
 
         @Override
         public int hashCode() {
-            return mName.hashCode() + mLength;
+            return mName.hashCode() + Objects.hashCode(mLength);
         }
 
         @Override
