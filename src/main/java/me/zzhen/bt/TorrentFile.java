@@ -4,6 +4,7 @@ import me.zzhen.bt.decoder.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
@@ -59,7 +60,7 @@ public class TorrentFile {
         return ret;
     }
 
-    public static TorrentFile fromFile(File file) throws IOException,DecoderExecption {
+    public static TorrentFile fromFile(File file) throws IOException, DecoderExecption {
         Decoder decoder = new Decoder(file);
         TorrentFile ret = new TorrentFile();
         ret.setFileName(file.getName());
@@ -169,8 +170,8 @@ public class TorrentFile {
         mCreatedBy = created;
     }
 
-    public Map<String, Node> getInfo() {
-        return mInfo.getValue();
+    public Node getInfo() {
+        return mInfo;
     }
 
     public void setInfo(Map<String, Node> info) {
@@ -261,6 +262,20 @@ public class TorrentFile {
 
     public void setInfoFilesPath(String value) {
         mInfo.addNode(PATH, new StringNode(value.getBytes()));
+    }
+
+    public String getInfoHash() {
+        byte[] encode = new byte[0];
+        try {
+            encode = getInfo().encode();
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        return Utils.toHex(Utils.SHA_1(encode));
+    }
+
+    public String getMagnet() {
+        return "magnet:?xt=urn:btih:" + getInfoHash();
     }
 
     @Override
@@ -385,9 +400,10 @@ public class TorrentFile {
 
     public static void main(String[] args) {
         try {
-            TorrentFile torrentFile = TorrentFile.fromString("D:/Chicago.Med.torrent");
+            TorrentFile torrentFile = TorrentFile.fromFile(new File("D:/Chicago.Med.torrent"));
             System.out.println(torrentFile.getAnnounce());
             System.out.println(torrentFile.getInfoFiles());
+            System.out.println(torrentFile.getMagnet());
         } catch (IOException e) {
             e.printStackTrace();
         }
