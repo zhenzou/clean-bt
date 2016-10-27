@@ -28,6 +28,9 @@ public class DictionaryNode implements Node {
     public DictionaryNode() {
     }
 
+    public DictionaryNode(Map<String, Node> value) {
+        mValue = value;
+    }
 
     public Map<String, Node> getValue() {
         return mValue;
