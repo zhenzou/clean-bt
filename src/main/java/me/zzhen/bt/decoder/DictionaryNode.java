@@ -1,11 +1,10 @@
 package me.zzhen.bt.decoder;
 
-import javax.swing.*;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.lang.invoke.VarHandle;
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * /**
@@ -29,9 +28,6 @@ public class DictionaryNode implements Node {
     public DictionaryNode() {
     }
 
-    public DictionaryNode(Map<String, Node> map) {
-        mValue = map;
-    }
 
     public Map<String, Node> getValue() {
         return mValue;
