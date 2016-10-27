@@ -1,7 +1,6 @@
 
 package me.zzhen.bt;
 
-import com.sun.xml.internal.org.jvnet.mimepull.DecodingException;
 import javafx.application.Application;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
@@ -179,7 +178,6 @@ public class Main extends Application {
             children.forEach(node -> getFileTreeItem(infoRoot, node, path));
             path.removeNode(path.size() - 1);//回退
         }
-
     }
 
     /**

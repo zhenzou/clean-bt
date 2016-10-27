@@ -54,17 +54,14 @@ public class DictionaryNode implements Node {
     public byte[] encode() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         baos.write((byte) DIC_START);
-        Object[] keys = mValue.keySet().toArray();
-        Arrays.sort(keys);
-        for (int i = 0; i < keys.length; i++) {
+        mValue.entrySet().stream().sorted(Comparator.comparing(Map.Entry::getKey)).forEach(entry -> {
             try {
-                String key = keys[i].toString();
-                baos.write(new StringNode(key.getBytes()).encode());
-                baos.write(mValue.get(key).encode());
+                baos.write(new StringNode(entry.getKey().getBytes()).encode());
+                baos.write(entry.getValue().encode());
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        }
+        });
         baos.write((byte) DIC_END);
         return baos.toByteArray();
     }
@@ -79,6 +76,4 @@ public class DictionaryNode implements Node {
         return mValue.toString();
 //        return new Gson().toJson(mValue.toString());
     }
-
-
 }
