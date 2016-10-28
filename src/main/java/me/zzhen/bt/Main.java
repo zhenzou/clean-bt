@@ -1,6 +1,7 @@
 
 package me.zzhen.bt;
 
+import com.sun.xml.internal.xsom.impl.WildcardImpl;
 import javafx.application.Application;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
@@ -363,13 +364,10 @@ public class Main extends Application {
 
         @Override
         public boolean equals(Object obj) {
-            if (obj instanceof FileTreeItemModel) {
-                FileTreeItemModel other = (FileTreeItemModel) obj;
-                if (mName.equals(other.mName) && mLength == other.mLength) {
-                    return true;
-                }
-            }
-            return false;
+            if (this == obj) return true;
+            if (obj == null || getClass() != obj.getClass()) return false;
+            FileTreeItemModel other = (FileTreeItemModel) obj;
+            return mName.equals(other.mName) && mLength == other.mLength;
         }
 
         @Override

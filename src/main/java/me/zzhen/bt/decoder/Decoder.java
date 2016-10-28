@@ -19,7 +19,7 @@ public class Decoder {
     private List<Node> mValues = new ArrayList<>();
 
     public Decoder(byte[] input) {
-        mInput = new ByteArrayInputStream(input);
+        this(new ByteArrayInputStream(input));
     }
 
     public Decoder(String file) throws FileNotFoundException {
@@ -30,44 +30,59 @@ public class Decoder {
         this(new FileInputStream(file));
     }
 
-    public Decoder(InputStream input) throws FileNotFoundException {
+    public Decoder(InputStream input) {
         mInput = new BufferedInputStream(input);
     }
 
     /**
-     * TODO 整理代码
+     * 开始解析整个输入文件
      *
      * @throws IOException
      */
     public void parse() throws IOException {
         int c;
         while ((c = mInput.read()) != -1) {
-            Node node = null;
             char cur = (char) c;
-            switch (c) {
-                case IntNode.INT_START:
-                    node = parseInt();
-                    break;
-                case ListNode.LIST_START:
-                    node = parseList();
-                    break;
-                case DictionaryNode.DIC_START:
-                    node = parseDic();
-                    break;
-                default:
-                    if (Character.isDigit(c)) {
-                        node = parseString(c);
-                    } else {
-                        throw new DecoderExecption("not a legal char");
-                    }
-                    break;
-            }
+            Node node = parseNext(cur);
             mValues.add(node);
         }
         mInput.close();
     }
 
     /**
+     * 解析下一个Node
+     *
+     * @param c 当前输入的字符 应该是 i,d,l或者数字
+     * @return 当前节点的Node结构
+     * @throws IOException
+     */
+    private Node parseNext(char c) throws IOException {
+        Node node = null;
+        switch (c) {
+            case IntNode.INT_START:
+                node = parseInt();
+                break;
+            case ListNode.LIST_START:
+                node = parseList();
+                break;
+            case DictionaryNode.DIC_START:
+                node = parseDic();
+                break;
+            default:
+                if (Character.isDigit(c)) {
+                    node = parseString(c);
+                } else {
+                    throw new DecoderExecption("not a legal char");
+                }
+                break;
+        }
+        return node;
+    }
+
+
+    /**
+     * 解析字符串节点，cur应该为数字
+     *
      * @param cur
      * @return
      * @throws IOException
@@ -102,6 +117,11 @@ public class Decoder {
         return node;
     }
 
+    /**
+     * 解析字典结构，字典的的key值，应该是字符串类型
+     * @return
+     * @throws IOException
+     */
     private Node parseDic() throws IOException {
         int c;
         String key = "";
@@ -119,24 +139,7 @@ public class Decoder {
                     throw new DecoderExecption("key of dic must be string,found digital");
                 }
             } else {
-                switch (cur) {
-                    case IntNode.INT_START:
-                        node = parseInt();
-                        break;
-                    case ListNode.LIST_START:
-                        node = parseList();
-                        break;
-                    case DictionaryNode.DIC_START:
-                        node = parseDic();
-                        break;
-                    default:
-                        if (Character.isDigit(c)) {
-                            node = parseString(c);
-                        } else {
-                            throw new DecoderExecption("not a legal char");
-                        }
-                        break;
-                }
+                node = parseNext(cur);
                 dic.addNode(key, node);
                 inKey = true;
                 if (mHandler != null) {
@@ -151,26 +154,8 @@ public class Decoder {
         ListNode list = new ListNode();
         int c;
         while ((c = mInput.read()) != -1 && (char) c != ListNode.LIST_END) {
-            Node node = null;
             char cc = (char) c;
-            switch (cc) {
-                case IntNode.INT_START:
-                    node = parseInt();
-                    break;
-                case ListNode.LIST_START:
-                    node = parseList();
-                    break;
-                case DictionaryNode.DIC_START:
-                    node = parseDic();
-                    break;
-                default:
-                    if (Character.isDigit(c)) {
-                        node = parseString(c);
-                    } else {
-                        throw new DecoderExecption("not a legal char");
-                    }
-                    break;
-            }
+            Node node = parseNext(cc);
             list.addNode(node);
         }
         return list;

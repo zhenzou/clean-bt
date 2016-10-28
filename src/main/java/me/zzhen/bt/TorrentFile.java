@@ -4,6 +4,7 @@ import me.zzhen.bt.decoder.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.time.Instant;
 import java.util.Date;
@@ -23,29 +24,29 @@ import java.util.stream.Collectors;
 public class TorrentFile {
 
     //公共字段
-    public static final String ANNOUNCE = "announce";//必选, tracker 服务器的地址
-    public static final String ANNOUNCE_LIST = "announce-list";//list, 可选, 可选的 tracker 服务器地址
-    public static final String CREATION_DATE = "creation date";//必选, 文件创建时间
-    public static final String COMMENT = "comment";//可选, bt 文件注释
-    public static final String CREATED_BY = "created by";//可选， 文件创建者。
-    public static final String ENCODING = "encoding";//文件编码
+    public static final String ANNOUNCE = "announce";               //必选, tracker 服务器的地址
+    public static final String ANNOUNCE_LIST = "announce-list";     //list, 可选, 可选的 tracker 服务器地址
+    public static final String CREATION_DATE = "creation date";     //必选, 文件创建时间
+    public static final String COMMENT = "comment";                 //可选, bt 文件注释
+    public static final String CREATED_BY = "created by";           //可选， 文件创建者。
+    public static final String ENCODING = "encoding";               //文件编码
     //mInfo
-    public static final String INFO = "info";//必选, 每一数据块的长度
-    public static final String PIECE_LENGTH = "piece length";//必选, 每一数据块的长度
-    public static final String PIECES = "pieces";//必选, 所有数据块的 SHA1 校验值
-    public static final String PUBLISHER = "publisher";//可选, 发布者
-    public static final String PUBLISHER_UTF8 = "publisher.utf-8";//可选, 发布者的 UTF-8 编码
-    public static final String PUBLISHER_URL = "publisher-url";//可选, 发布者的 URL
+    public static final String INFO = "info";                       //必选, 每一数据块的长度
+    public static final String PIECE_LENGTH = "piece length";       //必选, 每一数据块的长度
+    public static final String PIECES = "pieces";                   //必选, 所有数据块的 SHA1 校验值
+    public static final String PUBLISHER = "publisher";             //可选, 发布者
+    public static final String PUBLISHER_UTF8 = "publisher.utf-8";  //可选, 发布者的 UTF-8 编码
+    public static final String PUBLISHER_URL = "publisher-url";     //可选, 发布者的 URL
     public static final String PUBLISHER_URL_UTF8 = "publisher-url.utf-8";//可选, 发布者的 URL 的 UTF-8 编码
     //单文件
-    public static final String NAME = "name";//必选, 推荐的文件名称  多文件-必选, 推荐的文件夹名称
-    public static final String NAME_UTF8 = "name.utf8";//可选, 推荐的文件名称的 UTF-8 编码
-    public static final String LENGTH = "length";//必选， 文件的长度单位是字节
+    public static final String NAME = "name";                       //必选, 推荐的文件名称  多文件-必选, 推荐的文件夹名称
+    public static final String NAME_UTF8 = "name.utf8";             //可选, 推荐的文件名称的 UTF-8 编码
+    public static final String LENGTH = "length";                   //必选， 文件的长度单位是字节
     //多文件
-    public static final String FILES = "files";//必选, 文件列表，每个文件列表下面是包括每一个文件的信息，文件信息是个字典。
-    public static final String PATH = "path";//必选， 文件名称，包含文件夹在内
+    public static final String FILES = "files";                     //必选, 文件列表，每个文件列表下面是包括每一个文件的信息，文件信息是个字典。
+    public static final String PATH = "path";                       //必选， 文件名称，包含文件夹在内
     public static final String PATH_UTF8 = "path.utf8";
-    public static final String FILEHASH = "filehash";//可选， 文件 hash。
+    public static final String FILEHASH = "filehash";               //可选， 文件 hash。
     public static final String ED2K = "ed2k";
 
 
@@ -53,6 +54,14 @@ public class TorrentFile {
 
     public static TorrentFile fromString(String bytes) throws IOException, DecoderExecption {
         Decoder decoder = new Decoder(bytes.getBytes());
+        TorrentFile ret = new TorrentFile();
+        ret.setFileName("String");
+        decoder.setHandler(new TorrentFileHandler(ret));
+        decoder.parse();
+        return ret;
+    }
+    public static TorrentFile fromStream(InputStream input) throws IOException, DecoderExecption {
+        Decoder decoder = new Decoder(input);
         TorrentFile ret = new TorrentFile();
         ret.setFileName("String");
         decoder.setHandler(new TorrentFileHandler(ret));
@@ -79,6 +88,9 @@ public class TorrentFile {
     private StringNode mEncoding;
     private DictionaryNode mInfo;
 
+    private TorrentFile(){
+
+    }
 
     public String getFileName() {
         return mFileName;
@@ -401,8 +413,6 @@ public class TorrentFile {
     public static void main(String[] args) {
         try {
             TorrentFile torrentFile = TorrentFile.fromFile(new File("D:/Chicago.Med.torrent"));
-            System.out.println(torrentFile.getAnnounce());
-            System.out.println(torrentFile.getInfoFiles());
             System.out.println(torrentFile.getMagnet());
         } catch (IOException e) {
             e.printStackTrace();

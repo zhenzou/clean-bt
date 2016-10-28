@@ -24,7 +24,7 @@ public class Utils {
      * @return 没有扩展名则返回全部
      */
     public static String getExtName(String file) {
-        return file.substring(file.lastIndexOf(".") + 1);
+        return file.substring(file.lastIndexOf('.') + 1);
     }
 
     public static byte[] SHA_1(byte[] input) {
@@ -41,12 +41,6 @@ public class Utils {
 
     public static String toHex(byte[] input) {
         StringBuilder sb = new StringBuilder();
-//        for (byte b : input) {
-//            int i = b & 0xFF;
-//            String s = Integer.toHexString(i).toUpperCase();
-//            if (s.length() == 1) s = 0 + s;
-//            sb.append(s);
-//        }
         for (byte b : input) {
             int i = (b >> 4) & 0x0f;
             if (i > 9) {
