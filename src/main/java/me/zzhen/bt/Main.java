@@ -1,7 +1,6 @@
 
 package me.zzhen.bt;
 
-import com.sun.xml.internal.xsom.impl.WildcardImpl;
 import javafx.application.Application;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
@@ -19,6 +18,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -60,7 +60,7 @@ public class Main extends Application {
         initView();
         initMenu();
         Scene scene = new Scene(mRoot, Config.WINDOW_WIDTH, Config.WINDOW_HEIGHT);
-        primaryStage.setResizable(false);
+        primaryStage.setResizable(true);
         primaryStage.setTitle(Config.APP_NAME);
         primaryStage.setScene(scene);
         primaryStage.show();
@@ -81,18 +81,16 @@ public class Main extends Application {
         mTop.getChildren().add(mMenu);
         mErrorDialog.setTitle("错误");
         mMessageDialog.setTitle("提示");
-
     }
 
     private void initMenu() {
         Menu fileMenu = new Menu(Config.MENU_FILE);
         MenuItem openFile = new MenuItem(Config.MENU_FILE_OPEN);
         MenuItem saveFile = new MenuItem(Config.MENU_FILE_SAVE);
-        fileMenu.getItems().add(openFile);
-        fileMenu.getItems().add(saveFile);
+        fileMenu.getItems().addAll(openFile, saveFile);
         saveFile.setDisable(true);
-        mMenu.getMenus().add(fileMenu);
 
+        mMenu.getMenus().add(fileMenu);
         openFile.setOnAction(event -> {
             chooser.setTitle("选择文件");
             File file = chooser.showOpenDialog(mPrimaryStage);
@@ -170,7 +168,7 @@ public class Main extends Application {
             DictionaryNode dic = new DictionaryNode();
             StringNode[] nodes = new StringNode[size];
             System.arraycopy(path.getValue().toArray(), 0, nodes, 0, size);
-            dic.addNode("path", new ListNode(List.of(nodes)));
+            dic.addNode("path", new ListNode(Arrays.asList(nodes)));
             dic.addNode("length", new IntNode(item.getValue().getLength()));
             infoRoot.addNode(dic);
 
@@ -234,11 +232,8 @@ public class Main extends Application {
      */
     private final class FileTreeItemCell extends TreeCell<FileTreeItemModel> {
 
-        private HBox mHBox;
-        private Button mOkButton;
-        private Button mCancelButton;
-        private Button mRandomButton;
-        private TextField mTextField;
+        private EditorViewHolder editorViewHolder = EditorViewHolder.EDITOR_VIEW_HOLDER;
+        private boolean isEdited = false;
 
         //TODO 增加 随机文件夹以及全部文件随机命名
         public FileTreeItemCell() {
@@ -250,32 +245,10 @@ public class Main extends Application {
             if (getTreeItem() == mRootItem) {
                 return;
             }
-            if (mHBox == null) {
-                mHBox = new HBox();
-                mOkButton = new Button("确定");
-                mCancelButton = new Button("取消");
-                mRandomButton = new Button("随机");
-                mTextField = new TextField(getString());
-                mHBox.getChildren().addAll(mTextField, mRandomButton, mOkButton, mCancelButton);
+            editorViewHolder.setCell(this);
+            setGraphic(editorViewHolder);
+            isEdited = true;
 
-                mOkButton.setOnAction(event -> commitEdit(getItem()));
-
-                mCancelButton.setOnAction(event -> {
-                    String text = getItem().getOriginalName();
-                    if (text != null) {
-                        getItem().setName(text);
-                    }
-                    mTextField.setText(text);
-                    commitEdit(getItem());
-                });
-
-                mRandomButton.setOnAction(event -> {
-                    String extName = Utils.getExtName(getItem().getName());
-                    mTextField.setText(Utils.randomDigitalName() + "." + extName);
-                });
-
-            }
-            setGraphic(mHBox);
         }
 
         @Override
@@ -283,6 +256,7 @@ public class Main extends Application {
             super.cancelEdit();
             setText(getItem().getOriginalName());
             setGraphic(getTreeItem().getGraphic());
+            isEdited = false;
         }
 
         @Override
@@ -293,21 +267,24 @@ public class Main extends Application {
                 setGraphic(null);
             } else {
                 if (isEditing()) {
-                    if (mTextField != null) {
-                        mTextField.setText(item.getName());
-                    }
+                    editorViewHolder.editor.setText(item.getName());
                     setText(null);
-                    setGraphic(getTreeItem().getGraphic());
                 } else {
-                    if (mTextField != null) {
-                        setText(mTextField.getText());
-                        item.setName(mTextField.getText());
+                    if (isEdited) {
+                        setText(editorViewHolder.editor.getText());
+                        item.setName(editorViewHolder.editor.getText());
                     } else {
                         setText(item.getName());
                     }
-                    setGraphic(getTreeItem().getGraphic());
                 }
+                setGraphic(getTreeItem().getGraphic());
             }
+        }
+
+        @Override
+        public void commitEdit(FileTreeItemModel newValue) {
+            super.commitEdit(newValue);
+            isEdited = false;
         }
 
         private String getString() {
@@ -320,46 +297,46 @@ public class Main extends Application {
      */
     private final class FileTreeItemModel {
 
-        private String mOriginalName;
-        private String mName;
-        private long mLength;// 0 文件夹
+        private String originalName;
+        private String name;
+        private long leagth;// 0 文件夹
 
         public FileTreeItemModel(String name, long length) {
-            mName = name;
-            mLength = length;
+            this.name = name;
+            leagth = length;
         }
 
         public FileTreeItemModel(String name, String length) {
-            mName = name;
-            mLength = Long.parseLong(length);
+            this.name = name;
+            leagth = Long.parseLong(length);
         }
 
         public String getName() {
-            return mName;
+            return name;
         }
 
         public void setName(String name) {
-            if (mOriginalName == null) {
-                mOriginalName = mName;
+            if (originalName == null) {
+                originalName = this.name;
             }
-            mName = name;
+            this.name = name;
         }
 
         public String getOriginalName() {
-            return mOriginalName;
+            return originalName;
         }
 
         public long getLength() {
-            return mLength;
+            return leagth;
         }
 
         public void setLength(int length) {
-            mLength = length;
+            leagth = length;
         }
 
         @Override
         public int hashCode() {
-            return mName.hashCode() + Objects.hashCode(mLength);
+            return name.hashCode() + Objects.hashCode(leagth);
         }
 
         @Override
@@ -367,15 +344,57 @@ public class Main extends Application {
             if (this == obj) return true;
             if (obj == null || getClass() != obj.getClass()) return false;
             FileTreeItemModel other = (FileTreeItemModel) obj;
-            return mName.equals(other.mName) && mLength == other.mLength;
+            return name.equals(other.name) && leagth == other.leagth;
         }
 
         @Override
         public String toString() {
-            return mName + ":" + mLength;
+            return name + ":" + leagth;
         }
 
     }
+
+
+    static class EditorViewHolder extends HBox {
+        static final EditorViewHolder EDITOR_VIEW_HOLDER = new EditorViewHolder();
+
+        Button okBtn;
+        Button cancelBtn;
+        Button random;
+        TextField editor;
+
+        FileTreeItemCell cell;
+
+        public void setCell(FileTreeItemCell cell) {
+            this.cell = cell;
+            editor.setText(cell.getItem().getName());
+        }
+
+        EditorViewHolder() {
+            okBtn = new Button("确定");
+            cancelBtn = new Button("取消");
+            random = new Button("随机");
+            editor = new TextField();
+            getChildren().addAll(editor, random, okBtn, cancelBtn);
+
+            okBtn.setOnAction(event -> cell.commitEdit(cell.getItem()));
+
+            cancelBtn.setOnAction(event -> {
+                String text = cell.getItem().getOriginalName();
+                if (text != null) {
+                    cell.getItem().setName(text);
+                }
+                editor.setText(text);
+                cell.commitEdit(cell.getItem());
+            });
+
+            random.setOnAction(event -> {
+                String extName = Utils.getExtName(cell.getItem().getName());
+                editor.setText(Utils.randomDigitalName() + "." + extName);
+            });
+        }
+    }
+
 
     public static void main(String[] args) {
         launch(args);

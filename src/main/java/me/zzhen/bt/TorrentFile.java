@@ -412,7 +412,7 @@ public class TorrentFile {
 
     public static void main(String[] args) {
         try {
-            TorrentFile torrentFile = TorrentFile.fromFile(new File("D:/Chicago.Med.torrent"));
+            TorrentFile torrentFile = TorrentFile.fromFile(new File("D:/The.Big.Bang.Theory.torrent"));
             System.out.println(torrentFile.getMagnet());
         } catch (IOException e) {
             e.printStackTrace();

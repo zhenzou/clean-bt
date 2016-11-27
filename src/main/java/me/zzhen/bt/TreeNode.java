@@ -15,10 +15,10 @@ public class TreeNode<T> {
 
     private List<TreeNode<T>> mChildren = new ArrayList<>();
 
-    private T mValue;
+    private T value;
 
     public TreeNode(T value) {
-        mValue = value;
+        this.value = value;
     }
 
     public void add(T t) {
@@ -56,11 +56,11 @@ public class TreeNode<T> {
     }
 
     public T getValue() {
-        return mValue;
+        return value;
     }
 
     public void setValue(T value) {
-        mValue = value;
+        this.value = value;
     }
 
 
