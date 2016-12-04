@@ -304,6 +304,7 @@ public class Main extends Application {
         public FileTreeItemModel(String name, long length) {
             this.name = name;
             leagth = length;
+            originalName = name;
         }
 
         public FileTreeItemModel(String name, String length) {

@@ -16,31 +16,31 @@ public class IntNode implements Node {
     static final char INT_START = 'i';
     static final char INT_END = 'e';
 
-    private String mValue;
+    private String value;
 
     public IntNode(String value) {
-        mValue = value;
+        this.value = value;
     }
 
     public IntNode(long value) {
-        mValue = value + "";
+        this.value = value + "";
     }
 
 
     @Override
     public byte[] encode() throws UnsupportedEncodingException {
-//        return new StringBuilder().append(INT_START).append(mValue).append(INT_END).toString().getBytes();
-        return new StringBuilder().append(INT_START).append(mValue).append(INT_END).toString().getBytes("UTF-8");
+//        return new StringBuilder().append(INT_START).append(value).append(INT_END).toString().getBytes();
+        return new StringBuilder().append(INT_START).append(value).append(INT_END).toString().getBytes("UTF-8");
     }
 
     @Override
     public String decode() {
-        return mValue;
+        return value;
     }
 
     @Override
     public String toString() {
-        return mValue;
+        return value;
     }
 
 }

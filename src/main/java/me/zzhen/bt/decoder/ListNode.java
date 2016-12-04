@@ -19,40 +19,40 @@ public class ListNode implements Node {
     static final char LIST_START = 'l';
     static final char LIST_END = 'e';
 
-    List<Node> mValue = new ArrayList<>();
+    List<Node> value = new ArrayList<>();
 
     public ListNode() {
 
     }
 
     public ListNode(List<Node> value) {
-        mValue = value;
+        this.value = value;
     }
 
     public List<Node> getValue() {
-        return mValue;
+        return value;
     }
 
     public void addNode(Node node) {
-        mValue.add(node);
+        value.add(node);
     }
 
     public Node removeNode(int index) {
-        return mValue.remove(index);
+        return value.remove(index);
     }
 
     public Node get(int index) {
-        return mValue.get(index);
+        return value.get(index);
     }
 
     public int size() {
-        return mValue.size();
+        return value.size();
     }
 
     @Override
     public String toString() {
-        return mValue.toString();//去掉Gson依赖
-//        return new Gson().toJson(mValue.toString());
+        return value.toString();//去掉Gson依赖
+//        return new Gson().toJson(value.toString());
     }
 
     @Override
@@ -60,7 +60,7 @@ public class ListNode implements Node {
         StringBuilder sb = new StringBuilder();
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         baos.write((byte) LIST_START);
-        mValue.forEach(node -> {
+        value.forEach(node -> {
             try {
                 baos.write(node.encode());
             } catch (IOException e) {
@@ -73,7 +73,7 @@ public class ListNode implements Node {
 
     @Override
     public String decode() {
-        return mValue.toString();
+        return value.toString();
     }
 
 }

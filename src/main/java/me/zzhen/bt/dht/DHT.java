@@ -8,23 +8,23 @@ package me.zzhen.bt.dht;
  * @author zzhen zzzhen1994@gmail.com
  */
 public class DHT {
-    private NodeKey mKey;
-    private RouteTable mRouteTable;
+    private NodeKey key;
+    private RouteTable routeTable;
 
 
     public NodeKey getKey() {
-        return mKey;
+        return key;
     }
 
     public void setKey(NodeKey key) {
-        mKey = key;
+        this.key = key;
     }
 
     public RouteTable getRouteTable() {
-        return mRouteTable;
+        return routeTable;
     }
 
     public void setRouteTable(RouteTable routeTable) {
-        mRouteTable = routeTable;
+        this.routeTable = routeTable;
     }
 }

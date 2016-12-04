@@ -16,7 +16,7 @@ public class StringNode implements Node {
 
     static final char STRING_VALUE_START = ':';
 
-    byte[] mValue;
+    byte[] value;
 
     /**
      * 不用处理编码问题
@@ -24,16 +24,16 @@ public class StringNode implements Node {
      * @param value
      */
     public StringNode(byte[] value) {
-        mValue = value;
+        this.value = value;
     }
 
     @Override
     public byte[] encode() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
-            baos.write(String.valueOf(mValue.length).getBytes());
+            baos.write(String.valueOf(value.length).getBytes());
             baos.write((byte) STRING_VALUE_START);
-            baos.write(mValue);
+            baos.write(value);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -42,12 +42,12 @@ public class StringNode implements Node {
 
     @Override
     public String decode() {
-        return new String(mValue);
+        return new String(value);
     }
 
     @Override
     public String toString() {
-        return new String(mValue);
+        return new String(value);
     }
 
 }

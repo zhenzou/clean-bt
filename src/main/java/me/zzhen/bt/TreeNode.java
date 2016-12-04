@@ -13,7 +13,7 @@ import java.util.Optional;
  */
 public class TreeNode<T> {
 
-    private List<TreeNode<T>> mChildren = new ArrayList<>();
+    private List<TreeNode<T>> children = new ArrayList<>();
 
     private T value;
 
@@ -22,11 +22,11 @@ public class TreeNode<T> {
     }
 
     public void add(T t) {
-        mChildren.add(new TreeNode<>(t));
+        children.add(new TreeNode<>(t));
     }
 
     public Optional<TreeNode<T>> get(T key) {
-        return mChildren.stream().filter(item -> item.getValue().equals(key)).findFirst();
+        return children.stream().filter(item -> item.getValue().equals(key)).findFirst();
     }
 
     public TreeNode<T> getOrAdd(T t) {
@@ -35,23 +35,23 @@ public class TreeNode<T> {
             return treeNode.get();
         } else {
             TreeNode<T> node = new TreeNode<>(t);
-            mChildren.add(node);
+            children.add(node);
             return node;
         }
     }
 
     public List<TreeNode<T>> getChildren() {
-        return mChildren;
+        return children;
     }
 
     public void setChildren(List<TreeNode<T>> children) {
-        mChildren = children;
+        this.children = children;
     }
 
     public TreeNode remove(T key) {
 
-        TreeNode<T> node = new TreeNode<T>(key);
-        mChildren.remove(node);
+        TreeNode<T> node = new TreeNode<>(key);
+        children.remove(node);
         return node;
     }
 

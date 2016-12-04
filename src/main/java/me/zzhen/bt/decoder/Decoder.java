@@ -14,9 +14,9 @@ import java.util.List;
  */
 public class Decoder {
 
-    private InputStream mInput;
-    private EventHandler mHandler;
-    private List<Node> mValues = new ArrayList<>();
+    private InputStream input;
+    private EventHandler handler;
+    private List<Node> nodes = new ArrayList<>();
 
     public Decoder(byte[] input) {
         this(new ByteArrayInputStream(input));
@@ -31,7 +31,7 @@ public class Decoder {
     }
 
     public Decoder(InputStream input) {
-        mInput = new BufferedInputStream(input);
+        this.input = new BufferedInputStream(input);
     }
 
     /**
@@ -41,12 +41,12 @@ public class Decoder {
      */
     public void parse() throws IOException {
         int c;
-        while ((c = mInput.read()) != -1) {
+        while ((c = input.read()) != -1) {
             char cur = (char) c;
             Node node = parseNext(cur);
-            mValues.add(node);
+            nodes.add(node);
         }
-        mInput.close();
+        input.close();
     }
 
     /**
@@ -92,7 +92,7 @@ public class Decoder {
         int c;
         StringBuilder len = new StringBuilder();
         len.append((char) cur);
-        while ((c = mInput.read()) != -1 && (char) c != StringNode.STRING_VALUE_START) {
+        while ((c = input.read()) != -1 && (char) c != StringNode.STRING_VALUE_START) {
             if (Character.isDigit(c)) {
                 len.append((char) c);
             } else {
@@ -101,7 +101,7 @@ public class Decoder {
         }
         long length = Long.parseLong(len.toString().trim());
         long i = 0;
-        while (i < length && (c = mInput.read()) != -1) {
+        while (i < length && (c = input.read()) != -1) {
             baos.write((byte) c);
             i++;
         }
@@ -111,8 +111,8 @@ public class Decoder {
 
         StringNode node = new StringNode(baos.toByteArray());
         //TODO 设计更好用的API 但是现在还是就是将这个东西做出来 能用吧
-        if (mHandler != null) {
-            mHandler.handleStringNode(node);
+        if (handler != null) {
+            handler.handleStringNode(node);
         }
         return node;
     }
@@ -127,7 +127,7 @@ public class Decoder {
         String key = "";
         DictionaryNode dic = new DictionaryNode();
         boolean inKey = true;
-        while ((c = mInput.read()) != -1 && (char) c != DictionaryNode.DIC_END) {
+        while ((c = input.read()) != -1 && (char) c != DictionaryNode.DIC_END) {
             Node node = null;
             char cur = (char) c;
             if (inKey) {
@@ -142,8 +142,8 @@ public class Decoder {
                 node = parseNext(cur);
                 dic.addNode(key, node);
                 inKey = true;
-                if (mHandler != null) {
-                    mHandler.handleDictionaryNode(key, node);
+                if (handler != null) {
+                    handler.handleDictionaryNode(key, node);
                 }
             }
         }
@@ -153,7 +153,7 @@ public class Decoder {
     private Node parseList() throws IOException {
         ListNode list = new ListNode();
         int c;
-        while ((c = mInput.read()) != -1 && (char) c != ListNode.LIST_END) {
+        while ((c = input.read()) != -1 && (char) c != ListNode.LIST_END) {
             char cc = (char) c;
             Node node = parseNext(cc);
             list.addNode(node);
@@ -164,7 +164,7 @@ public class Decoder {
     private Node parseInt() throws IOException {
         StringBuilder sb = new StringBuilder();
         int c = -1;
-        while ((c = mInput.read()) != -1 && c != IntNode.INT_END) {
+        while ((c = input.read()) != -1 && c != IntNode.INT_END) {
             char cc = (char) c;
             if (Character.isDigit(cc)) {
                 sb.append(cc);
@@ -176,15 +176,15 @@ public class Decoder {
     }
 
     public List<Node> getValue() {
-        return mValues;
+        return nodes;
     }
 
     public EventHandler getHandler() {
-        return mHandler;
+        return handler;
     }
 
     public void setHandler(EventHandler handler) {
-        mHandler = handler;
+        this.handler = handler;
     }
 
     public static void main(String[] args) {

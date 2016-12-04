@@ -30,7 +30,7 @@ public class TorrentFile {
     public static final String COMMENT = "comment";                 //可选, bt 文件注释
     public static final String CREATED_BY = "created by";           //可选， 文件创建者。
     public static final String ENCODING = "encoding";               //文件编码
-    //mInfo
+    //info
     public static final String INFO = "info";                       //必选, 每一数据块的长度
     public static final String PIECE_LENGTH = "piece length";       //必选, 每一数据块的长度
     public static final String PIECES = "pieces";                   //必选, 所有数据块的 SHA1 校验值
@@ -79,72 +79,72 @@ public class TorrentFile {
     }
 
 
-    private String mFileName;
-    private StringNode mAnnounce;
-    private ListNode mAnnounceList;
-    private IntNode mCreationDate;
-    private StringNode mComment;
-    private StringNode mCreatedBy;
-    private StringNode mEncoding;
-    private DictionaryNode mInfo;
+    private String fileName;
+    private StringNode announce;
+    private ListNode announces;
+    private IntNode creationData;
+    private StringNode comment;
+    private StringNode createdBy;
+    private StringNode encoding;
+    private DictionaryNode info;
 
     private TorrentFile(){
 
     }
 
     public String getFileName() {
-        return mFileName;
+        return fileName;
     }
 
     public void setFileName(String fileName) {
-        mFileName = fileName;
+        this.fileName = fileName;
     }
 
     public String getAnnounce() {
-        return mAnnounce.decode();
+        return announce.decode();
     }
 
     public void setAnnounce(String announce) {
-        mAnnounce = new StringNode(announce.getBytes());
+        this.announce = new StringNode(announce.getBytes());
     }
 
     public void setAnnounce(StringNode announce) {
-        mAnnounce = announce;
+        this.announce = announce;
     }
 
     public List<String> getAnnounceList() {
-        List<Node> nodes = mAnnounceList.getValue();
+        List<Node> nodes = announces.getValue();
         return nodes.stream().map(Node::decode).collect(Collectors.toList());
     }
 
     public void setAnnounceList(List<String> announceList) {
         List<Node> list = announceList.stream().map(str -> new StringNode(str.getBytes())).collect(Collectors.toList());
-        mAnnounceList = new ListNode(list);
+        announces = new ListNode(list);
     }
 
     public void setAnnounceList(ListNode announceList) {
 
-        mAnnounceList = announceList;
+        announces = announceList;
     }
 
     public String getEncoding() {
-        return mEncoding.decode();
+        return encoding.decode();
     }
 
     public void setEncoidng(String encoidng) {
-        mEncoding = new StringNode(encoidng.getBytes());
+        encoding = new StringNode(encoidng.getBytes());
     }
 
     public void setEncoidng(StringNode encoidng) {
-        mEncoding = encoidng;
+        encoding = encoidng;
     }
 
     public Date getCreationDate() {
-        String time = mCreationDate.decode();
+        String time = creationData.decode();
         if (time.length() > 10) {
-            return Date.from(Instant.ofEpochMilli(Long.parseLong(mCreationDate.decode())));
+            return Date.from(Instant.ofEpochMilli(Long.parseLong(creationData.decode())));
         } else {
-            return Date.from(Instant.ofEpochSecond(Long.parseLong(mCreationDate.decode())));
+            return Date.from(Instant.ofEpochSecond(Long.parseLong(creationData.decode())));
         }
     }
 
@@ -155,125 +155,125 @@ public class TorrentFile {
         } else {
             time = date.getTime();
         }
-        mCreationDate = new IntNode(String.valueOf(time));
+        creationData = new IntNode(String.valueOf(time));
     }
 
     public void setCreationData(Node date) {
-        mCreationDate = (IntNode) date;
+        creationData = (IntNode) date;
     }
 
     public String getComment() {
-        return mComment.decode();
+        return comment.decode();
     }
 
     public void setComment(String comment) {
-        mComment = new StringNode(comment.getBytes());
+        this.comment = new StringNode(comment.getBytes());
     }
 
     public void setComment(StringNode comment) {
-        mComment = comment;
+        this.comment = comment;
     }
 
     public String getCreatedBy() {
-        return mCreatedBy.decode();
+        return createdBy.decode();
     }
 
     public void setCreatedBy(StringNode created) {
-        mCreatedBy = created;
+        createdBy = created;
     }
 
     public Node getInfo() {
-        return mInfo;
+        return info;
     }
 
     public void setInfo(Map<String, Node> info) {
-        mInfo = new DictionaryNode(info);
+        this.info = new DictionaryNode(info);
     }
 
     public void setInfo(DictionaryNode info) {
-        mInfo = info;
+        this.info = info;
     }
 
     public long getInfoPieceLength() {
-        return Long.parseLong(String.valueOf(mInfo.getNode(PIECE_LENGTH)));
+        return Long.parseLong(String.valueOf(info.getNode(PIECE_LENGTH)));
     }
 
     public void setInfoPieceLength(int len) {
-        mInfo.addNode(PIECE_LENGTH, new IntNode(len + ""));
+        info.addNode(PIECE_LENGTH, new IntNode(len + ""));
     }
 
     public String getInfoPieces() {
-        return mInfo.getNode(PIECES).decode();
+        return info.getNode(PIECES).decode();
     }
 
     public void setInfoPieces(String value) {
-        mInfo.addNode(PIECES, new StringNode(value.getBytes()));
+        info.addNode(PIECES, new StringNode(value.getBytes()));
     }
 
     public String getInfoPublisher() {
-        return String.valueOf(mInfo.getNode(PUBLISHER));
+        return String.valueOf(info.getNode(PUBLISHER));
     }
 
     public void setInfoPublisher(String value) {
-        mInfo.addNode(PUBLISHER, new StringNode(value.getBytes()));
+        info.addNode(PUBLISHER, new StringNode(value.getBytes()));
     }
 
     public String getInfoPublisherUtf8() {
-        return String.valueOf(mInfo.getNode(PUBLISHER_UTF8));
+        return String.valueOf(info.getNode(PUBLISHER_UTF8));
     }
 
     public void setInfoPublisherUtf8(String value) {
-        mInfo.addNode(PUBLISHER_UTF8, new StringNode(value.getBytes()));
+        info.addNode(PUBLISHER_UTF8, new StringNode(value.getBytes()));
     }
 
     public String getInfoPublisherUrl() {
-        return String.valueOf(mInfo.getNode(PUBLISHER_URL));
+        return String.valueOf(info.getNode(PUBLISHER_URL));
     }
 
     public void setInfoPublisherUrl(String value) {
-        mInfo.addNode(PUBLISHER_URL, new StringNode(value.getBytes()));
+        info.addNode(PUBLISHER_URL, new StringNode(value.getBytes()));
     }
 
     public String getInfoPublisherUrlUtf8() {
-        return String.valueOf(mInfo.getNode(PUBLISHER_URL_UTF8));
+        return String.valueOf(info.getNode(PUBLISHER_URL_UTF8));
     }
 
     public void setInfoPublisherUrlUtf8(String value) {
-        mInfo.addNode(PUBLISHER_URL_UTF8, new StringNode(value.getBytes()));
+        info.addNode(PUBLISHER_URL_UTF8, new StringNode(value.getBytes()));
     }
 
     //目录
     public Node getInfoName() {
-        return mInfo.getNode(NAME);
+        return info.getNode(NAME);
     }
 
     public void settInfoName(Node name) {
-        mInfo.addNode(NAME, name);
+        info.addNode(NAME, name);
     }
 
     public Node getInfoNameUtf8() {
-        return mInfo.getNode(NAME);
+        return info.getNode(NAME);
     }
 
     //多个文件
     public Node getInfoFiles() {
-        return mInfo.getNode(FILES);
+        return info.getNode(FILES);
     }
 
     public void setInfoFiles(Node node) {
-        mInfo.addNode(FILES, node);
+        info.addNode(FILES, node);
     }
 
     public long getInfoLength() {
-        return Long.parseLong(mInfo.getNode(LENGTH).decode());
+        return Long.parseLong(info.getNode(LENGTH).decode());
     }
 
     public String getInfoFilesPath() {
-        return mInfo.getNode(PATH).decode();
+        return info.getNode(PATH).decode();
     }
 
     public void setInfoFilesPath(String value) {
-        mInfo.addNode(PATH, new StringNode(value.getBytes()));
+        info.addNode(PATH, new StringNode(value.getBytes()));
     }
 
     public String getInfoHash() {
@@ -293,26 +293,26 @@ public class TorrentFile {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        if (mAnnounce != null) {
-            sb.append(mAnnounce.toString());
+        if (announce != null) {
+            sb.append(announce.toString());
         }
-        if (mAnnounceList != null) {
-            sb.append(mAnnounceList.toString());
+        if (announces != null) {
+            sb.append(announces.toString());
         }
-        if (mEncoding != null) {
-            sb.append(mEncoding.toString());
+        if (encoding != null) {
+            sb.append(encoding.toString());
         }
-        if (mComment != null) {
-            sb.append(mComment.toString());
+        if (comment != null) {
+            sb.append(comment.toString());
         }
-        if (mCreationDate != null) {
-            sb.append(mCreationDate.toString());
+        if (creationData != null) {
+            sb.append(creationData.toString());
         }
-        if (mCreatedBy != null) {
-            sb.append(mCreatedBy.toString());
+        if (createdBy != null) {
+            sb.append(createdBy.toString());
         }
-        if (mInfo != null) {
-            sb.append(mInfo.toString());
+        if (info != null) {
+            sb.append(info.toString());
         }
         return sb.toString();
     }
@@ -320,26 +320,26 @@ public class TorrentFile {
     public byte[] encode() {
         DictionaryNode bt = new DictionaryNode();
 
-        if (mAnnounce != null) {
-            bt.addNode(ANNOUNCE, mAnnounce);
+        if (announce != null) {
+            bt.addNode(ANNOUNCE, announce);
         }
-        if (mAnnounceList != null) {
-            bt.addNode(ANNOUNCE_LIST, mAnnounceList);
+        if (announces != null) {
+            bt.addNode(ANNOUNCE_LIST, announces);
         }
-        if (mEncoding != null) {
-            bt.addNode(ENCODING, mEncoding);
+        if (encoding != null) {
+            bt.addNode(ENCODING, encoding);
         }
-        if (mComment != null) {
-            bt.addNode(COMMENT, mComment);
+        if (comment != null) {
+            bt.addNode(COMMENT, comment);
         }
-        if (mCreationDate != null) {
-            bt.addNode(CREATION_DATE, mCreationDate);
+        if (creationData != null) {
+            bt.addNode(CREATION_DATE, creationData);
         }
-        if (mCreatedBy != null) {
-            bt.addNode(CREATED_BY, mCreatedBy);
+        if (createdBy != null) {
+            bt.addNode(CREATED_BY, createdBy);
         }
-        if (mInfo != null) {
-            bt.addNode(INFO, mInfo);
+        if (info != null) {
+            bt.addNode(INFO, info);
         }
         return bt.encode();
     }

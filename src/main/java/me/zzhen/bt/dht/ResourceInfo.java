@@ -11,7 +11,7 @@ import java.util.List;
  * @author zzhen zzzhen1994@gmail.com
  */
 public class ResourceInfo {
-    public List<NodeInfo> mNodeInfos = new ArrayList<>();
+    public List<NodeInfo> nodeInfos = new ArrayList<>();
 
 
     public ResourceInfo() {
@@ -19,15 +19,15 @@ public class ResourceInfo {
     }
 
     public void addNodeIndo(NodeInfo info) {
-        mNodeInfos.add(info);
+        nodeInfos.add(info);
     }
 
     public NodeInfo getNodeInfo(int i) {
-        return mNodeInfos.get(i);
+        return nodeInfos.get(i);
     }
 
     public List<NodeInfo> getNodeList() {
-        return mNodeInfos;
+        return nodeInfos;
     }
 }
 

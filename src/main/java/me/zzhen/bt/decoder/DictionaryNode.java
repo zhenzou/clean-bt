@@ -22,38 +22,38 @@ public class DictionaryNode implements Node {
     static final char DIC_END = 'e';
 
 
-    private Map<String, Node> mValue = new HashMap<>();
+    private Map<String, Node> value = new HashMap<>();
 
 
     public DictionaryNode() {
     }
 
     public DictionaryNode(Map<String, Node> value) {
-        mValue = value;
+        this.value = value;
     }
 
     public Map<String, Node> getValue() {
-        return mValue;
+        return value;
     }
 
     public void addNode(String key, Node value) {
-        mValue.put(key, value);
+        this.value.put(key, value);
     }
 
     public Node removeNode(String key) {
-        return mValue.remove(key);
+        return value.remove(key);
     }
 
 
     public Node getNode(String key) {
-        return mValue.get(key);
+        return value.get(key);
     }
 
     @Override
     public byte[] encode() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         baos.write((byte) DIC_START);
-        mValue.entrySet().stream().sorted(Comparator.comparing(Map.Entry::getKey)).forEach(entry -> {
+        value.entrySet().stream().sorted(Comparator.comparing(Map.Entry::getKey)).forEach(entry -> {
             try {
                 baos.write(new StringNode(entry.getKey().getBytes()).encode());
                 baos.write(entry.getValue().encode());
@@ -67,12 +67,12 @@ public class DictionaryNode implements Node {
 
     @Override
     public String decode() {
-        return mValue.toString();
+        return value.toString();
     }
 
     @Override
     public String toString() {
-        return mValue.toString();
-//        return new Gson().toJson(mValue.toString());
+        return value.toString();
+//        return new Gson().toJson(value.toString());
     }
 }
