@@ -56,8 +56,7 @@ public class ListNode implements Node {
     }
 
     @Override
-    public byte[] encode() throws UnsupportedEncodingException {
-        StringBuilder sb = new StringBuilder();
+    public byte[] encode()  {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         baos.write((byte) LIST_START);
         value.forEach(node -> {

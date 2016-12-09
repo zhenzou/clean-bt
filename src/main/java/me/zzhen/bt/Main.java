@@ -1,14 +1,16 @@
 
 package me.zzhen.bt;
 
+import com.sun.javafx.scene.control.skin.MenuBarSkin;
+import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon;
+import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView;
 import javafx.application.Application;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import me.zzhen.bt.decoder.*;
@@ -26,6 +28,7 @@ import java.util.stream.Collectors;
 /**
  * /**
  * Project:CleanBT
+ * TODO 改成属性
  *
  * @author zzhen zzzhen1994@gmail.com
  *         Create Time: 2016/10/17.
@@ -34,122 +37,132 @@ import java.util.stream.Collectors;
  */
 public class Main extends Application {
 
-    private static Logger logger = Logger.getLogger(Main.class.getName());
+    private static final Logger logger = Logger.getLogger(Main.class.getName());
 
-    private TorrentFile mTorrent;
-    private BorderPane mRoot = new BorderPane();
-    private MenuBar mMenu = new MenuBar();
-    private HBox mTop = new HBox();
-    private VBox mCenter = new VBox();
-    private FileChooser chooser = new FileChooser();
+    private final BorderPane mainArea = new BorderPane();
+    private final MenuBar menuBar = new MenuBar();
+    private final HBox topArea = new HBox();
+    private final VBox centerArea = new VBox();
+    private final FileChooser chooser = new FileChooser();
+    private final Button centerBtn = new Button("点击选择Torrent文件");
+    private final Alert errorDialog = new Alert(Alert.AlertType.ERROR);
+    private final Alert infoDialog = new Alert(Alert.AlertType.INFORMATION);
+    private final TreeView<FileTreeItemModel> fileTree = new TreeView<>();
+    private TreeItem<FileTreeItemModel> treeRoot = new TreeItem<>();
+    private Stage primaryStage;
 
-    private Alert mErrorDialog = new Alert(Alert.AlertType.ERROR);
-    private Alert mMessageDialog = new Alert(Alert.AlertType.INFORMATION);
-
-    private Label mInitLabel = new Label("请选择Torrent文件");
-
-    private TreeView<FileTreeItemModel> mFileTree = new TreeView<>();
-    private TreeItem<FileTreeItemModel> mRootItem = new TreeItem<>();
-
-    private Stage mPrimaryStage;
-
+    private TorrentFile torrent;
+    private MenuItem openFile;
+    private MenuItem saveFile;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        mPrimaryStage = primaryStage;
+        this.primaryStage = primaryStage;
         initView();
         initMenu();
-        Scene scene = new Scene(mRoot, Config.WINDOW_WIDTH, Config.WINDOW_HEIGHT);
-        primaryStage.setResizable(true);
+        Scene scene = new Scene(mainArea, Config.WINDOW_WIDTH, Config.WINDOW_HEIGHT);
+        primaryStage.setResizable(false);
         primaryStage.setTitle(Config.APP_NAME);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
 
     private void initView() {
-        mCenter.getChildren().add(mInitLabel);
-        mCenter.setAlignment(Pos.CENTER);
-        mCenter.getChildren().add(mFileTree);
-        mFileTree.setVisible(false);
-        mFileTree.setEditable(true);
-        mFileTree.setCellFactory((TreeView<FileTreeItemModel> tree) -> new FileTreeItemCell());
-        mRoot.setTop(mTop);
-        mRoot.setCenter(mCenter);
+        centerArea.getChildren().add(centerBtn);
+        centerArea.setAlignment(Pos.CENTER);
+        fileTree.setEditable(true);
+        fileTree.setCellFactory((TreeView<FileTreeItemModel> tree) -> new FileTreeItemCell());
+        mainArea.setTop(topArea);
+        mainArea.setCenter(centerArea);
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("All Torrent", "*.torrent"));
 
         //将菜单栏添加到顶部
-        mTop.getChildren().add(mMenu);
-        mErrorDialog.setTitle("错误");
-        mMessageDialog.setTitle("提示");
+        topArea.getChildren().add(menuBar);
+        errorDialog.setTitle("错误");
+        infoDialog.setTitle("提示");
+
+        centerBtn.setOnAction(event -> openTorrentFile());
     }
 
     private void initMenu() {
         Menu fileMenu = new Menu(Config.MENU_FILE);
-        MenuItem openFile = new MenuItem(Config.MENU_FILE_OPEN);
-        MenuItem saveFile = new MenuItem(Config.MENU_FILE_SAVE);
+        openFile = new MenuItem(Config.MENU_FILE_OPEN);
+        FontAwesomeIconView openView = new FontAwesomeIconView(FontAwesomeIcon.FOLDER_OPEN);
+        openFile.setGraphic(openView);
+        saveFile = new MenuItem(Config.MENU_FILE_SAVE);
+        FontAwesomeIconView saveView = new FontAwesomeIconView(FontAwesomeIcon.SAVE);
+        saveFile.setGraphic(saveView);
         fileMenu.getItems().addAll(openFile, saveFile);
         saveFile.setDisable(true);
 
-        mMenu.getMenus().add(fileMenu);
-        openFile.setOnAction(event -> {
-            chooser.setTitle("选择文件");
-            File file = chooser.showOpenDialog(mPrimaryStage);
-            if (file == null || !file.exists()) {
-                logger.info("没有选择文件");
-                return;
-            }
-            try {
-                mTorrent = TorrentFile.fromFile(file);
-            } catch (IOException | DecoderExecption e) {
-                logger.error(e.getMessage());
-                e.printStackTrace();
-                mErrorDialog.setContentText(e.getMessage());
-                mErrorDialog.showAndWait();
-            }
-            saveFile.setDisable(false);
-            TreeNode<FileTreeItemModel> fileTree = createFileNodeTree();
-            //将原来的节点清空
-            mRootItem.getChildren().clear();
-            getFileTree(mRootItem, fileTree);
-            mInitLabel.setVisible(false);
-            mFileTree.setVisible(true);
-            //TODO 使用更自然的方式
-            mRootItem = mRootItem.getChildren().get(0);
-            mFileTree.setRoot(mRootItem);
-            mFileTree.refresh();
-        });
+        menuBar.setBackground(new Background(new BackgroundFill(Color.TRANSPARENT, null, null)));
+
+        menuBar.getMenus().add(fileMenu);
+        openFile.setOnAction(event -> openTorrentFile());
 
         //TODO 异步？
         saveFile.setOnAction((event) -> {
             try {
                 chooser.setTitle("保存Torrent文件");
-                File file = chooser.showSaveDialog(mPrimaryStage);
+                File file = chooser.showSaveDialog(primaryStage);
                 if (file == null) {
                     logger.info("没有选择保存文件");
                 } else {
                     ListNode infoRoot = new ListNode();
-                    mRootItem.getChildren().forEach(item -> {
+                    treeRoot.getChildren().forEach(item -> {
                         ObservableList<TreeItem<FileTreeItemModel>> children = item.getChildren();
                         children.forEach(tt -> System.out.println(tt.getValue().getName()));
                         ListNode path = new ListNode();
-                        getFileTreeItem(infoRoot, item, path);
+                        buildFileTreeItem(infoRoot, item, path);
                     });
-                    mTorrent.setInfoFiles(infoRoot);
+                    torrent.setInfoFiles(infoRoot);
 
                     OutputStream out = new FileOutputStream(file);
-                    out.write(mTorrent.encode());
+                    out.write(torrent.encode());
                     out.flush();
                     out.close();
-                    mMessageDialog.setContentText("保存文件" + file.getName() + "成功");
-                    mMessageDialog.showAndWait();
+                    infoDialog.setContentText("保存文件" + file.getName() + "成功");
+                    infoDialog.showAndWait();
                 }
             } catch (IOException e) {
                 logger.error(e.getMessage());
-                mErrorDialog.setContentText(e.getMessage());
-                mErrorDialog.showAndWait();
+                errorDialog.setContentText(e.getMessage());
+                errorDialog.showAndWait();
                 e.printStackTrace();
             }
         });
+    }
+
+    private boolean isFirst = true;
+
+    public void openTorrentFile() {
+        chooser.setTitle("选择文件");
+        File file = chooser.showOpenDialog(primaryStage);
+        if (file == null || !file.exists()) {
+            logger.info("没有选择文件");
+            return;
+        }
+        try {
+            torrent = TorrentFile.fromFile(file);
+        } catch (IOException | DecoderException e) {
+            logger.error(e.getMessage());
+            errorDialog.setContentText(e.getMessage());
+            errorDialog.showAndWait();
+        }
+        TreeNode<FileTreeItemModel> treeNodes = buildFileNodeTree();
+        //将原来的文件信息清空
+        treeRoot.getChildren().clear();
+        buildFileTree(treeRoot, treeNodes);
+        //TODO 使用更自然的方式
+        treeRoot = treeRoot.getChildren().get(0);
+        fileTree.setRoot(treeRoot);
+        fileTree.refresh();
+        if (isFirst) {
+            centerArea.getChildren().add(fileTree);
+            isFirst = false;
+        }
+        centerBtn.setVisible(false);
+        saveFile.setDisable(false);
     }
 
     /**
@@ -159,7 +172,7 @@ public class Main extends Application {
      * @param item     当前树的根节点
      * @param path     BT文件的path节点
      */
-    private void getFileTreeItem(ListNode infoRoot, TreeItem<FileTreeItemModel> item, ListNode path) {
+    private void buildFileTreeItem(ListNode infoRoot, TreeItem<FileTreeItemModel> item, ListNode path) {
         ObservableList<TreeItem<FileTreeItemModel>> children = item.getChildren();
         path.addNode(new StringNode(item.getValue().getName().getBytes()));
 
@@ -174,7 +187,7 @@ public class Main extends Application {
 
             path.removeNode(size - 1);//回退
         } else {
-            children.forEach(node -> getFileTreeItem(infoRoot, node, path));
+            children.forEach(node -> buildFileTreeItem(infoRoot, node, path));
             path.removeNode(path.size() - 1);//回退
         }
     }
@@ -185,14 +198,14 @@ public class Main extends Application {
      * @param rootItem
      * @param fileTree
      */
-    private void getFileTree(TreeItem<FileTreeItemModel> rootItem, TreeNode<FileTreeItemModel> fileTree) {
+    private void buildFileTree(TreeItem<FileTreeItemModel> rootItem, TreeNode<FileTreeItemModel> fileTree) {
         List<TreeNode<FileTreeItemModel>> children = fileTree.getChildren();
         TreeItem<FileTreeItemModel> treeItem = new TreeItem<>(new FileTreeItemModel(fileTree.getValue().getName(), fileTree.getValue().getLength()));
         logger.debug(children.size());
         if (children.size() == 0) {
 //            rootItem.getChildren().add(treeItem);
         } else {
-            children.forEach(node -> getFileTree(treeItem, node));
+            children.forEach(node -> buildFileTree(treeItem, node));
         }
         rootItem.getChildren().add(treeItem);
     }
@@ -202,11 +215,11 @@ public class Main extends Application {
      *
      * @return 文件树的根节点
      */
-    private TreeNode<FileTreeItemModel> createFileNodeTree() {
-        ListNode infoName = (ListNode) mTorrent.getInfoFiles();
+    private TreeNode<FileTreeItemModel> buildFileNodeTree() {
+        ListNode infoName = (ListNode) torrent.getInfoFiles();
         List<Node> value = infoName.getValue();
-        TreeNode<FileTreeItemModel> treeRoot = new TreeNode<>(new FileTreeItemModel(mTorrent.getInfoName().decode(), 0));
-        value.stream().map(item -> (DictionaryNode) item).collect(Collectors.toList()).forEach(item -> addFileToTree(treeRoot, item));
+        TreeNode<FileTreeItemModel> treeRoot = new TreeNode<>(new FileTreeItemModel(torrent.getInfoName().decode(), 0));
+        value.stream().map(item -> (DictionaryNode) item).collect(Collectors.toList()).forEach(item -> addNodeToTree(treeRoot, item));
         return treeRoot;
     }
 
@@ -216,7 +229,7 @@ public class Main extends Application {
      * @param treeRoot 当前子树的根节点
      * @param file     当前的文件信息
      */
-    private void addFileToTree(TreeNode<FileTreeItemModel> treeRoot, DictionaryNode file) {
+    private void addNodeToTree(TreeNode<FileTreeItemModel> treeRoot, DictionaryNode file) {
         int index = 0;
         ListNode path = (ListNode) file.getNode("path");
         long length = Long.parseLong(file.getNode("length").decode());
@@ -232,7 +245,7 @@ public class Main extends Application {
      */
     private final class FileTreeItemCell extends TreeCell<FileTreeItemModel> {
 
-        private EditorViewHolder editorViewHolder = EditorViewHolder.EDITOR_VIEW_HOLDER;
+        private final EditorViewHolder editorViewHolder = EditorViewHolder.EDITOR_VIEW_HOLDER;
         private boolean isEdited = false;
 
         //TODO 增加 随机文件夹以及全部文件随机命名
@@ -242,7 +255,7 @@ public class Main extends Application {
         @Override
         public void startEdit() {
             super.startEdit();
-            if (getTreeItem() == mRootItem) {
+            if (getTreeItem() == treeRoot) {
                 return;
             }
             editorViewHolder.setCell(this);
@@ -359,10 +372,10 @@ public class Main extends Application {
     static class EditorViewHolder extends HBox {
         static final EditorViewHolder EDITOR_VIEW_HOLDER = new EditorViewHolder();
 
-        Button okBtn;
-        Button cancelBtn;
-        Button random;
-        TextField editor;
+        final Button okBtn;
+        final Button cancelBtn;
+        final Button random;
+        final TextField editor;
 
         FileTreeItemCell cell;
 

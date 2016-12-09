@@ -72,7 +72,7 @@ public class Decoder {
                 if (Character.isDigit(c)) {
                     node = parseString(c);
                 } else {
-                    throw new DecoderExecption("not a legal char");
+                    throw new DecoderException("not a legal char");
                 }
                 break;
         }
@@ -96,7 +96,7 @@ public class Decoder {
             if (Character.isDigit(c)) {
                 len.append((char) c);
             } else {
-                throw new DecoderExecption("expect a digital but found " + c);
+                throw new DecoderException("expect a digital but found " + c);
             }
         }
         long length = Long.parseLong(len.toString().trim());
@@ -106,7 +106,7 @@ public class Decoder {
             i++;
         }
         if (i < length) {
-            throw new DecoderExecption("illegal string node , except " + length + " char but found " + i);
+            throw new DecoderException("illegal string node , except " + length + " char but found " + i);
         }
 
         StringNode node = new StringNode(baos.toByteArray());
@@ -136,7 +136,7 @@ public class Decoder {
                     inKey = false;
                 } else {
                     System.out.println(cur);
-                    throw new DecoderExecption("key of dic must be string,found digital");
+                    throw new DecoderException("key of dic must be string,found digital");
                 }
             } else {
                 node = parseNext(cur);
@@ -169,7 +169,7 @@ public class Decoder {
             if (Character.isDigit(cc)) {
                 sb.append(cc);
             } else {
-                throw new DecoderExecption("expect a digital but found " + cc);
+                throw new DecoderException("expect a digital but found " + cc);
             }
         }
         return new IntNode(sb.toString());

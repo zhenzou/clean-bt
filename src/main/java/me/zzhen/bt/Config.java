@@ -10,8 +10,8 @@ package me.zzhen.bt;
 public final class Config {
 
     public static final String APP_NAME = "CleanBT";
-    public static final int WINDOW_WIDTH = 400;
-    public static final int WINDOW_HEIGHT = 300;
+    public static final int WINDOW_WIDTH = 600;
+    public static final int WINDOW_HEIGHT = 400;
 
 
     public static final String MENU_FILE = "文件";

@@ -27,10 +27,19 @@ public class IntNode implements Node {
     }
 
 
+    /**
+     * 返回UTF-8编码的字节数组，如果异常则返回默认编码数组
+     *
+     * @return
+     */
     @Override
-    public byte[] encode() throws UnsupportedEncodingException {
-//        return new StringBuilder().append(INT_START).append(value).append(INT_END).toString().getBytes();
-        return new StringBuilder().append(INT_START).append(value).append(INT_END).toString().getBytes("UTF-8");
+    public byte[] encode() {
+        try {
+            return (String.valueOf(INT_START) + value + INT_END).getBytes("UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        return (String.valueOf(INT_START) + value + INT_END).getBytes();
     }
 
     @Override

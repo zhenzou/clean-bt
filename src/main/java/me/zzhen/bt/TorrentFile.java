@@ -52,7 +52,7 @@ public class TorrentFile {
 
     public static List<Node> mValues;
 
-    public static TorrentFile fromString(String bytes) throws IOException, DecoderExecption {
+    public static TorrentFile fromString(String bytes) throws IOException, DecoderException {
         Decoder decoder = new Decoder(bytes.getBytes());
         TorrentFile ret = new TorrentFile();
         ret.setFileName("String");
@@ -60,7 +60,7 @@ public class TorrentFile {
         decoder.parse();
         return ret;
     }
-    public static TorrentFile fromStream(InputStream input) throws IOException, DecoderExecption {
+    public static TorrentFile fromStream(InputStream input) throws IOException, DecoderException {
         Decoder decoder = new Decoder(input);
         TorrentFile ret = new TorrentFile();
         ret.setFileName("String");
@@ -69,7 +69,7 @@ public class TorrentFile {
         return ret;
     }
 
-    public static TorrentFile fromFile(File file) throws IOException, DecoderExecption {
+    public static TorrentFile fromFile(File file) throws IOException, DecoderException {
         Decoder decoder = new Decoder(file);
         TorrentFile ret = new TorrentFile();
         ret.setFileName(file.getName());
@@ -278,11 +278,7 @@ public class TorrentFile {
 
     public String getInfoHash() {
         byte[] encode = new byte[0];
-        try {
-            encode = getInfo().encode();
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
+        encode = getInfo().encode();
         return Utils.toHex(Utils.SHA_1(encode));
     }
 

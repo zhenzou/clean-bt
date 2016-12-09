@@ -24,15 +24,19 @@ public class Utils {
      * @return 没有扩展名则返回全部
      */
     public static String getExtName(String file) {
-        return file.substring(file.lastIndexOf('.') + 1);
+        int index = file.lastIndexOf(".");
+        if (index > 0) {
+            return file.substring(index + 1);
+        } else {
+            return file;
+        }
     }
 
     public static byte[] SHA_1(byte[] input) {
         try {
             MessageDigest sha_1 = MessageDigest.getInstance("SHA-1");
             sha_1.update(input);
-            byte[] digest = sha_1.digest();
-            return digest;
+            return sha_1.digest();
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
