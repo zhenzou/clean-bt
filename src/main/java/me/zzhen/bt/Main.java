@@ -1,7 +1,6 @@
 
 package me.zzhen.bt;
 
-import com.sun.javafx.scene.control.skin.MenuBarSkin;
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon;
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView;
 import javafx.application.Application;
@@ -111,12 +110,11 @@ public class Main extends Application {
                     ListNode infoRoot = new ListNode();
                     treeRoot.getChildren().forEach(item -> {
                         ObservableList<TreeItem<FileTreeItemModel>> children = item.getChildren();
-                        children.forEach(tt -> System.out.println(tt.getValue().getName()));
+//                        children.forEach(tt -> System.out.println(tt.getValue().getName()));
                         ListNode path = new ListNode();
-                        buildFileTreeItem(infoRoot, item, path);
+                        transformTreeItemNode(infoRoot, item, path);
                     });
                     torrent.setInfoFiles(infoRoot);
-
                     OutputStream out = new FileOutputStream(file);
                     out.write(torrent.encode());
                     out.flush();
@@ -149,20 +147,16 @@ public class Main extends Application {
             errorDialog.setContentText(e.getMessage());
             errorDialog.showAndWait();
         }
-        TreeNode<FileTreeItemModel> treeNodes = buildFileNodeTree();
-        //将原来的文件信息清空
-        treeRoot.getChildren().clear();
-        buildFileTree(treeRoot, treeNodes);
-        //TODO 使用更自然的方式
-        treeRoot = treeRoot.getChildren().get(0);
+        TreeNode<FileTreeItemModel> treeNodes = buildNodeTree();
+        treeRoot = buildItemTree(treeNodes);
         fileTree.setRoot(treeRoot);
         fileTree.refresh();
         if (isFirst) {
             centerArea.getChildren().add(fileTree);
             isFirst = false;
+            centerBtn.setVisible(false);
+            saveFile.setDisable(false);
         }
-        centerBtn.setVisible(false);
-        saveFile.setDisable(false);
     }
 
     /**
@@ -172,10 +166,9 @@ public class Main extends Application {
      * @param item     当前树的根节点
      * @param path     BT文件的path节点
      */
-    private void buildFileTreeItem(ListNode infoRoot, TreeItem<FileTreeItemModel> item, ListNode path) {
+    private void transformTreeItemNode(ListNode infoRoot, TreeItem<FileTreeItemModel> item, ListNode path) {
         ObservableList<TreeItem<FileTreeItemModel>> children = item.getChildren();
         path.addNode(new StringNode(item.getValue().getName().getBytes()));
-
         if (children.size() == 0) {
             int size = path.size();
             DictionaryNode dic = new DictionaryNode();
@@ -184,10 +177,9 @@ public class Main extends Application {
             dic.addNode("path", new ListNode(Arrays.asList(nodes)));
             dic.addNode("length", new IntNode(item.getValue().getLength()));
             infoRoot.addNode(dic);
-
             path.removeNode(size - 1);//回退
         } else {
-            children.forEach(node -> buildFileTreeItem(infoRoot, node, path));
+            children.forEach(node -> transformTreeItemNode(infoRoot, node, path));
             path.removeNode(path.size() - 1);//回退
         }
     }
@@ -195,19 +187,19 @@ public class Main extends Application {
     /**
      * 将文件树转换成FX中的TreeView的节点
      *
-     * @param rootItem
      * @param fileTree
      */
-    private void buildFileTree(TreeItem<FileTreeItemModel> rootItem, TreeNode<FileTreeItemModel> fileTree) {
-        List<TreeNode<FileTreeItemModel>> children = fileTree.getChildren();
-        TreeItem<FileTreeItemModel> treeItem = new TreeItem<>(new FileTreeItemModel(fileTree.getValue().getName(), fileTree.getValue().getLength()));
-        logger.debug(children.size());
-        if (children.size() == 0) {
-//            rootItem.getChildren().add(treeItem);
+    private TreeItem<FileTreeItemModel> buildItemTree(TreeNode<FileTreeItemModel> fileTree) {
+        TreeItem<FileTreeItemModel> root = new TreeItem<>(fileTree.getValue());
+        List<TreeItem<FileTreeItemModel>> collect = fileTree.getChildren().stream().map(this::buildItemTree).collect(Collectors.toList());
+        if (fileTree.isLeaf()) {
+            //TODO 支持更多文件类型图标显示
+            root.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.FILE_VIDEO_ALT));
         } else {
-            children.forEach(node -> buildFileTree(treeItem, node));
+            root.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.FOLDER));
         }
-        rootItem.getChildren().add(treeItem);
+        root.getChildren().addAll(collect);
+        return root;
     }
 
     /**
@@ -215,7 +207,7 @@ public class Main extends Application {
      *
      * @return 文件树的根节点
      */
-    private TreeNode<FileTreeItemModel> buildFileNodeTree() {
+    private TreeNode<FileTreeItemModel> buildNodeTree() {
         ListNode infoName = (ListNode) torrent.getInfoFiles();
         List<Node> value = infoName.getValue();
         TreeNode<FileTreeItemModel> treeRoot = new TreeNode<>(new FileTreeItemModel(torrent.getInfoName().decode(), 0));
@@ -241,6 +233,7 @@ public class Main extends Application {
     }
 
     /**
+     * TODO 增加 随机文件夹以及全部文件随机命名
      * 文件的UI显示
      */
     private final class FileTreeItemCell extends TreeCell<FileTreeItemModel> {
@@ -248,7 +241,6 @@ public class Main extends Application {
         private final EditorViewHolder editorViewHolder = EditorViewHolder.EDITOR_VIEW_HOLDER;
         private boolean isEdited = false;
 
-        //TODO 增加 随机文件夹以及全部文件随机命名
         public FileTreeItemCell() {
         }
 
@@ -261,7 +253,6 @@ public class Main extends Application {
             editorViewHolder.setCell(this);
             setGraphic(editorViewHolder);
             isEdited = true;
-
         }
 
         @Override
@@ -299,10 +290,6 @@ public class Main extends Application {
             super.commitEdit(newValue);
             isEdited = false;
         }
-
-        private String getString() {
-            return getItem() == null ? "" : getItem().getName();
-        }
     }
 
     /**
@@ -312,17 +299,17 @@ public class Main extends Application {
 
         private String originalName;
         private String name;
-        private long leagth;// 0 文件夹
+        private long length;// 0 文件夹
 
         public FileTreeItemModel(String name, long length) {
             this.name = name;
-            leagth = length;
+            this.length = length;
             originalName = name;
         }
 
         public FileTreeItemModel(String name, String length) {
             this.name = name;
-            leagth = Long.parseLong(length);
+            this.length = Long.parseLong(length);
         }
 
         public String getName() {
@@ -341,16 +328,16 @@ public class Main extends Application {
         }
 
         public long getLength() {
-            return leagth;
+            return length;
         }
 
         public void setLength(int length) {
-            leagth = length;
+            this.length = length;
         }
 
         @Override
         public int hashCode() {
-            return name.hashCode() + Objects.hashCode(leagth);
+            return name.hashCode() + Objects.hashCode(length);
         }
 
         @Override
@@ -358,12 +345,12 @@ public class Main extends Application {
             if (this == obj) return true;
             if (obj == null || getClass() != obj.getClass()) return false;
             FileTreeItemModel other = (FileTreeItemModel) obj;
-            return name.equals(other.name) && leagth == other.leagth;
+            return name.equals(other.name) && length == other.length;
         }
 
         @Override
         public String toString() {
-            return name + ":" + leagth;
+            return name + ":" + length;
         }
 
     }
@@ -371,10 +358,9 @@ public class Main extends Application {
 
     static class EditorViewHolder extends HBox {
         static final EditorViewHolder EDITOR_VIEW_HOLDER = new EditorViewHolder();
-
         final Button okBtn;
         final Button cancelBtn;
-        final Button random;
+        final Button randomBtn;
         final TextField editor;
 
         FileTreeItemCell cell;
@@ -387,9 +373,9 @@ public class Main extends Application {
         EditorViewHolder() {
             okBtn = new Button("确定");
             cancelBtn = new Button("取消");
-            random = new Button("随机");
+            randomBtn = new Button("随机");
             editor = new TextField();
-            getChildren().addAll(editor, random, okBtn, cancelBtn);
+            getChildren().addAll(editor, randomBtn, okBtn, cancelBtn);
 
             okBtn.setOnAction(event -> cell.commitEdit(cell.getItem()));
 
@@ -402,7 +388,7 @@ public class Main extends Application {
                 cell.commitEdit(cell.getItem());
             });
 
-            random.setOnAction(event -> {
+            randomBtn.setOnAction(event -> {
                 String extName = Utils.getExtName(cell.getItem().getName());
                 editor.setText(Utils.randomDigitalName() + "." + extName);
             });
