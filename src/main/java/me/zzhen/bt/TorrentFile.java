@@ -2,10 +2,7 @@ package me.zzhen.bt;
 
 import me.zzhen.bt.decoder.*;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
@@ -60,6 +57,7 @@ public class TorrentFile {
         decoder.parse();
         return ret;
     }
+
     public static TorrentFile fromStream(InputStream input) throws IOException, DecoderException {
         Decoder decoder = new Decoder(input);
         TorrentFile ret = new TorrentFile();
@@ -88,7 +86,7 @@ public class TorrentFile {
     private StringNode encoding;
     private DictionaryNode info;
 
-    private TorrentFile(){
+    private TorrentFile() {
 
     }
 
@@ -338,6 +336,20 @@ public class TorrentFile {
             bt.addNode(INFO, info);
         }
         return bt.encode();
+    }
+
+    /**
+     * @param file 没有检查是否为空
+     * @throws IOException
+     */
+    public void save(File file) throws IOException {
+        try (OutputStream out = new FileOutputStream(file)) {
+            out.write(encode());
+            out.flush();
+            out.close();
+        } catch (IOException e) {
+            throw e;
+        }
     }
 
     public static class TorrentFileHandler implements EventHandler {
