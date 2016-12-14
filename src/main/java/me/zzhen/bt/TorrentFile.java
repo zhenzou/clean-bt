@@ -1,6 +1,7 @@
 package me.zzhen.bt;
 
 import me.zzhen.bt.decoder.*;
+import me.zzhen.bt.utils.Utils;
 
 import java.io.*;
 import java.time.Instant;
@@ -22,6 +23,7 @@ public class TorrentFile {
 
     //公共字段
     public static final String ANNOUNCE = "announce";               //必选, tracker 服务器的地址
+    public static final String NODES = "nodes";               //必选, tracker 服务器的地址
     public static final String ANNOUNCE_LIST = "announce-list";     //list, 可选, 可选的 tracker 服务器地址
     public static final String CREATION_DATE = "creation date";     //必选, 文件创建时间
     public static final String COMMENT = "comment";                 //可选, bt 文件注释
@@ -78,12 +80,13 @@ public class TorrentFile {
 
 
     private String fileName;
-    private StringNode announce;
+    private Node announce;
+    private Node nodes;
     private ListNode announces;
-    private IntNode creationData;
-    private StringNode comment;
-    private StringNode createdBy;
-    private StringNode encoding;
+    private Node creationData;
+    private Node comment;
+    private Node createdBy;
+    private Node encoding;
     private DictionaryNode info;
 
     private TorrentFile() {
@@ -99,7 +102,7 @@ public class TorrentFile {
     }
 
     public String getAnnounce() {
-        return announce.decode();
+        return announce.toString();
     }
 
     public void setAnnounce(String announce) {
@@ -112,7 +115,7 @@ public class TorrentFile {
 
     public List<String> getAnnounceList() {
         List<Node> nodes = announces.getValue();
-        return nodes.stream().map(Node::decode).collect(Collectors.toList());
+        return nodes.stream().map(Node::toString).collect(Collectors.toList());
     }
 
     public void setAnnounceList(List<String> announceList) {
@@ -126,7 +129,7 @@ public class TorrentFile {
     }
 
     public String getEncoding() {
-        return encoding.decode();
+        return encoding.toString();
     }
 
     public void setEncoidng(String encoidng) {
@@ -138,11 +141,11 @@ public class TorrentFile {
     }
 
     public Date getCreationDate() {
-        String time = creationData.decode();
+        String time = creationData.toString();
         if (time.length() > 10) {
-            return Date.from(Instant.ofEpochMilli(Long.parseLong(creationData.decode())));
+            return Date.from(Instant.ofEpochMilli(Long.parseLong(creationData.toString())));
         } else {
-            return Date.from(Instant.ofEpochSecond(Long.parseLong(creationData.decode())));
+            return Date.from(Instant.ofEpochSecond(Long.parseLong(creationData.toString())));
         }
     }
 
@@ -156,12 +159,20 @@ public class TorrentFile {
         creationData = new IntNode(String.valueOf(time));
     }
 
+    public Node getNodes() {
+        return nodes;
+    }
+
+    public void setNodes(Node nodes) {
+        this.nodes = nodes;
+    }
+
     public void setCreationData(Node date) {
         creationData = (IntNode) date;
     }
 
     public String getComment() {
-        return comment.decode();
+        return comment.toString();
     }
 
     public void setComment(String comment) {
@@ -173,7 +184,7 @@ public class TorrentFile {
     }
 
     public String getCreatedBy() {
-        return createdBy.decode();
+        return createdBy.toString();
     }
 
     public void setCreatedBy(StringNode created) {
@@ -201,7 +212,7 @@ public class TorrentFile {
     }
 
     public String getInfoPieces() {
-        return info.getNode(PIECES).decode();
+        return info.getNode(PIECES).toString();
     }
 
     public void setInfoPieces(String value) {
@@ -263,11 +274,11 @@ public class TorrentFile {
     }
 
     public long getInfoLength() {
-        return Long.parseLong(info.getNode(LENGTH).decode());
+        return Long.parseLong(info.getNode(LENGTH).toString());
     }
 
     public String getInfoFilesPath() {
-        return info.getNode(PATH).decode();
+        return info.getNode(PATH).toString();
     }
 
     public void setInfoFilesPath(String value) {
@@ -289,6 +300,9 @@ public class TorrentFile {
         StringBuilder sb = new StringBuilder();
         if (announce != null) {
             sb.append(announce.toString());
+        }
+        if (nodes != null) {
+            sb.append(nodes.toString());
         }
         if (announces != null) {
             sb.append(announces.toString());
@@ -316,6 +330,9 @@ public class TorrentFile {
 
         if (announce != null) {
             bt.addNode(ANNOUNCE, announce);
+        }
+        if (nodes != null) {
+            bt.addNode(NODES, nodes);
         }
         if (announces != null) {
             bt.addNode(ANNOUNCE_LIST, announces);
@@ -365,6 +382,9 @@ public class TorrentFile {
             switch (key) {
                 case ANNOUNCE:
                     mTorrentFile.setAnnounce((StringNode) value);
+                    break;
+                case NODES:
+                    mTorrentFile.setNodes(value);
                     break;
                 case ANNOUNCE_LIST:
                     mTorrentFile.setAnnounceList(((ListNode) value));

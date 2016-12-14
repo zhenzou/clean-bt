@@ -7,14 +7,20 @@ package me.zzhen.bt;
  *
  * @author zzhen zzzhen1994@gmail.com
  */
-public final class Config {
+public interface Config {
 
-    public static final String APP_NAME = "CleanBT";
-    public static final int WINDOW_WIDTH = 600;
-    public static final int WINDOW_HEIGHT = 400;
+    String APP_NAME = "CleanBT";
+    int WINDOW_WIDTH = 600;
+    int WINDOW_HEIGHT = 400;
 
 
-    public static final String MENU_FILE = "文件";
-    public static final String MENU_FILE_OPEN = "打开";
-    public static final String MENU_FILE_SAVE = "保存";
+    String MENU_FILE = "文件";
+    String MENU_FILE_OPEN = "打开";
+    String MENU_FILE_SAVE = "保存";
+
+
+    //    DHT
+    String SERVER_IP = "43.241.224.72";
+    int SERVER_PORT = 6882;
+
 }

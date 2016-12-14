@@ -8,19 +8,15 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.control.Button;
-import javafx.scene.control.Menu;
-import javafx.scene.control.MenuBar;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.TextField;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import me.zzhen.bt.decoder.*;
-import me.zzhen.bt.log.Logger;
+import me.zzhen.bt.utils.Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -40,9 +36,8 @@ import java.util.stream.Collectors;
  */
 public class Main extends Application {
 
-    private static final Logger logger = Logger.getLogger(Main.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(Main.class.getName());
 
-    Desktop desktop = Desktop.getDesktop();
     private final BorderPane mainArea = new BorderPane();
     private final MenuBar menuBar = new MenuBar();
     private final HBox topArea = new HBox();
@@ -204,7 +199,7 @@ public class Main extends Application {
     private TreeNode<FileTreeItemModel> buildNodeTree() {
         ListNode infoName = (ListNode) torrent.getInfoFiles();
         List<Node> value = infoName.getValue();
-        TreeNode<FileTreeItemModel> treeRoot = new TreeNode<>(new FileTreeItemModel(torrent.getInfoName().decode(), 0));
+        TreeNode<FileTreeItemModel> treeRoot = new TreeNode<>(new FileTreeItemModel(torrent.getInfoName().toString(), 0));
         value.stream().map(item -> (DictionaryNode) item).collect(Collectors.toList()).forEach(item -> addNodeToTree(treeRoot, item));
         return treeRoot;
     }
@@ -218,10 +213,10 @@ public class Main extends Application {
     private void addNodeToTree(TreeNode<FileTreeItemModel> treeRoot, DictionaryNode file) {
         int index = 0;
         ListNode path = (ListNode) file.getNode("path");
-        long length = Long.parseLong(file.getNode("length").decode());
+        long length = Long.parseLong(file.getNode("length").toString());
         int size = path.size();
         while (index < size) {
-            treeRoot = treeRoot.getOrAdd(new FileTreeItemModel(path.get(index).decode(), (index == size - 1) ? length : 0));
+            treeRoot = treeRoot.getOrAdd(new FileTreeItemModel(path.get(index).toString(), (index == size - 1) ? length : 0));
             index++;
         }
     }
