@@ -66,13 +66,30 @@ public class DictionaryNode implements Node {
     }
 
     @Override
-    public String decode() {
-        return value.toString();
+    public byte[] decode() {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        baos.write('{');
+        try {
+            for (Map.Entry<String, Node> entry : value.entrySet()) {
+                baos.write(entry.getKey().getBytes());
+                baos.write(':');
+                baos.write(entry.getValue().decode());
+                baos.write(',');
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        baos.write('}');
+        return baos.toByteArray();
     }
 
+    /**
+     * 都没有检查null
+     *
+     * @return
+     */
     @Override
     public String toString() {
         return value.toString();
-//        return new Gson().toJson(value.toString());
     }
 }

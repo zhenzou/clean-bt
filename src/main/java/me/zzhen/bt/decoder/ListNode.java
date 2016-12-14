@@ -51,12 +51,11 @@ public class ListNode implements Node {
 
     @Override
     public String toString() {
-        return value.toString();//去掉Gson依赖
-//        return new Gson().toJson(value.toString());
+        return value.toString();
     }
 
     @Override
-    public byte[] encode()  {
+    public byte[] encode() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         baos.write((byte) LIST_START);
         value.forEach(node -> {
@@ -71,8 +70,17 @@ public class ListNode implements Node {
     }
 
     @Override
-    public String decode() {
-        return value.toString();
+    public byte[] decode() {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        for (Node node : value) {
+            try {
+                baos.write(node.decode());
+                baos.write(',');
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return baos.toByteArray();
     }
 
 }

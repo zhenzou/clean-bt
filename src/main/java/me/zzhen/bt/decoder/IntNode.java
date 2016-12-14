@@ -1,5 +1,7 @@
 package me.zzhen.bt.decoder;
 
+import me.zzhen.bt.utils.Utils;
+
 import java.io.*;
 
 /**
@@ -43,8 +45,8 @@ public class IntNode implements Node {
     }
 
     @Override
-    public String decode() {
-        return value;
+    public byte[] decode() {
+        return Utils.intToBytes(Integer.valueOf(value));
     }
 
     @Override
@@ -52,4 +54,17 @@ public class IntNode implements Node {
         return value;
     }
 
+    @Override
+    public int hashCode() {
+        return Integer.parseInt(value);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass() && o.getClass() != Integer.class) return false;
+        if (o instanceof Integer) return Integer.valueOf(value).equals(o);
+        IntNode intNode = (IntNode) o;
+        return value != null ? value.equals(intNode.value) : intNode.value == null;
+    }
 }

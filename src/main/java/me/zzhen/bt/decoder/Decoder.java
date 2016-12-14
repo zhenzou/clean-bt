@@ -22,6 +22,10 @@ public class Decoder {
         this(new ByteArrayInputStream(input));
     }
 
+    public Decoder(byte[] input, int offset, int length) {
+        this(new ByteArrayInputStream(input, offset, length));
+    }
+
     public Decoder(String file) throws FileNotFoundException {
         this(new FileInputStream(file));
     }
@@ -119,6 +123,7 @@ public class Decoder {
 
     /**
      * 解析字典结构，字典的的key值，应该是字符串类型
+     *
      * @return
      * @throws IOException
      */

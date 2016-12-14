@@ -2,6 +2,7 @@ package me.zzhen.bt.decoder;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 
 /**
  * /**
@@ -27,6 +28,19 @@ public class StringNode implements Node {
         this.value = value;
     }
 
+    /**
+     * 默认使用UTF-8
+     *
+     * @param value
+     */
+    public StringNode(String value) {
+        try {
+            this.value = value.getBytes("UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+    }
+
     @Override
     public byte[] encode() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -41,8 +55,8 @@ public class StringNode implements Node {
     }
 
     @Override
-    public String decode() {
-        return new String(value);
+    public byte[] decode() {
+        return value;
     }
 
     @Override
