@@ -13,7 +13,6 @@ import java.util.List;
 public class ResourceInfo {
     public List<NodeInfo> nodeInfos = new ArrayList<>();
 
-
     public ResourceInfo() {
 
     }
