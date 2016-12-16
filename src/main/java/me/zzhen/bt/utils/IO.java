@@ -14,7 +14,7 @@ import java.net.UnknownHostException;
 public interface IO {
 
 
-    static String readAllByte(InputStream input) {
+    static String readAllLine(InputStream input) {
         String line = null;
         StringBuilder sb = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(input));) {
@@ -25,6 +25,36 @@ public interface IO {
             e.printStackTrace();
         }
         return sb.toString();
+    }
+
+    static byte[] readKBytes(InputStream input, int k) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        int c = -1;
+        int count = 0;
+        BufferedInputStream buffer = new BufferedInputStream(input);
+        try {
+            while (count < k && (c = buffer.read()) != -1) {
+                baos.write(c);
+                k++;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return baos.toByteArray();
+    }
+
+    static byte[] readAllBytes(InputStream input) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        int c = -1;
+        BufferedInputStream buffer = new BufferedInputStream(input);
+        try {
+            while ((c = buffer.read()) != -1) {
+                baos.write(c);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return baos.toByteArray();
     }
 
     static InetAddress getAddrFromBytes(byte[] bytes) {

@@ -1,9 +1,13 @@
 package me.zzhen.bt.utils;
 
+import me.zzhen.bt.decoder.Decoder;
+import me.zzhen.bt.decoder.Node;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -89,7 +93,7 @@ public interface Utils {
      * @param num
      * @return
      */
-    static byte[] intToBytes(int num) {
+    static byte[] int2Bytes(int num) {
         byte[] bytes = new byte[4];
         int mask = 0xFF;
         for (int i = 0; i < 4; i++) {
@@ -99,36 +103,45 @@ public interface Utils {
     }
 
 
-
     /**
      * @param bytes Big Endian
      * @return
      */
-    static int bytesToInt(byte[] bytes) {
-        return bytesToInt(bytes, 0, bytes.length);
+    static int bytes2Int(byte[] bytes) {
+        return bytes2Int(bytes, 0, bytes.length);
     }
 
-    static int bytesToInt(byte[] bytes, int offset, int length) {
+    /**
+     * @param bytes   小端，需要reverse
+     * @param reverse 标志是否reverse
+     * @return
+     */
+    static int bytes2Int(byte[] bytes, boolean reverse) {
+        if (reverse) {
+            reverseArray(bytes);
+        }
+        return bytes2Int(bytes, 0, bytes.length);
+    }
+
+    static int bytes2Int(byte[] bytes, int offset, int length) {
         int len = bytes.length;
         length = offset + length;
         int ret = 0;
         for (int i = offset; i < len && i < length; i++) {
             ret |= (bytes[i] & 0xFF);//暂时
-            System.out.println(ret);
             if (i < length - 1) {
                 ret <<= 8;
             }
-            System.out.println(ret);
         }
         return ret;
     }
 
-    static byte[] hexToBytes(String hex) {
-        int len = hex.length();
+    static byte[] hex2Bytes(String hex) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         char[] chars = hex.toCharArray();
-        for (int i = 0; i < chars.length; i += 2) {
-            int i1 = getHexInt(chars[i]);
+        int len = chars.length;
+        for (int i = 0; i < len; i += 2) {
+            int i1 = getHexInt(chars[i]) * 16;
             int i2 = getHexInt(chars[i + 1]);
             baos.write((byte) (i1 + i2));
         }
@@ -137,7 +150,7 @@ public interface Utils {
 
     static int getHexInt(char c) {
         int i = -1;
-        if (c > 15) return -1;
+        if (c > 'f') return -1;
         switch (Character.toUpperCase(c)) {
             case 'A':
                 i = 10;
@@ -158,7 +171,7 @@ public interface Utils {
                 i = 15;
                 break;
             default:
-                i = c;
+                i = Integer.parseInt(c + "");
         }
         return i;
     }
@@ -172,5 +185,50 @@ public interface Utils {
             bytes[i] = (byte) a;
         }
         return bytes;
+    }
+
+    static <T> void reverseArray(T[] ts) {
+        int len = ts.length;
+        int halfLen = len / 2;
+        len--;
+        for (int i = 0; i < halfLen; i++) {
+            swap(ts, i, len - i);
+        }
+    }
+
+    static void reverseArray(int[] ts) {
+        int len = ts.length;
+        int halfLen = len / 2;
+        len--;
+        for (int i = 0; i < halfLen; i++) {
+            swap(ts, i, len - i);
+        }
+    }
+
+    static void reverseArray(byte[] ts) {
+        int len = ts.length;
+        int halfLen = len / 2;
+        len--;
+        for (int i = 0; i < halfLen; i++) {
+            swap(ts, i, len - i);
+        }
+    }
+
+    static <T> void swap(T[] ts, int i, int j) {
+        T tmp = ts[i];
+        ts[i] = ts[j];
+        ts[j] = tmp;
+    }
+
+    static void swap(int[] ts, int i, int j) {
+        int tmp = ts[i];
+        ts[i] = ts[j];
+        ts[j] = tmp;
+    }
+
+    static void swap(byte[] ts, int i, int j) {
+        byte tmp = ts[i];
+        ts[i] = ts[j];
+        ts[j] = tmp;
     }
 }
