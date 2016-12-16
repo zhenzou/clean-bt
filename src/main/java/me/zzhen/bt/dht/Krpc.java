@@ -2,15 +2,16 @@ package me.zzhen.bt.dht;
 
 import me.zzhen.bt.utils.IO;
 import me.zzhen.bt.utils.Utils;
-import me.zzhen.bt.decoder.*;
+import me.zzhen.bt.bencode.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import static me.zzhen.bt.utils.Utils.*;
 
@@ -35,12 +36,8 @@ public class Krpc {
     private final NodeKey local;
     private final RouteTable table;
 
+    private Executor executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2 + 2);
 
-    private static final NodeInfo[] BOOTSTRAP_NODE = {
-            new NodeInfo("router.bittorrent.com", 6881),
-            new NodeInfo("router.utorrent.com", 6881),
-            new NodeInfo("dht.transmissionbt.com", 6881)
-    };
 
     public Krpc(NodeKey local, RouteTable table) {
         this.local = local;
@@ -48,27 +45,34 @@ public class Krpc {
     }
 
 
-    public boolean ping(NodeKey node) {
+    public boolean ping(NodeInfo node) {
         DictionaryNode arg = new DictionaryNode();
         System.out.println("id::::" + toHex(local.getValue()));
         arg.addNode("id", new StringNode(local.getValue()));
+        executor.execute(() -> request(arg, node, METHOD_PING));
         return false;
     }
 
-    public NodeInfo findNode(NodeKey node) {
+    public void findNode(NodeInfo node, byte[] target) {
         DictionaryNode arg = new DictionaryNode();
-        arg.addNode("target", new StringNode("32303a32f54e697351ff4aec29cdbaabf2fbe3467cc267"));
+        arg.addNode("target", new StringNode(target));
         arg.addNode("id", new StringNode(local.getValue()));
-        request(arg, null, METHOD_GET_PEERS);
-        return new NodeInfo("127.0.0.1", 1234, node);
+        executor.execute(() -> request(arg, node, METHOD_PING));
     }
 
-    public NodeInfo getPeers(NodeKey peer) {
+    /**
+     * 每次请求都会有Token，看看能不能通过获取吧
+     *
+     * @param node
+     * @param peer
+     */
+    public Token getPeers(NodeInfo node, NodeKey peer) {
         DictionaryNode arg = new DictionaryNode();
-//        arg.addNode("info_hash", new StringNode(hexToBytes("546cf15f724d19c4319cc17b179d7e035f89c1f4")));
+//        arg.addNode("info_hash", new StringNode(hex2Bytes("546cf15f724d19c4319cc17b179d7e035f89c1f4")));
         arg.addNode("info_hash", new StringNode(peer.getValue()));
         arg.addNode("id", new StringNode(local.getValue()));
-        request(arg, BOOTSTRAP_NODE[0], METHOD_GET_PEERS);
+        executor.execute(() -> request(arg, node, METHOD_PING));
+//        request(arg, table.getNode(DHTServer.BOOTSTRAP_NODE[0].getKey()), METHOD_GET_PEERS);
         return null;
     }
 
@@ -78,7 +82,7 @@ public class Krpc {
      * @param peer
      */
     public void announcePeer(NodeKey peer) {
-        DictionaryNode req = (DictionaryNode) makeRequest(peer);
+        DictionaryNode req = makeRequest(peer);
         req.addNode("q", new StringNode(METHOD_ANNOUNCE_PEER));
         System.out.println("id::::" + toHex(local.getValue()));
         DictionaryNode arg = new DictionaryNode();
@@ -91,15 +95,18 @@ public class Krpc {
 
 
     private void request(Node arg, NodeInfo node, String method) {
-        DictionaryNode req = (DictionaryNode) makeRequest(node.getKey());
+        DictionaryNode req = makeRequest(node.getKey());
         req.addNode("q", new StringNode(method));
         req.addNode("a", arg);
         byte[] encode = req.encode();
         DictionaryNode data = null;
         logger.info("req string" + new String(encode));
         try (DatagramSocket socket = new DatagramSocket()) {
-            InetAddress bootAddress = node.getAddress();
-            DatagramPacket packet = new DatagramPacket(encode, 0, encode.length, bootAddress, node.getPort());
+            socket.setSoTimeout(5 * 1000);
+            InetAddress address = node.getAddress();
+            logger.info("request ip:" + address.getHostAddress());
+            logger.info("request port:" + node.getPort());
+            DatagramPacket packet = new DatagramPacket(encode, 0, encode.length, address, node.getPort());
             socket.send(packet);
             logger.info("sent");
             byte[] getByte = new byte[1024];
@@ -110,17 +117,41 @@ public class Krpc {
             Decoder decoder = new Decoder(getByte, 0, result.getLength());
             decoder.parse();
             data = (DictionaryNode) decoder.getValue().get(0);
+        } catch (SocketTimeoutException e) {
+            logger.error(e.getMessage());
+            if (!nodeQueue.isEmpty()) {
+                node = nodeQueue.poll();
+                request(arg, node, method);
+            }
         } catch (IOException e) {
             logger.info(e.getMessage());
+        }
+        Node y = data.getNode("y");
+        switch (y.toString()) {
+            case "r":
+                logger.info("response");
+                break;
+            case "e":
+                logger.info("error");
+                break;
+            default:
+                logger.info("default");
+                break;
         }
         DictionaryNode resp = (DictionaryNode) data.getNode("r");
         if (resp != null) {
             switch (method) {
                 case METHOD_PING:
+                    handleFindNodeResp(arg, resp, method);
                     break;
                 case METHOD_GET_PEERS:
+                    DictionaryNode arg1 = (DictionaryNode) arg;
+                    byte[] info_hashes = arg1.getNode("info_hash").decode();
+                    for (byte info_hash : info_hashes) {
+                        System.out.print(info_hash + ",");
+                    }
+                    System.out.println();
                     handleGetPeerResp(arg, resp, method);
-
                     break;
                 case METHOD_FIND_NODE:
                     break;
@@ -130,14 +161,12 @@ public class Krpc {
                     break;
             }
         }
-
     }
 
     private Set<NodeInfo> nodeSet = new HashSet<>();
     private Queue<NodeInfo> nodeQueue = new ArrayDeque<>();//TODO 完善
 
-    private void handleGetPeerResp(Node arg, DictionaryNode resp, String method) {
-
+    private void handleFindNodeResp(Node arg, DictionaryNode resp, String method) {
         Node token = resp.getNode("token");
         ListNode values = (ListNode) resp.getNode("values");
         if (values == null) {
@@ -152,19 +181,88 @@ public class Krpc {
                     nodeQueue.add(nodeInfo);
                 }
             }
+            if (!nodeQueue.isEmpty()) {
+                NodeInfo node = nodeQueue.poll();
+                request(arg, node, method);
+            }
         } else {
             logger.info("found peers");
-            for (Node dhtNode : values.getValue()) {
-                byte[] decode = dhtNode.decode();
+            logger.info("nodes :" + values.getValue().size());
+            List<Node> value = values.getValue();
+            int len = value.size();
+            for (int i = 0; i < len; i++) {
+                byte[] decode = values.get(i).decode();
+                logger.info("node: length:" + decode.length);
                 InetAddress nodeAddr = IO.getAddrFromBytes(decode, 0);
-                int port = Utils.bytesToInt(decode, 4, 2);
-                getMetadata(nodeAddr, port);
-                System.out.println(" String:IP" + nodeAddr.getHostAddress());
+                int port = Utils.bytes2Int(decode, 4, 2);
+                System.out.println(" Peer:IP" + nodeAddr.getHostAddress());
+                System.out.println(" Peer:Port" + port);
+                UtMetadata utMetadata = null;
+                try {
+                    utMetadata = new UtMetadata(nodeAddr, port);
+                    utMetadata.fetchMetadata("546cf15f724d19c4319cc17b179d7e035f89c1f4", local);
+                    break;
+                } catch (SocketTimeoutException e) {
+                    e.printStackTrace();
+                    logger.error(e.getMessage());
+                    if (i == len - 1) tokenManager.clear();
+                    continue;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    if (i == len - 1) tokenManager.clear();
+                    continue;
+                }
             }
         }
-        if (!nodeQueue.isEmpty()) {
-            NodeInfo node = nodeQueue.poll();
-            request(arg, node, method);
+    }
+
+    private void handleGetPeerResp(Node arg, DictionaryNode resp, String method) {
+        Node token = resp.getNode("token");
+        ListNode values = (ListNode) resp.getNode("values");
+        if (values == null) {
+            logger.info("not find peers");
+            StringNode nodes = (StringNode) resp.getNode("nodes");
+            byte[] decode = nodes.decode();
+            logger.info("decode len :" + decode.length);
+            for (int i = 0; i < decode.length; i += 26) {
+                NodeInfo nodeInfo = new NodeInfo(decode, i);
+                if (!nodeSet.contains(nodeInfo)) {
+                    nodeSet.add(nodeInfo);
+                    nodeQueue.add(nodeInfo);
+                }
+            }
+            if (!nodeQueue.isEmpty()) {
+                NodeInfo node = nodeQueue.poll();
+                request(arg, node, method);
+            }
+        } else {
+            logger.info("found peers");
+            logger.info("nodes :" + values.getValue().size());
+            List<Node> value = values.getValue();
+            int len = value.size();
+            for (int i = 0; i < len; i++) {
+                byte[] decode = values.get(i).decode();
+                logger.info("node: length:" + decode.length);
+                InetAddress nodeAddr = IO.getAddrFromBytes(decode, 0);
+                int port = Utils.bytes2Int(decode, 4, 2);
+                System.out.println(" Peer:IP" + nodeAddr.getHostAddress());
+                System.out.println(" Peer:Port" + port);
+                UtMetadata utMetadata = null;
+                try {
+                    utMetadata = new UtMetadata(nodeAddr, port);
+                    utMetadata.fetchMetadata("546cf15f724d19c4319cc17b179d7e035f89c1f4", local);
+                    break;
+                } catch (SocketTimeoutException e) {
+                    e.printStackTrace();
+                    logger.error(e.getMessage());
+                    if (i == len - 1) tokenManager.clear();
+                    continue;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    if (i == len - 1) tokenManager.clear();
+                    continue;
+                }
+            }
         }
     }
 
@@ -178,128 +276,87 @@ public class Krpc {
     }
 
     private void response(Node data, NodeKey node) {
-        Node node1 = makeResponse(node);
+        NodeInfo nodeInfo = table.getNode(node);
+        byte[] encode = data.encode();
+        if (nodeInfo != null) {
+            try (DatagramSocket socket = new DatagramSocket()) {
+                socket.setSoTimeout(5 * 1000);
+                InetAddress address = nodeInfo.getAddress();
+                logger.info("request ip:" + address.getHostAddress());
+                logger.info("request port:" + nodeInfo.getPort());
+                DatagramPacket packet = new DatagramPacket(encode, 0, encode.length, address, nodeInfo.getPort());
+                socket.send(packet);
+            } catch (SocketTimeoutException e) {
+                logger.error(e.getMessage());
+            } catch (IOException e) {
+                logger.info(e.getMessage());
+            }
+        }
     }
 
     private void error(Node data, NodeKey node) {
 
     }
 
-    private Node makeRequest(NodeKey key) {
+    private DictionaryNode makeRequest(NodeKey key) {
         DictionaryNode node = new DictionaryNode();
         node.addNode("t", new StringNode(tokenManager.newToken(key).token + ""));
         node.addNode("y", new StringNode("q"));
         return node;
     }
 
-    private Node makeResponse(NodeKey key) {
+    private DictionaryNode makeResponse(NodeKey key) {
         DictionaryNode node = new DictionaryNode();
         node.addNode("t", new StringNode(tokenManager.newToken(key).token + ""));
         node.addNode("y", new StringNode("r"));
         return node;
     }
 
-    private Node makeError(NodeKey key) {
+    private DictionaryNode makeError(NodeKey key) {
         DictionaryNode node = new DictionaryNode();
         node.addNode("t", new StringNode(tokenManager.newToken(key).token + ""));
         node.addNode("y", new StringNode("e"));
         return node;
     }
 
-    public static void tmp() {
-        DictionaryNode query = new DictionaryNode();
-        DictionaryNode arg = new DictionaryNode();
-        arg.addNode("target", new StringNode("32303a32f54e697351ff4aec29cdbaabf2fbe3467cc267"));
-        NodeKey NODE_KEY = NodeKey.generateKey();
-        System.out.println("id::::" + toHex(NODE_KEY.getValue()));
-        arg.addNode("id", new StringNode(NODE_KEY.getValue()));
-        query.addNode("a", arg);
-        byte[] encode = query.encode();
-        System.out.println("s:" + new String(encode));
-        try (DatagramSocket socket = new DatagramSocket()) {
-            InetAddress bootAddress = InetAddress.getByName("router.utorrent.com");
-            System.out.println("ip:" + bootAddress.getHostAddress());
-            DatagramPacket packet = new DatagramPacket(encode, 0, encode.length, bootAddress, 6881);
-            System.out.println("to send");
-            socket.send(packet);
-            System.out.println("send");
-            byte[] getByte = new byte[1000];
-            DatagramPacket result = new DatagramPacket(getByte, 1000);
-            socket.setSoTimeout(10000);
-            System.out.println("start");
-            socket.receive(result);
-            System.out.println("received");
-            int length = result.getLength();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            for (int i = 0; i < length; i++) {
-                baos.write(getByte[i]);
-            }
-            getByte = baos.toByteArray();
-            String s = new String(getByte);
-            System.out.println("reced s:::" + s);
-            Decoder decoder = new Decoder(getByte);
-            decoder.parse();
-            DictionaryNode node = (DictionaryNode) decoder.getValue().get(0);
-            System.out.println("node String ::" + node.toString());
-            System.out.println(new String(node.encode()));
-            DictionaryNode resp = (DictionaryNode) node.getNode("r");
-            if (resp != null) {
-                Node id = resp.getNode("id");
-                Node nodes = resp.getNode("nodes");
-                System.out.println("rec id::::" + Utils.toHex(id.encode()));
-                System.out.println(nodes.toString());
-            }
-            byte[] ips = node.getNode("ip").encode();
-            byte[] port = new byte[2];
-            byte[] ip = new byte[4];
-            for (int i = 0; i < 4; i++) {
-                ip[i] = ips[i];
-                System.out.println("ips:" + ip[i]);
-            }
-            for (int i = 0; i < 2; i++) {
-                port[i] = ips[i + 4];
-                System.out.println("ips:" + port[i]);
-            }
-
-            InetAddress byAddress = Inet4Address.getByAddress(ip);
-            System.out.println("addr:" + byAddress.getHostAddress());
-            System.out.println("port:" + bytesToInt(port));
-            System.out.println("dcode" + node.getNode("ip").decode());
-            System.out.println(new String(node.getNode("ip").encode(), "utf-8"));
-
-            InetAddress btAddress = InetAddress.getByAddress(ip);
-            int btPort = bytesToInt(port);
-
-            byte[] btbuf = new byte[1000];
-            DatagramPacket btPing = new DatagramPacket(encode, encode.length, btAddress, btPort);
-            System.out.println("bt ping");
-            socket.send(btPing);
-            System.out.println("pingded");
-            socket.receive(result);
-            byte[] pingRet = new byte[1000];
-            DatagramPacket pingResult = new DatagramPacket(pingRet, 1000);
-            socket.receive(pingResult);
-            System.out.println("end ping");
-            length = result.getLength();
-            baos = new ByteArrayOutputStream();
-            for (int i = 0; i < length; i++) {
-                baos.write(getByte[i]);
-            }
-            decoder = new Decoder(baos.toByteArray());
-            decoder.parse();
-            node = (DictionaryNode) decoder.getValue().get(0);
-            System.out.println(node.getNode("r").decode());
-            System.out.println(node.getNode("t").decode());
-            System.out.println(node.getNode("y").decode());
-            System.out.println(new String(node.encode()));
-
-        } catch (IOException e) {
-            System.out.println(e.getMessage());
-            e.printStackTrace();
+    public void onResponse(InetAddress address, int port, DictionaryNode node) {
+        Node method = node.getNode("y");
+        Node t = node.getNode("t");
+        DictionaryNode arg = (DictionaryNode) node.getNode("r");
+        Node id = arg.getNode("id");
+        switch (method.toString()) {
+            case METHOD_PING:
+                table.addNode(new NodeInfo(address, port, new NodeKey(id.decode())));
+                onPing(t, arg);
+                break;
+            case METHOD_GET_PEERS:
+                DictionaryNode arg1 = arg;
+                byte[] info_hashes = arg1.getNode("info_hash").decode();
+                for (byte info_hash : info_hashes) {
+                    System.out.print(info_hash + ",");
+                }
+                System.out.println();
+                break;
+            case METHOD_FIND_NODE:
+                break;
+            case METHOD_ANNOUNCE_PEER:
+                break;
+            default:
+                break;
         }
+
     }
+
+    private void onPing(Node t, DictionaryNode arg) {
+        Node id = arg.getNode("id");
+        DictionaryNode node = makeResponse(local);
+        node.addNode("t", t);
+        response(node, new NodeKey(id.decode()));
+    }
+
 
     public static void main(String[] args) throws UnsupportedEncodingException, UnknownHostException {
     }
+
 
 }

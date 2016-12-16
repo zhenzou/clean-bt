@@ -1,4 +1,4 @@
-package me.zzhen.bt;
+package me.zzhen.bt.editor;
 
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon;
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView;

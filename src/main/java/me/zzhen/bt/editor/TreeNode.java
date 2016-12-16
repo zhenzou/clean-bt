@@ -1,4 +1,4 @@
-package me.zzhen.bt;
+package me.zzhen.bt.editor;
 
 import java.util.ArrayList;
 import java.util.List;

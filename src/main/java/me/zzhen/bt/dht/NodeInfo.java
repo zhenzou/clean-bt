@@ -5,6 +5,7 @@ import me.zzhen.bt.utils.Utils;
 
 import java.io.*;
 import java.net.*;
+import java.util.Objects;
 
 /**
  * Project:CleanBT
@@ -33,14 +34,14 @@ public class NodeInfo {
     }
 
     /**
-     * 一般用于
+     *
      */
     public NodeInfo(byte[] bytes) {
         byte[] keydata = new byte[20];
         System.arraycopy(bytes, 0, keydata, 0, 20);
         address = IO.getAddrFromBytes(bytes, 20);
         key = new NodeKey(keydata);
-        port = Utils.bytesToInt(bytes, 24, 2);
+        port = Utils.bytes2Int(bytes, 24, 2);
     }
 
     /**
@@ -56,7 +57,7 @@ public class NodeInfo {
     }
 
     /**
-     * 一般Bootstrap Node 初始化使用
+     * 一般Bootstrap RouteTreeNode 初始化使用
      *
      * @param host
      * @param port
@@ -74,6 +75,12 @@ public class NodeInfo {
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
+    }
+
+    public boolean prefix(int i) {
+        if (i >= 160 || i < 1) throw new RuntimeException("prefix of node should smaller than 160 and bigger than 1");
+
+        return key.getValue()[(i - 1) / 8] >>> i % 8 == 1;
     }
 
     private void initAddress() throws UnknownHostException {
@@ -107,7 +114,7 @@ public class NodeInfo {
     /**
      * @return nodeinfo的编码，ID IP/Port 一共26个字节
      */
-    public byte[] encode() {
+    public byte[] compactNodeInfo() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
             baos.write(key.getValue());
@@ -134,7 +141,7 @@ public class NodeInfo {
     @Override
     public int hashCode() {
         int result = port;
-        result = 31 * result + key.hashCode();
+        result = 31 * result + Objects.hash(key);
         result = 31 * result + address.hashCode();
         return result;
     }

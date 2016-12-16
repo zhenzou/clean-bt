@@ -1,13 +1,8 @@
 package me.zzhen.bt.utils;
 
-import me.zzhen.bt.decoder.Decoder;
-import me.zzhen.bt.decoder.Node;
-
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.List;
 import java.util.UUID;
 
 /**

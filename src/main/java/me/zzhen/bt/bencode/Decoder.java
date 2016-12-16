@@ -1,4 +1,7 @@
-package me.zzhen.bt.decoder;
+package me.zzhen.bt.bencode;
+
+import me.zzhen.bt.dht.NodeInfo;
+import me.zzhen.bt.utils.Utils;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -6,6 +9,7 @@ import java.util.List;
 
 /**
  * Project:CleanBT
+ * TODO 重构成工具类 使用代码模式
  *
  * @author zzhen zzzhen1994@gmail.com
  *         Create Time: 2016/10/16.
@@ -26,10 +30,6 @@ public class Decoder {
         this(new ByteArrayInputStream(input, offset, length));
     }
 
-    public Decoder(String file) throws FileNotFoundException {
-        this(new FileInputStream(file));
-    }
-
     public Decoder(File file) throws FileNotFoundException {
         this(new FileInputStream(file));
     }
@@ -37,6 +37,25 @@ public class Decoder {
     public Decoder(InputStream input) {
         this.input = new BufferedInputStream(input);
     }
+
+    public static List<Node> parse(byte[] input) throws IOException {
+        return parse(new ByteArrayInputStream(input));
+    }
+
+    public static List<Node> parse(byte[] input, int offset, int length) throws IOException {
+        return parse(new ByteArrayInputStream(input, offset, length));
+    }
+
+    public static List<Node> parse(File file) throws IOException {
+        return parse(new FileInputStream(file));
+    }
+
+    public static List<Node> parse(InputStream input) throws IOException {
+        Decoder decoder = new Decoder(input);
+        decoder.parse();
+        return decoder.getValue();
+    }
+
 
     /**
      * 开始解析整个输入文件
@@ -55,6 +74,7 @@ public class Decoder {
 
     /**
      * 解析下一个Node
+     * TODO 增加错误位置
      *
      * @param c 当前输入的字符 应该是 i,d,l或者数字
      * @return 当前节点的Node结构
@@ -92,7 +112,6 @@ public class Decoder {
      * @throws IOException
      */
     private Node parseString(int cur) throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
         int c;
         StringBuilder len = new StringBuilder();
         len.append((char) cur);
@@ -105,8 +124,9 @@ public class Decoder {
         }
         long length = Long.parseLong(len.toString().trim());
         long i = 0;
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
         while (i < length && (c = input.read()) != -1) {
-            baos.write((byte) c);
+            baos.write(c & 0xFF);
             i++;
         }
         if (i < length) {
@@ -194,11 +214,23 @@ public class Decoder {
 
     public static void main(String[] args) {
         try {
-//            Decoder decoder = new Decoder("D:/Chicago.Med.torrent");
-            Decoder decoder = new Decoder("d4:test0:e".getBytes());
+            String info="7494dc47bec535581b208170d98d3f16ddaa22a5";
+            String x = "64323a6970363a71738432457d313a7264323a696432303aebff36697351ff4aec29cdbaabf2fbe3467cc267353a6e6f6465733431363a86d481f1d385d269d90ca72f5dad2c37ada985575c37fded51855cb3ec86d3f1ed8dd97898cb5dd913d3adddbab36921fd6546185cb3ec87f0a6b93768ac30422e2891c936d89560bf428df417845cb3ec0021456877aa5d9873033d1c0e079be65fb38d5e8b79cb5cb3ec018bcc1d862a4705762eee65f253eac3087b202364460c5cb3ec025d6494f7d9c51fef29c1b68fadbcb2298e7395a7620d5cb3ec03ecb03c7eaa349df5b2c4995cd240e4583d532a42687a5cb3ec04501fe8ea25596c4bae419c4f07211832da9978a974025cb3ec0506a5573e8fd011ba2e5b094a2af269cebffdd6a8452c5cb3ec0653f1ed8d597898cbddd913d32dddbab3020c33696fb45cb3ec0770a6b937e8ac3042ae2891c9b6d895605a6e9b4c74b55cb3ec4061456877ea5d9873433d1c0e479be65f31b6435c12645cb3ec41cbcc1d866a4705766eee65f213eac30861d093ba38585cb3ec421d6494f799c51fef69c1b68fedbcb229bb70c3092c015cb3ec43acb03c7eea349df5f2c4995c9240e458d90bc2788c1c5cb3ec44101fe8ea65596c4bee419c4f47211832592a7de6a24865313a74313a01313a76343a4c540011313a79313a7265";
+            byte[] bytes = Utils.hex2Bytes(x);
+            Decoder decoder = new Decoder(bytes);
             decoder.parse();
             List<Node> value = decoder.getValue();
-            value.forEach(item -> System.out.println(item.decode()));
+            value.forEach((Node item) -> {
+                DictionaryNode resp = (DictionaryNode) ((DictionaryNode) item).getNode("r");
+                Node node = resp.getNode("nodes");
+                byte[] decode = node.decode();
+                System.out.println(decode.length);
+                for (int i = 0; i < decode.length; i += 26) {
+                    NodeInfo nodeInfo = new NodeInfo(decode, i);
+                    System.out.println(nodeInfo.getAddress().getHostAddress());
+                    System.out.println(nodeInfo.getPort());
+                }
+            });
 
         } catch (IOException e) {
             e.printStackTrace();

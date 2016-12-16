@@ -1,4 +1,4 @@
-package me.zzhen.bt.decoder;
+package me.zzhen.bt.bencode;
 
 /**
  * /**

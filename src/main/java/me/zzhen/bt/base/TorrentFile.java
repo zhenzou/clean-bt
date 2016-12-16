@@ -1,6 +1,6 @@
-package me.zzhen.bt;
+package me.zzhen.bt.base;
 
-import me.zzhen.bt.decoder.*;
+import me.zzhen.bt.bencode.*;
 import me.zzhen.bt.utils.Utils;
 
 import java.io.*;
