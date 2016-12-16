@@ -192,7 +192,6 @@ public class UtMetadata {
             e.printStackTrace();
         }
     }
-
     private DictionaryNode buildMsg(DictionaryNode data) {
         DictionaryNode msg = new DictionaryNode();
         DictionaryNode head = new DictionaryNode();
