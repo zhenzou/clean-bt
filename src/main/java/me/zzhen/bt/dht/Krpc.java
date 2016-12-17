@@ -139,12 +139,11 @@ public class Krpc {
                 logger.info("send " + method + ":" + address.getHostAddress() + ":" + target.getPort());
                 byte[] getByte = new byte[1024];
                 DatagramPacket result = new DatagramPacket(getByte, 1024);
+                socket.receive(result);
                 addr = result.getAddress();
                 port = result.getPort();
-                socket.receive(result);
-                logger.info("received from " + method + ":" + address.getHostAddress() + ":" + target.getPort());
-                data = (DictionaryNode) Decoder.parse(getByte, 0, result.getLength());
-
+                logger.info("received from " + method + ":" + addr.getHostAddress() + ":" + port);
+                data = (DictionaryNode) Decoder.parse(getByte, 0, result.getLength()).get(0);
                 Node y = data.getNode("y");
                 getReceivedType(y.toString());
                 DictionaryNode resp = (DictionaryNode) data.getNode("r");
@@ -154,12 +153,6 @@ public class Krpc {
                             handlePingResp(addr, port, resp);
                             break;
                         case METHOD_GET_PEERS:
-                            DictionaryNode arg1 = (DictionaryNode) arg;
-                            byte[] info_hashes = arg1.getNode("info_hash").decode();
-                            for (byte info_hash : info_hashes) {
-                                System.out.print(info_hash + ",");
-                            }
-                            System.out.println();
                             handleGetPeerResp(arg, resp, method);
                             break;
                         case METHOD_FIND_NODE:
@@ -278,9 +271,6 @@ public class Krpc {
 
     private void handleGetPeerResp(Node arg, DictionaryNode resp, String method) {
 
-        DictionaryNode arg1 = (DictionaryNode) arg;
-        byte[] info_hashes = arg1.getNode("info_hash").decode();
-        logger.info("infohash:" + Utils.toHex(info_hashes));
         Node token = resp.getNode("token");
         ListNode values = (ListNode) resp.getNode("values");
         if (values == null) {

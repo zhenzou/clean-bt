@@ -19,7 +19,7 @@ public interface Config {
     String MENU_FILE_SAVE = "保存";
 
 
-    //    DHT
+    //DHT
     String SERVER_IP = "43.241.224.72";
     int SERVER_PORT = 6882;
 

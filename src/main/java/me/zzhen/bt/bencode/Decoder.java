@@ -6,6 +6,7 @@ import me.zzhen.bt.utils.Utils;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Project:CleanBT
@@ -214,22 +215,36 @@ public class Decoder {
 
     public static void main(String[] args) {
         try {
-            String info="7494dc47bec535581b208170d98d3f16ddaa22a5";
+            String info = "7494dc47bec535581b208170d98d3f16ddaa22a5";
             String x = "64323a6970363a71738432457d313a7264323a696432303aebff36697351ff4aec29cdbaabf2fbe3467cc267353a6e6f6465733431363a86d481f1d385d269d90ca72f5dad2c37ada985575c37fded51855cb3ec86d3f1ed8dd97898cb5dd913d3adddbab36921fd6546185cb3ec87f0a6b93768ac30422e2891c936d89560bf428df417845cb3ec0021456877aa5d9873033d1c0e079be65fb38d5e8b79cb5cb3ec018bcc1d862a4705762eee65f253eac3087b202364460c5cb3ec025d6494f7d9c51fef29c1b68fadbcb2298e7395a7620d5cb3ec03ecb03c7eaa349df5b2c4995cd240e4583d532a42687a5cb3ec04501fe8ea25596c4bae419c4f07211832da9978a974025cb3ec0506a5573e8fd011ba2e5b094a2af269cebffdd6a8452c5cb3ec0653f1ed8d597898cbddd913d32dddbab3020c33696fb45cb3ec0770a6b937e8ac3042ae2891c9b6d895605a6e9b4c74b55cb3ec4061456877ea5d9873433d1c0e479be65f31b6435c12645cb3ec41cbcc1d866a4705766eee65f213eac30861d093ba38585cb3ec421d6494f799c51fef69c1b68fedbcb229bb70c3092c015cb3ec43acb03c7eea349df5f2c4995c9240e458d90bc2788c1c5cb3ec44101fe8ea65596c4bee419c4f47211832592a7de6a24865313a74313a01313a76343a4c540011313a79313a7265";
-            byte[] bytes = Utils.hex2Bytes(x);
+            String x1 = "64323a6970363a7781ff5c1ae1313a7264323a696432303aebff36697351ff4aec29cdbaabf2fbe3467cc267353a6e6f6465733431363a02b3afe2cb7829e37b9cd259faefcbb3c6cb53beb87982d0690d6a8a433912f38a14c49f678a43f236e226f1a5f92ecc3080107a6a8a433912f38a14c49f678a43f236e352fd3c175b4f3c7995116a8a433912f38a14c49f678a43f236e42d8b328ea84290568a346a8a433912f38a14c49f678a43f236e508f2468cb5796da958c06a8a433912f38a14c49f678a43f236e61ed131f8a71ef2236d5a6a8a433912f38a14c49f678a43f236e7bcc514835c8cec91732d6a8a433912f38a14c49f678a43f236f0a18a96f2af2735fc7e576a8a433912f38a14c49f678a43f236f138664f20507148c24bd96a8a433912f38a14c49f678a43f236f236f1a5f925c3f5403f456a8a433912f38a14c49f678a43f236f342fd3c17b0af6d3b1adf6a8a433912f38a14c49f678a43f236f43d8b328ebc8194ce53d56a8a433912f38a14c49f678a43f236f518f2468c3e8b8b9986e16a8a433912f38a14c49f678a43f236f60ed131f8df3598b4161e6a8a433912f38a14c49f678a43f236f7acc51483978867790cf16a8a433912f38a14c49f678a43f236f8a98a96f2abcb8f9423ad65313a74313a01313a76343a4c540011313a79313a7265";
+            String x2 = "64313a74313a01313a79313a71313a71393a66696e645f6e6f6465313a6164363a74617267657432303a6a8a433912f38a14c49f678a43f236ffae1276c7323a696432303a6a8a433912f38a14c49f678a43f236ffae1276c76565";
+            byte[] bytes = Utils.hex2Bytes(x2);
             Decoder decoder = new Decoder(bytes);
             decoder.parse();
-            List<Node> value = decoder.getValue();
+            List<Node> value = Decoder.parse(bytes);
             value.forEach((Node item) -> {
-                DictionaryNode resp = (DictionaryNode) ((DictionaryNode) item).getNode("r");
-                Node node = resp.getNode("nodes");
-                byte[] decode = node.decode();
-                System.out.println(decode.length);
-                for (int i = 0; i < decode.length; i += 26) {
-                    NodeInfo nodeInfo = new NodeInfo(decode, i);
-                    System.out.println(nodeInfo.getAddress().getHostAddress());
-                    System.out.println(nodeInfo.getPort());
+                DictionaryNode node = (DictionaryNode) item;
+                Map<String, Node> map = node.getValue();
+                for (Map.Entry<String, Node> entry : map.entrySet()) {
+                    System.out.println(entry.getValue().decode().length);
+                    System.out.println(entry.getKey() + ":" + Utils.toHex(entry.getValue().encode()));
                 }
+
+                DictionaryNode a = (DictionaryNode) node.getNode("a");
+                Node id = a.getNode("id");
+                System.out.println(id.encode().length);
+                Node info_hash = a.getNode("target");
+                System.out.println(info_hash.encode().length);
+//                DictionaryNode resp = (DictionaryNode) ((DictionaryNode) item).getNode("r");
+//                Node arg = resp.getNode("nodes");
+//                byte[] decode = arg.decode();
+//                System.out.println(decode.length);
+//                for (int i = 0; i < decode.length; i += 26) {
+//                    NodeInfo nodeInfo = new NodeInfo(decode, i);
+//                    System.out.println(nodeInfo.getAddress().getHostAddress());
+//                    System.out.println(nodeInfo.getPort());
+//                }
             });
 
         } catch (IOException e) {

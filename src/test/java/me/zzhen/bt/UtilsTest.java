@@ -38,12 +38,12 @@ public class UtilsTest {
 
     @org.junit.Test
     public void intToBytes() throws Exception {
-        assertArrayEquals(Utils.intToBytes(1), new byte[]{0, 0, 0, 1});
+        assertArrayEquals(Utils.int2Bytes(1), new byte[]{0, 0, 0, 1});
     }
 
     @org.junit.Test
     public void hexToBytes() throws Exception {
-        assertArrayEquals(Utils.hexToBytes("FF"), new byte[]{-1});
+        assertArrayEquals(Utils.hex2Bytes("FF"), new byte[]{-1});
     }
 
     @org.junit.Test
