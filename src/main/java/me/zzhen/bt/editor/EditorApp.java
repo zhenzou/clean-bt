@@ -36,9 +36,9 @@ import java.util.stream.Collectors;
  *         Version :
  *         Description:
  */
-public class Main extends Application {
+public class EditorApp extends Application {
 
-    private static final Logger logger = LoggerFactory.getLogger(Main.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(EditorApp.class.getName());
 
     private final BorderPane mainArea = new BorderPane();
     private final MenuBar menuBar = new MenuBar();
@@ -55,6 +55,7 @@ public class Main extends Application {
     private TorrentFile torrent;
     private MenuItem openFile;
     private MenuItem saveFile;
+    private MenuItem randomName;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
@@ -95,11 +96,18 @@ public class Main extends Application {
         saveFile.setGraphic(saveView);
         fileMenu.getItems().addAll(openFile, saveFile);
         saveFile.setDisable(true);
+        Menu toolMenu = new Menu(Config.MENU_TOOL);
+        randomName = new MenuItem(Config.MENU_TOOL_RANDOM);
+        randomName.setDisable(true);
+        toolMenu.getItems().add(randomName);
+
         menuBar.setBackground(new Background(new BackgroundFill(Color.TRANSPARENT, null, null)));
-        menuBar.getMenus().add(fileMenu);
+        menuBar.getMenus().addAll(fileMenu, toolMenu);
         openFile.setOnAction(event -> openFile());
         //TODO 异步？
         saveFile.setOnAction((event) -> saveFile());
+
+        randomName.setOnAction(event -> randomNameAll(itemRoot));
     }
 
     private void saveFile() {
@@ -133,7 +141,6 @@ public class Main extends Application {
         }
         try {
             torrent = TorrentFile.fromFile(file);
-            System.out.println(torrent.getInfoHash());
         } catch (IOException | DecoderException e) {
             errorDialog.setContentText(e.getMessage());
             errorDialog.showAndWait();
@@ -141,14 +148,29 @@ public class Main extends Application {
         TreeNode<FileTreeItemModel> nodeRoot = buildNodeTree();
         itemRoot = buildItemTree(nodeRoot);
         fileTree.setRoot(itemRoot);
-//        fileTree.refresh();
         if (isFirst) {
             centerArea.getChildren().add(fileTree);
             isFirst = false;
+            randomName.setDisable(false);
             centerBtn.setVisible(false);
             saveFile.setDisable(false);
         }
     }
+
+
+    /**
+     * 重命名所有文件
+     *
+     * @param item
+     */
+    private void randomNameAll(TreeItem<FileTreeItemModel> item) {
+        item.getValue().setName(randomName(item.getValue().getName()));
+        ObservableList<TreeItem<FileTreeItemModel>> children = item.getChildren();
+        for (TreeItem<FileTreeItemModel> child : children) {
+            randomNameAll(child);
+        }
+    }
+
 
     /**
      * 将UI上的文件树结构恢复成BT文件中的扁平的文件树
@@ -239,9 +261,9 @@ public class Main extends Application {
         @Override
         public void startEdit() {
             super.startEdit();
-            if (getTreeItem() == itemRoot) {
-                return;
-            }
+//            if (getTreeItem() == itemRoot) {
+//                return;
+//            }
             editorViewHolder.setCell(this);
             setGraphic(editorViewHolder);
             isEdited = true;
@@ -384,10 +406,14 @@ public class Main extends Application {
             });
 
             randomBtn.setOnAction(event -> {
-                String extName = Utils.getExtName(cell.getItem().getName());
-                editor.setText(Utils.randomDigitalName() + "." + extName);
+                editor.setText(randomName(cell.getItem().getName()));
             });
         }
+    }
+
+    static String randomName(String origin) {
+        String extName = Utils.getExtName(origin);
+        return Utils.randomDigitalName() + "." + extName;
     }
 
 
