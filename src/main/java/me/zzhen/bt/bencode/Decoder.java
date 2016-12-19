@@ -1,6 +1,5 @@
 package me.zzhen.bt.bencode;
 
-import me.zzhen.bt.dht.NodeInfo;
 import me.zzhen.bt.utils.Utils;
 
 import java.io.*;
@@ -10,7 +9,6 @@ import java.util.Map;
 
 /**
  * Project:CleanBT
- * TODO 重构成工具类 使用代码模式
  *
  * @author zzhen zzzhen1994@gmail.com
  *         Create Time: 2016/10/16.
@@ -23,51 +21,43 @@ public class Decoder {
     private EventHandler handler;
     private List<Node> nodes = new ArrayList<>();
 
-    public Decoder(byte[] input) {
-        this(new ByteArrayInputStream(input));
+    public static List<Node> decode(byte[] input) throws IOException {
+        return decode(new ByteArrayInputStream(input));
     }
 
-    public Decoder(byte[] input, int offset, int length) {
-        this(new ByteArrayInputStream(input, offset, length));
+    public static List<Node> decode(byte[] input, int offset, int length) throws IOException {
+        return decode(new ByteArrayInputStream(input, offset, length));
     }
 
-    public Decoder(File file) throws FileNotFoundException {
-        this(new FileInputStream(file));
+    public static List<Node> decode(File file) throws IOException {
+        return decode(new FileInputStream(file));
     }
 
-    public Decoder(InputStream input) {
-        this.input = new BufferedInputStream(input);
-    }
-
-    public static List<Node> parse(byte[] input) throws IOException {
-        return parse(new ByteArrayInputStream(input));
-    }
-
-    public static List<Node> parse(byte[] input, int offset, int length) throws IOException {
-        return parse(new ByteArrayInputStream(input, offset, length));
-    }
-
-    public static List<Node> parse(File file) throws IOException {
-        return parse(new FileInputStream(file));
-    }
-
-    public static List<Node> parse(InputStream input) throws IOException {
+    public static List<Node> decode(InputStream input) throws IOException {
         Decoder decoder = new Decoder(input);
-        decoder.parse();
+        decoder.decode();
         return decoder.getValue();
     }
 
+    /**
+     * 有时还是需要Handler的
+     *
+     * @param input
+     */
+    public Decoder(InputStream input) {
+        this.input = new BufferedInputStream(input);
+    }
 
     /**
      * 开始解析整个输入文件
      *
      * @throws IOException
      */
-    public void parse() throws IOException {
+    public void decode() throws IOException {
         int c;
         while ((c = input.read()) != -1) {
             char cur = (char) c;
-            Node node = parseNext(cur);
+            Node node = decodeNext(cur);
             nodes.add(node);
         }
         input.close();
@@ -81,21 +71,21 @@ public class Decoder {
      * @return 当前节点的Node结构
      * @throws IOException
      */
-    private Node parseNext(char c) throws IOException {
+    private Node decodeNext(char c) throws IOException {
         Node node = null;
         switch (c) {
             case IntNode.INT_START:
-                node = parseInt();
+                node = decodeInt();
                 break;
             case ListNode.LIST_START:
-                node = parseList();
+                node = decodeList();
                 break;
             case DictionaryNode.DIC_START:
-                node = parseDic();
+                node = decodeDic();
                 break;
             default:
                 if (Character.isDigit(c)) {
-                    node = parseString(c);
+                    node = decodeString(c);
                 } else {
                     throw new DecoderException("not a legal char");
                 }
@@ -112,7 +102,7 @@ public class Decoder {
      * @return
      * @throws IOException
      */
-    private Node parseString(int cur) throws IOException {
+    private Node decodeString(int cur) throws IOException {
         int c;
         StringBuilder len = new StringBuilder();
         len.append((char) cur);
@@ -148,7 +138,7 @@ public class Decoder {
      * @return
      * @throws IOException
      */
-    private Node parseDic() throws IOException {
+    private Node decodeDic() throws IOException {
         int c;
         String key = "";
         DictionaryNode dic = new DictionaryNode();
@@ -158,14 +148,14 @@ public class Decoder {
             char cur = (char) c;
             if (inKey) {
                 if (Character.isDigit(c)) {
-                    key = parseString(c).toString();
+                    key = decodeString(c).toString();
                     inKey = false;
                 } else {
                     System.out.println(cur);
                     throw new DecoderException("key of dic must be string,found digital");
                 }
             } else {
-                node = parseNext(cur);
+                node = decodeNext(cur);
                 dic.addNode(key, node);
                 inKey = true;
                 if (handler != null) {
@@ -176,18 +166,18 @@ public class Decoder {
         return dic;
     }
 
-    private Node parseList() throws IOException {
+    private Node decodeList() throws IOException {
         ListNode list = new ListNode();
         int c;
         while ((c = input.read()) != -1 && (char) c != ListNode.LIST_END) {
             char cc = (char) c;
-            Node node = parseNext(cc);
+            Node node = decodeNext(cc);
             list.addNode(node);
         }
         return list;
     }
 
-    private Node parseInt() throws IOException {
+    private Node decodeInt() throws IOException {
         StringBuilder sb = new StringBuilder();
         int c = -1;
         while ((c = input.read()) != -1 && c != IntNode.INT_END) {
@@ -220,9 +210,7 @@ public class Decoder {
             String x1 = "64323a6970363a7781ff5c1ae1313a7264323a696432303aebff36697351ff4aec29cdbaabf2fbe3467cc267353a6e6f6465733431363a02b3afe2cb7829e37b9cd259faefcbb3c6cb53beb87982d0690d6a8a433912f38a14c49f678a43f236e226f1a5f92ecc3080107a6a8a433912f38a14c49f678a43f236e352fd3c175b4f3c7995116a8a433912f38a14c49f678a43f236e42d8b328ea84290568a346a8a433912f38a14c49f678a43f236e508f2468cb5796da958c06a8a433912f38a14c49f678a43f236e61ed131f8a71ef2236d5a6a8a433912f38a14c49f678a43f236e7bcc514835c8cec91732d6a8a433912f38a14c49f678a43f236f0a18a96f2af2735fc7e576a8a433912f38a14c49f678a43f236f138664f20507148c24bd96a8a433912f38a14c49f678a43f236f236f1a5f925c3f5403f456a8a433912f38a14c49f678a43f236f342fd3c17b0af6d3b1adf6a8a433912f38a14c49f678a43f236f43d8b328ebc8194ce53d56a8a433912f38a14c49f678a43f236f518f2468c3e8b8b9986e16a8a433912f38a14c49f678a43f236f60ed131f8df3598b4161e6a8a433912f38a14c49f678a43f236f7acc51483978867790cf16a8a433912f38a14c49f678a43f236f8a98a96f2abcb8f9423ad65313a74313a01313a76343a4c540011313a79313a7265";
             String x2 = "64313a74313a01313a79313a71313a71393a66696e645f6e6f6465313a6164363a74617267657432303a6a8a433912f38a14c49f678a43f236ffae1276c7323a696432303a6a8a433912f38a14c49f678a43f236ffae1276c76565";
             byte[] bytes = Utils.hex2Bytes(x2);
-            Decoder decoder = new Decoder(bytes);
-            decoder.parse();
-            List<Node> value = Decoder.parse(bytes);
+            List<Node> value = Decoder.decode(bytes);
             value.forEach((Node item) -> {
                 DictionaryNode node = (DictionaryNode) item;
                 Map<String, Node> map = node.getValue();
