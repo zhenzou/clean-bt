@@ -1,4 +1,4 @@
-package me.zzhen.bt.base;
+package me.zzhen.bt.editor;
 
 /**
  * Project:CleanBT
@@ -7,7 +7,7 @@ package me.zzhen.bt.base;
  *
  * @author zzhen zzzhen1994@gmail.com
  */
-public interface Config {
+public interface EditorConfig {
 
     String APP_NAME = "CleanBT";
     int WINDOW_WIDTH = 600;
@@ -18,9 +18,8 @@ public interface Config {
     String MENU_FILE_OPEN = "打开";
     String MENU_FILE_SAVE = "保存";
 
+    String MENU_TOOL = "工具";
+    String MENU_TOOL_RANDOM = "随机";
 
-    //DHT
-    String SERVER_IP = "43.241.224.72";
-    int SERVER_PORT = 6882;
 
 }

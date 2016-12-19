@@ -12,8 +12,7 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import me.zzhen.bt.base.Config;
-import me.zzhen.bt.base.TorrentFile;
+import me.zzhen.bt.common.TorrentFile;
 import me.zzhen.bt.bencode.*;
 import me.zzhen.bt.utils.Utils;
 import org.slf4j.Logger;
@@ -62,9 +61,9 @@ public class EditorApp extends Application {
         this.primaryStage = primaryStage;
         initView();
         initMenu();
-        Scene scene = new Scene(mainArea, Config.WINDOW_WIDTH, Config.WINDOW_HEIGHT);
+        Scene scene = new Scene(mainArea, EditorConfig.WINDOW_WIDTH, EditorConfig.WINDOW_HEIGHT);
         primaryStage.setResizable(false);
-        primaryStage.setTitle(Config.APP_NAME);
+        primaryStage.setTitle(EditorConfig.APP_NAME);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
@@ -87,17 +86,17 @@ public class EditorApp extends Application {
     }
 
     private void initMenu() {
-        Menu fileMenu = new Menu(Config.MENU_FILE);
-        openFile = new MenuItem(Config.MENU_FILE_OPEN);
+        Menu fileMenu = new Menu(EditorConfig.MENU_FILE);
+        openFile = new MenuItem(EditorConfig.MENU_FILE_OPEN);
         FontAwesomeIconView openView = new FontAwesomeIconView(FontAwesomeIcon.FOLDER_OPEN);
         openFile.setGraphic(openView);
-        saveFile = new MenuItem(Config.MENU_FILE_SAVE);
+        saveFile = new MenuItem(EditorConfig.MENU_FILE_SAVE);
         FontAwesomeIconView saveView = new FontAwesomeIconView(FontAwesomeIcon.SAVE);
         saveFile.setGraphic(saveView);
         fileMenu.getItems().addAll(openFile, saveFile);
         saveFile.setDisable(true);
-        Menu toolMenu = new Menu(Config.MENU_TOOL);
-        randomName = new MenuItem(Config.MENU_TOOL_RANDOM);
+        Menu toolMenu = new Menu(EditorConfig.MENU_TOOL);
+        randomName = new MenuItem(EditorConfig.MENU_TOOL_RANDOM);
         randomName.setDisable(true);
         toolMenu.getItems().add(randomName);
 
@@ -413,7 +412,7 @@ public class EditorApp extends Application {
 
     static String randomName(String origin) {
         String extName = Utils.getExtName(origin);
-        return Utils.randomDigitalName() + "." + extName;
+        return Utils.uuid() + "." + extName;
     }
 
 
