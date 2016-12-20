@@ -74,13 +74,8 @@ public interface IO {
      * @return IPV4 地址
      */
     static InetAddress getAddrFromBytes(byte[] bytes, int offset) {
-        byte[] addr = getSomeByte(bytes, offset, 4);
+        byte[] addr = Utils.getSomeByte(bytes, offset, 4);
         return getAddrFromBytes(addr);
     }
 
-    static byte[] getSomeByte(byte[] bytes, int offset, int length) {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        baos.write(bytes, offset, length);
-        return baos.toByteArray();
-    }
 }

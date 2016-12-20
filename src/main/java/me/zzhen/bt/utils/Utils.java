@@ -14,7 +14,7 @@ import java.util.UUID;
  */
 public interface Utils {
 
-    static String randomDigitalName() {
+    static String uuid() {
         return UUID.randomUUID().toString();
     }
 
@@ -64,7 +64,7 @@ public interface Utils {
     }
 
     /**
-     * if (len(input)<offset+length) return toHex(input[offset,input.length])
+     * if (len(input)<offset+length) throw toHex(input[offset,input.length])
      *
      * @param input
      * @param offset
@@ -72,13 +72,8 @@ public interface Utils {
      * @return
      */
     static String toHex(byte[] input, int offset, int length) {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        length = offset + length;
-        int len = input.length;
-        for (int i = offset; i < len && i < length; i++) {
-            baos.write(input[i]);
-        }
-        return toHex(baos.toByteArray());
+        byte[] bytes = getSomeByte(input, offset, length);
+        return toHex(bytes);
     }
 
 
@@ -88,7 +83,7 @@ public interface Utils {
      * @param num
      * @return
      */
-    static byte[] int2Bytes(int num) {
+    static byte[] intToBytes(int num) {
         byte[] bytes = new byte[4];
         int mask = 0xFF;
         for (int i = 0; i < 4; i++) {
@@ -129,6 +124,21 @@ public interface Utils {
             }
         }
         return ret;
+    }
+
+    static String bytesToBin(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            for (int i = 0; i < 8; i++) {
+                sb.append(bitAt(b, i));
+            }
+        }
+        return sb.toString();
+    }
+
+    static int bitAt(byte b, int pos) {
+        int i = 1 << 7 - pos;
+        return (b & i & 0xFF) > 0 ? 1 : 0;
     }
 
     static byte[] hex2Bytes(String hex) {
@@ -225,5 +235,18 @@ public interface Utils {
         byte tmp = ts[i];
         ts[i] = ts[j];
         ts[j] = tmp;
+    }
+
+    /**
+     * @param input
+     * @param offset
+     * @param length
+     * @return
+     */
+    static byte[] getSomeByte(byte[] input, int offset, int length) {
+        if ((offset + length) > input.length) throw new ArrayIndexOutOfBoundsException("illegal lengths for input");
+        byte[] bytes = new byte[length];
+        System.arraycopy(input, offset, bytes, 0, length);
+        return bytes;
     }
 }
