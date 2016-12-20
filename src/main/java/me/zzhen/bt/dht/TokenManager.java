@@ -1,6 +1,7 @@
 package me.zzhen.bt.dht;
 
-import com.sun.corba.se.impl.oa.toa.TOA;
+import me.zzhen.bt.dht.base.NodeKey;
+import me.zzhen.bt.dht.base.Token;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -15,14 +16,13 @@ import java.util.*;
  */
 public class TokenManager {
 
-    private final Random random = new Random();
-    private final Map<NodeKey, List<Token>> tokens = new HashMap<>();
-    private final Timer timer;
-    private boolean isRunning = true;
+    //TODO 不使用Timer，而且使用ConcurrentMap
+    private static final Random random = new Random();
+    private static final Map<NodeKey, List<Token>> tokens = new HashMap<>();
+    private static final Timer timer = new Timer();
+    private static boolean isRunning = true;
 
-    public TokenManager() {
-        timer = new Timer();
-        //每隔五分钟清理一次
+    static {
         long seconds = 5L * 60 * 1000;
         timer.schedule(new TimerTask() {
             @Override
@@ -35,7 +35,7 @@ public class TokenManager {
     /**
      * 没有严格检查，随便吧，反正token过期时间就是节点自己定义的
      */
-    private void clearTokens() {
+    private static void clearTokens() {
         System.out.println("clear");
         Instant now = Instant.now();
         for (Map.Entry<NodeKey, List<Token>> entry : tokens.entrySet()) {
@@ -52,16 +52,16 @@ public class TokenManager {
     /**
      * @return token is a two byte char
      */
-    public Token newToken(NodeKey key) {
+    public static Token newToken(NodeKey key) {
         char c = (char) random.nextInt();
         Token token = new Token(key, c, Instant.now());
-        List<Token> keyTokens = this.tokens.get(key);
+        List<Token> keyTokens = tokens.get(key);
         if (keyTokens != null) {
             keyTokens.add(token);
         } else {
             List<Token> list = new ArrayList<>();
             list.add(token);
-            this.tokens.put(key, list);
+            tokens.put(key, list);
         }
         return token;
     }
@@ -72,11 +72,11 @@ public class TokenManager {
      * @param token
      * @return
      */
-    public boolean isEffective(char token) {
+    public static boolean isEffective(char token) {
         return tokens.get(token) != null;
     }
 
-    public synchronized void clear() {
+    public static synchronized void clear() {
         System.out.println("clear");
         if (isRunning) {
             tokens.clear();
@@ -89,5 +89,9 @@ public class TokenManager {
     protected void finalize() throws Throwable {
         tokens.clear();
         timer.cancel();
+    }
+
+    public static void remove(int token) {
+
     }
 }

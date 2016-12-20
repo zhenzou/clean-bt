@@ -2,6 +2,7 @@ package me.zzhen.bt.dht;
 
 import me.zzhen.bt.bencode.DictionaryNode;
 import me.zzhen.bt.bencode.IntNode;
+import me.zzhen.bt.dht.base.NodeKey;
 import me.zzhen.bt.utils.IO;
 import me.zzhen.bt.utils.Utils;
 import org.slf4j.Logger;
@@ -145,7 +146,7 @@ public class UtMetadata {
     public void sendKeepLive() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
-            baos.write(Utils.int2Bytes(0));
+            baos.write(Utils.intToBytes(0));
         } catch (IOException e) {
             e.printStackTrace();
         }

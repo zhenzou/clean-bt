@@ -1,4 +1,6 @@
-package me.zzhen.bt.dht;
+package me.zzhen.bt.dht.base;
+
+import me.zzhen.bt.dht.base.NodeInfo;
 
 import java.util.ArrayList;
 import java.util.List;

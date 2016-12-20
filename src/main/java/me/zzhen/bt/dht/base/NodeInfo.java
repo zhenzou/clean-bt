@@ -1,4 +1,4 @@
-package me.zzhen.bt.dht;
+package me.zzhen.bt.dht.base;
 
 import me.zzhen.bt.utils.IO;
 import me.zzhen.bt.utils.Utils;
@@ -144,26 +144,5 @@ public class NodeInfo {
         result = 31 * result + Objects.hash(key);
         result = 31 * result + address.hashCode();
         return result;
-    }
-
-    public static void main(String[] args) {
-        try {
-            URL url = new URL("http://www.baidu.com");
-            URLConnection connection = url.openConnection();
-            connection.connect();
-            InputStream read = connection.getInputStream();
-            StringBuilder sb = new StringBuilder();
-            BufferedReader br = new BufferedReader(new InputStreamReader(read));
-            String line = null;
-            while ((line = br.readLine()) != null) {
-                sb.append(line);
-            }
-            read.close();
-            System.out.println(sb.toString());
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 }

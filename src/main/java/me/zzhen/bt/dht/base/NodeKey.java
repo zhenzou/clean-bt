@@ -1,4 +1,6 @@
-package me.zzhen.bt.dht;
+package me.zzhen.bt.dht.base;
+
+import me.zzhen.bt.utils.Utils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -19,7 +21,7 @@ public class NodeKey implements Comparable<NodeKey> {
     public static NodeKey genRandomKey() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         for (int i = 0; i < 5; i++) {
-            byte[] bytes = int2Bytes((int) (Math.random() * Integer.MAX_VALUE));
+            byte[] bytes = intToBytes((int) (Math.random() * Integer.MAX_VALUE));
             try {
                 baos.write(bytes);
             } catch (IOException e) {
@@ -37,7 +39,7 @@ public class NodeKey implements Comparable<NodeKey> {
     public static NodeKey loadOldKey() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         for (int i = 0; i < 5; i++) {
-            byte[] bytes = int2Bytes((int) (Math.random() * Integer.MAX_VALUE));
+            byte[] bytes = intToBytes((int) (Math.random() * Integer.MAX_VALUE));
             try {
                 baos.write(bytes);
             } catch (IOException e) {
@@ -65,28 +67,23 @@ public class NodeKey implements Comparable<NodeKey> {
         }
     }
 
-    public NodeKey xor(NodeKey other) {
-        byte[] val = new byte[20];
-        for (int i = 0; i < 20; i++) {
-            val[i] = (byte) (value[i] ^ other.value[i]);
-        }
-        return new NodeKey(val);
+    public NodeKey distance(NodeKey other) {
+        return distance(this, other);
     }
 
-    public boolean prefix(int i) {
+    /**
+     * @param i 0～159
+     * @return
+     */
+    public byte prefix(int i) {
         if (i >= 160 || i < 1) throw new RuntimeException("prefix of node should smaller than 160 and bigger than 1");
 
-        return value[(i - 1) / 8] >>> i % 8 == 1;
+        return (byte) (value[i / 8] >>> i % 8);
     }
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder(20);
-        byte[] value = this.value;
-        for (byte b : value) {
-            sb.append(b);
-        }
-        return sb.toString();
+        return Utils.toHex(value);
     }
 
     public byte[] getValue() {
@@ -122,7 +119,7 @@ public class NodeKey implements Comparable<NodeKey> {
 
     public static void main(String[] args) {
 
-        byte[] bytes = int2Bytes(100);
+        byte[] bytes = intToBytes(100);
         for (byte aByte : bytes) {
             System.out.println(aByte);
         }
