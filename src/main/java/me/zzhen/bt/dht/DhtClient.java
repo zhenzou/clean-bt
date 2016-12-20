@@ -4,6 +4,7 @@ import me.zzhen.bt.bencode.DictionaryNode;
 import me.zzhen.bt.bencode.ListNode;
 import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.dht.base.*;
+import me.zzhen.bt.dht.krpc.Krpc;
 import me.zzhen.bt.utils.IO;
 import me.zzhen.bt.utils.Utils;
 import org.slf4j.Logger;
@@ -45,14 +46,14 @@ public class DhtClient {
 
 
     public void ping(NodeInfo node) {
-        if (!DhtApp.self().isBlackItem(node)) {
+        if (!DhtApp.NODE.isBlackItem(node)) {
             krpc.ping(node);
         }
     }
 
-    public void findNode(NodeInfo node, byte[] target) {
-        if (!DhtApp.self().isBlackItem(node)) {
-            Response resp = krpc.findNode(node, target);
+    public void findNode(NodeInfo target, NodeKey key) {
+        if (!DhtApp.NODE.isBlackItem(target)) {
+            Response resp = krpc.findNode(target, key);
             if (!Response.isError(resp.value)) {
                 DictionaryNode value = (DictionaryNode) resp.value;
                 byte[] decode = value.getNode("nodes").decode();
@@ -60,7 +61,7 @@ public class DhtClient {
                 int len = decode.length;
                 for (int i = 0; i < len; i += 26) {
                     NodeInfo nodeInfo = new NodeInfo(decode, i);
-                    if (!DhtApp.self().isBlackItem(nodeInfo)) routeTable.addNode(nodeInfo);
+                    if (!DhtApp.NODE.isBlackItem(nodeInfo)) routeTable.addNode(nodeInfo);
                 }
             }
         }
@@ -85,7 +86,7 @@ public class DhtClient {
                 int port = Utils.bytes2Int(decode, 4, 2);
                 logger.info(" Peer:IP" + nodeAddr.getHostAddress());
                 logger.info(" Peer:Port" + port);
-                if (DhtApp.self().isBlackItem(nodeAddr.getHostAddress(), port)) continue;
+                if (DhtApp.NODE.isBlackItem(nodeAddr.getHostAddress(), port)) continue;
                 UtMetadata utMetadata = null;
                 try {
                     utMetadata = new UtMetadata(nodeAddr, port);
@@ -94,11 +95,11 @@ public class DhtClient {
                 } catch (SocketTimeoutException e) {
                     e.printStackTrace();
                     logger.error(e.getMessage());
-                    DhtApp.self().addBlackItem(nodeAddr.getHostAddress(), port);
+                    DhtApp.NODE.addBlackItem(nodeAddr.getHostAddress(), port);
                     if (i == len - 1) TokenManager.clear();
                 } catch (IOException e) {
                     e.printStackTrace();
-                    DhtApp.self().addBlackItem(nodeAddr.getHostAddress(), port);
+                    DhtApp.NODE.addBlackItem(nodeAddr.getHostAddress(), port);
                     if (i == len - 1) TokenManager.clear();
                 }
             }
@@ -146,9 +147,9 @@ public class DhtClient {
 
 
     public void init() {
-        //test
-        NodeKey key = new NodeKey(Utils.hex2Bytes("546cf15f724d19c4319cc17b179d7e035f89c1f4"));
-        getPeers(DhtApp.BOOTSTRAP_NODE[0], key);
+//        //test
+//        NodeKey key = new NodeKey(Utils.hex2Bytes("546cf15f724d19c4319cc17b179d7e035f89c1f4"));
+//        getPeers(DhtApp.NODE.getSelf(), key);
     }
 
     public static void main(String[] args) {

@@ -1,7 +1,6 @@
 package me.zzhen.bt.dht.base;
 
 import me.zzhen.bt.common.Tuple;
-import me.zzhen.bt.utils.Utils;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -43,7 +42,7 @@ public class RouteTable {
             }
             index++;
         }
-        System.out.println(item.value==null);
+        System.out.println(item.value == null);
         if (addNodeToBucket(node, item)) {
             size++;
         }
@@ -129,16 +128,13 @@ public class RouteTable {
         return root;
     }
 
-    public List<NodeInfo> closest8Nodes(NodeInfo node) {
-        return closestKNodes(node.getKey(), 8);
-    }
-
     public List<NodeInfo> closest8Nodes(NodeKey key) {
-        return closestKNodes(key, 8);
+        List<NodeInfo> nodes = closestNodes(key);
+        return nodes.size() == 8 ? nodes.subList(0, 7) : nodes;
     }
 
-    public List<NodeInfo> closestKNodes(NodeInfo node, int k) {
-        return closestKNodes(node.getKey(), k);
+    public List<NodeInfo> closestNodes(NodeInfo node, int k) {
+        return closestNodes(node.getKey());
     }
 
     /**
@@ -146,17 +142,17 @@ public class RouteTable {
      *
      * @param key
      * @param k
-     * @return
+     * @return 离key最近的K个节点
      */
-    public List<NodeInfo> closestKNodes(NodeKey key, int k) {
+    public List<NodeInfo> closestNodes(NodeKey key) {
         TreeNode item = root;
         int index = 0;
         while (item.value == null && index < 160) {
             int prefix = key.prefix(index);
             if (prefix == 0) {
-                item = root.right;
+                item = item.right;
             } else {
-                item = root.left;
+                item = item.left;
             }
             index++;
         }

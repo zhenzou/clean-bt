@@ -1,9 +1,9 @@
 package me.zzhen.bt.dht;
 
-import sun.java2d.pipe.AAShapePipe;
+import me.zzhen.bt.utils.Utils;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Project:CleanBT
@@ -14,26 +14,31 @@ import java.util.List;
  */
 public class BlackList {
 
-    private List<BlackListItem> blackList = new ArrayList<>();
+    private Set<BlackListItem> items = new HashSet<>();
 
     public void add(String ip, int port) {
-        blackList.add(new BlackListItem(ip, port));
+        items.add(new BlackListItem(ip, port));
     }
 
     public boolean contains(String ip, int port) {
-        return blackList.contains(new BlackListItem(ip, port));
+        return items.contains(new BlackListItem(ip, port));
     }
 
-    public boolean remove(String ip,int port){
-        return blackList.remove(new BlackListItem(ip,port));
+    public boolean remove(String ip, int port) {
+        return items.remove(new BlackListItem(ip, port));
     }
 
     final class BlackListItem {
-        final String ip;
+        final int ip;//32位 IPV4
         final int port;
 
+        /**
+         * @param ip   分隔符形式的IPV4地址
+         * @param port
+         */
         public BlackListItem(String ip, int port) {
-            this.ip = ip;
+            byte[] bytes = Utils.ipToBytes(ip);
+            this.ip = Utils.bytes2Int(bytes);
             this.port = port;
         }
 
@@ -44,17 +49,15 @@ public class BlackList {
 
             BlackListItem that = (BlackListItem) o;
 
-            if (port != that.port) return false;
-            return ip.equals(that.ip);
+            if (ip != that.ip) return false;
+            return port == that.port;
         }
 
         @Override
         public int hashCode() {
-            int result = ip.hashCode();
+            int result = ip;
             result = 31 * result + port;
             return result;
         }
     }
-
-
 }

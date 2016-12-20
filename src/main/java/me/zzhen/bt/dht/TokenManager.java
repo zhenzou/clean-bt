@@ -22,8 +22,9 @@ public class TokenManager {
     private static final Timer timer = new Timer();
     private static boolean isRunning = true;
 
+
     static {
-        long seconds = 5L * 60 * 1000;
+        long seconds = DhtConfig.TOKEN_TIMEOUT;
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
@@ -36,10 +37,10 @@ public class TokenManager {
      * 没有严格检查，随便吧，反正token过期时间就是节点自己定义的
      */
     private static void clearTokens() {
-        System.out.println("clear");
         Instant now = Instant.now();
         for (Map.Entry<NodeKey, List<Token>> entry : tokens.entrySet()) {
             List<Token> tokens = entry.getValue();
+
             for (int i = 0; i < tokens.size(); i++) {
                 boolean after = tokens.get(i).time.plus(5, ChronoUnit.MINUTES).isAfter(now);
                 if (!after) {
