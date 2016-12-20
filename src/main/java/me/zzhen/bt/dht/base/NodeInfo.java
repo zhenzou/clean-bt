@@ -53,7 +53,7 @@ public class NodeInfo {
      * @param offset
      */
     public NodeInfo(byte[] bytes, int offset) {
-        this(IO.getSomeByte(bytes, offset, 26));
+        this(Utils.getSomeByte(bytes, offset, 26));
     }
 
     /**
@@ -75,12 +75,6 @@ public class NodeInfo {
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
-    }
-
-    public boolean prefix(int i) {
-        if (i >= 160 || i < 1) throw new RuntimeException("prefix of node should smaller than 160 and bigger than 1");
-
-        return key.getValue()[(i - 1) / 8] >>> i % 8 == 1;
     }
 
     private void initAddress() throws UnknownHostException {

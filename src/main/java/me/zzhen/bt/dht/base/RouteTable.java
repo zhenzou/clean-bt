@@ -1,6 +1,7 @@
 package me.zzhen.bt.dht.base;
 
 import me.zzhen.bt.common.Tuple;
+import me.zzhen.bt.utils.Utils;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -9,62 +10,43 @@ import java.util.*;
 /**
  * Project:CleanBT
  * Create Time: 2016/10/29.
- * Description:
- * 首先简单的实现,不考虑性能
+ * Description： 每次重启都会重新开始
  *
  * @author zzhen zzzhen1994@gmail.com
  */
 public class RouteTable {
 
-
-    private List<Bucket> buckets = new ArrayList<>();
-    private Set<NodeInfo> nodeInfos = new HashSet<>();
-
     private int size;
-
     private TreeNode root = new TreeNode((byte) 0);//前缀树，根节点，不使用
-
     private final NodeInfo self;
 
     public RouteTable(NodeInfo self) {
         this.self = self;
+        root = new TreeNode((byte) 0);
+        root.value = new Bucket(0, 159);
     }
 
     public int size() {
         return size;
     }
 
-    public static RouteTable init() {
-        loadData();
-//        return new RouteTable(self);
-        return null;
-    }
-
-
-    /**
-     * TODO 加载以前保存的节点数据
-     */
-    private static void loadData() {
-
-    }
-
-
     public synchronized void addNode(NodeInfo node) {
         NodeKey key = node.getKey();
         TreeNode item = root;
         int index = 0;
         while (item.value == null && index < 160) {
-            byte prefix = key.prefix(index);
+            int prefix = key.prefix(index);
             if (prefix == 0) {
-                item = root.right;
+                item = item.right;
             } else {
-                item = root.left;
+                item = item.left;
             }
             index++;
         }
-
-        addNodeToBucket(node, item);
-        size++;
+        System.out.println(item.value==null);
+        if (addNodeToBucket(node, item)) {
+            size++;
+        }
 //        for (int i = 0; i < 160; i++) {
 //            byte prefix = key.prefix(i);
 //            Bucket bucket = item.value;
@@ -95,11 +77,24 @@ public class RouteTable {
 //        }
     }
 
-    private void addNodeToBucket(NodeInfo node, TreeNode item) {
+    /**
+     * 添加Node信息到响应的Bucket中
+     * 如果Bucket满了，则分裂
+     * item的Bucket不可能是null
+     *
+     * @param node
+     * @param item
+     */
+    private boolean addNodeToBucket(NodeInfo node, TreeNode item) {
         Bucket bucket = item.value;
         NodeKey key = node.getKey();
+        if (bucket.contains(node)) return false;
+//        System.out.println(bucket.checkRange(key));
+//        System.out.println(bucket.left + ":" + bucket.right);
+//        System.out.println("self:" + Utils.bytesToBin(self.getKey().getValue()));
+//        System.out.println("node:" + Utils.bytesToBin(key.getValue()));
         if (bucket.size() == 8) {
-            if (!bucket.checkRange(self.getKey())) return;
+            if (!bucket.checkRange(self.getKey())) return false;
             Tuple<Bucket, Bucket> spit = bucket.spit();
             TreeNode left = new TreeNode((byte) 1);
             left.value = spit._1;
@@ -113,8 +108,26 @@ public class RouteTable {
         } else {
             bucket.addNode(node);
         }
+        return true;
     }
 
+    //Test
+    public void preOrderTra(RouteTable.TreeNode root) {
+        if (root == null) return;
+        System.out.println(root.key);
+        if (root.value != null) System.out.println("size:" + root.value.size());
+        preOrderTra(root.left);
+        preOrderTra(root.right);
+    }
+
+    /**
+     * Test
+     *
+     * @return
+     */
+    public TreeNode getRoot() {
+        return root;
+    }
 
     public List<NodeInfo> closest8Nodes(NodeInfo node) {
         return closestKNodes(node.getKey(), 8);
@@ -129,7 +142,7 @@ public class RouteTable {
     }
 
     /**
-     * 暂时
+     * 在添加节点的过程中已经保证分裂后的节点的Bucket是空的
      *
      * @param key
      * @param k
@@ -139,7 +152,7 @@ public class RouteTable {
         TreeNode item = root;
         int index = 0;
         while (item.value == null && index < 160) {
-            byte prefix = key.prefix(index);
+            int prefix = key.prefix(index);
             if (prefix == 0) {
                 item = root.right;
             } else {
@@ -147,17 +160,8 @@ public class RouteTable {
             }
             index++;
         }
-
         return item.value.nodes;
     }
-
-    public NodeInfo getNode(NodeKey node) {
-        for (NodeInfo nodeInfo : nodeInfos) {
-            if (nodeInfo.getKey().equals(node)) return nodeInfo;
-        }
-        return null;
-    }
-
 
     /**
      * 前缀树
@@ -174,19 +178,14 @@ public class RouteTable {
         Bucket value;
         TreeNode left;//大
         TreeNode right;//小
-
-        public void addNode(NodeInfo node) {
-            value.addNode(node);
-        }
-
     }
 
     private class Bucket {
 
-        Instant localChange;
+        Instant localChange = Instant.now();
 
-        int left;
-        int right;
+        int left;//在[0,left)出现1则不在范围内
+        int right;//[left,right)之间，至少有一个为1的位置
 
         /**
          * @param left  高字节
@@ -197,26 +196,23 @@ public class RouteTable {
             this.right = right;
         }
 
-        private Map<NodeKey, NodeInfo> infos = new HashMap<>();
-
         private List<NodeInfo> nodes = new ArrayList<>(8);
 
-//        private Queue<NodeInfo> nodes = new ArrayDeque<>(8);
-
-        private int size = 0;
-        private NodeInfo replacement;//TODO opt
+        private NodeInfo replacement;//TODO optimize
 
         /**
+         * package-private
+         *
          * @return
          */
-        public Tuple<Bucket, Bucket> spit() {
+        Tuple<Bucket, Bucket> spit() {
             int mid = left + 1;
             Bucket rightBucket = new Bucket(mid, right);
-            for (NodeInfo nodeInfo : nodeInfos) {
+            for (NodeInfo nodeInfo : nodes) {
                 if (rightBucket.checkRange(nodeInfo.getKey())) rightBucket.addNode(nodeInfo);
             }
-            Bucket leftBucket = new Bucket(right, mid);
-            for (NodeInfo nodeInfo : nodeInfos) {
+            Bucket leftBucket = new Bucket(left, mid);
+            for (NodeInfo nodeInfo : nodes) {
                 if (leftBucket.checkRange(nodeInfo.getKey())) leftBucket.addNode(nodeInfo);
             }
             return new Tuple<>(leftBucket, rightBucket);
@@ -234,14 +230,15 @@ public class RouteTable {
 
         private boolean checkLeft(NodeKey key) {
             int len = key.getValue().length;
-            for (int i = 0; i <= left && i < len; i++) {
+            for (int i = 0; i < left && i < len; i++) {
                 if (key.prefix(i) == 1) return false;
             }
             return true;
         }
 
         private boolean checkRight(NodeKey key) {
-            for (int i = left + 1; i <= right; i++) {
+            int len = key.getValue().length;
+            for (int i = left; i <= right && i < len; i++) {
                 if (key.prefix(i) == 1) return true;
             }
             return false;
@@ -254,10 +251,9 @@ public class RouteTable {
          * @param info
          */
         public void addNode(NodeInfo info) {
-            if (size == 8) {
+            if (size() == 8) {
                 return;
             }
-            size++;
             nodes.add(info);
         }
 
@@ -265,8 +261,8 @@ public class RouteTable {
             return nodes.size();
         }
 
-        boolean contains(NodeKey key) {
-            return infos.containsKey(key);
+        boolean contains(NodeInfo info) {
+            return nodes.contains(info);
         }
 
         NodeInfo getNode(NodeKey key) {
@@ -277,6 +273,9 @@ public class RouteTable {
         }
 
 
+        /**
+         * 处理Bucket定时刷新问题
+         */
         public void refresh() {
             localChange = Instant.now();
         }

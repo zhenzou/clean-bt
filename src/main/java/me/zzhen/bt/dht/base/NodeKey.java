@@ -73,12 +73,12 @@ public class NodeKey implements Comparable<NodeKey> {
 
     /**
      * @param i 0～159
-     * @return
+     * @return 第 i 个 bit的值 0 or 1
      */
-    public byte prefix(int i) {
-        if (i >= 160 || i < 1) throw new RuntimeException("prefix of node should smaller than 160 and bigger than 1");
-
-        return (byte) (value[i / 8] >>> i % 8);
+    public int prefix(int i) {
+        if (i >= 160 || i < 0) throw new RuntimeException("prefix of node should smaller than 160 and bigger than 0");
+        return Utils.bitAt(value[i / 8], i % 8);
+//        return (byte) (value[i / 8] >>> i % 8);
     }
 
     @Override
