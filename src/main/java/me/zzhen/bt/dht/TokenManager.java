@@ -6,6 +6,7 @@ import me.zzhen.bt.dht.base.Token;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Project:CleanBT
@@ -18,6 +19,7 @@ public class TokenManager {
 
     //TODO 不使用Timer，而且使用ConcurrentMap
     private static final Random random = new Random();
+    private static AtomicLong autoIncId = new AtomicLong();
     private static final Map<NodeKey, List<Token>> tokens = new HashMap<>();
     private static final Timer timer = new Timer();
     private static boolean isRunning = true;
@@ -54,8 +56,8 @@ public class TokenManager {
      * @return token is a two byte char
      */
     public static Token newToken(NodeKey key) {
-        char c = (char) random.nextInt();
-        Token token = new Token(key, c, Instant.now());
+        long id = autoIncId.addAndGet(1);
+        Token token = new Token(key, id, Instant.now());
         List<Token> keyTokens = tokens.get(key);
         if (keyTokens != null) {
             keyTokens.add(token);
@@ -78,7 +80,6 @@ public class TokenManager {
     }
 
     public static synchronized void clear() {
-        System.out.println("clear");
         if (isRunning) {
             tokens.clear();
             timer.cancel();
@@ -88,6 +89,7 @@ public class TokenManager {
 
     @Override
     protected void finalize() throws Throwable {
+        super.finalize();
         tokens.clear();
         timer.cancel();
     }

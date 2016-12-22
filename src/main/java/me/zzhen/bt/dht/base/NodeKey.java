@@ -6,7 +6,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 
-import static me.zzhen.bt.utils.Utils.*;
+import static me.zzhen.bt.utils.Utils.bytesToInt;
+import static me.zzhen.bt.utils.Utils.intToBytes;
 
 /**
  * Project:CleanBT
@@ -122,6 +123,6 @@ public class NodeKey implements Comparable<NodeKey> {
         for (byte aByte : bytes) {
             System.out.println(aByte);
         }
-        System.out.println(bytes2Int(bytes));
+        System.out.println(bytesToInt(bytes));
     }
 }

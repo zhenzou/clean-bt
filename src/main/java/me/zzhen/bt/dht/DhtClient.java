@@ -53,17 +53,17 @@ public class DhtClient {
 
     public void findNode(NodeInfo target, NodeKey key) {
         if (!DhtApp.NODE.isBlackItem(target)) {
-            Response resp = krpc.findNode(target, key);
-            if (!Response.isError(resp.value)) {
-                DictionaryNode value = (DictionaryNode) resp.value;
-                byte[] decode = value.getNode("nodes").decode();
-                Node id = value.getNode("id");
-                int len = decode.length;
-                for (int i = 0; i < len; i += 26) {
-                    NodeInfo nodeInfo = new NodeInfo(decode, i);
-                    if (!DhtApp.NODE.isBlackItem(nodeInfo)) routeTable.addNode(nodeInfo);
-                }
-            }
+            krpc.findNode(target, key);
+//            if (!Response.isError(resp.value)) {
+//                DictionaryNode value = (DictionaryNode) resp.value;
+//                byte[] decode = value.getNode("nodes").decode();
+//                Node id = value.getNode("id");
+//                int len = decode.length;
+//                for (int i = 0; i < len; i += 26) {
+//                    NodeInfo nodeInfo = new NodeInfo(decode, i);
+//                    if (!DhtApp.NODE.isBlackItem(nodeInfo)) routeTable.addNode(nodeInfo);
+//                }
+//            }
         }
     }
 
@@ -74,37 +74,37 @@ public class DhtClient {
      * @param peer
      */
     public void getPeers(NodeInfo node, NodeKey peer) {
-        Response peers = krpc.getPeers(node, peer);
-        if (!Response.isError(peers.value)) {
-            ListNode resp = (ListNode) peers.value;
-            List<Node> value = resp.getValue();
-            int len = value.size();
-            for (int i = 0; i < len; i++) {
-                byte[] decode = value.get(i).decode();
-                logger.info("target: length:" + decode.length);
-                InetAddress nodeAddr = IO.getAddrFromBytes(decode, 0);
-                int port = Utils.bytes2Int(decode, 4, 2);
-                logger.info(" Peer:IP" + nodeAddr.getHostAddress());
-                logger.info(" Peer:Port" + port);
-                if (DhtApp.NODE.isBlackItem(nodeAddr.getHostAddress(), port)) continue;
-                UtMetadata utMetadata = null;
-                try {
-                    utMetadata = new UtMetadata(nodeAddr, port);
-                    utMetadata.fetchMetadata("546cf15f724d19c4319cc17b179d7e035f89c1f4", self.getKey());
-                    break;
-                } catch (SocketTimeoutException e) {
-                    e.printStackTrace();
-                    logger.error(e.getMessage());
-                    DhtApp.NODE.addBlackItem(nodeAddr.getHostAddress(), port);
-                    if (i == len - 1) TokenManager.clear();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    DhtApp.NODE.addBlackItem(nodeAddr.getHostAddress(), port);
-                    if (i == len - 1) TokenManager.clear();
-                }
-            }
-        }
-        TokenManager.remove(peers.token);
+        krpc.getPeers(node, peer);
+//        if (!Response.isError(peers.value)) {
+//            ListNode resp = (ListNode) peers.value;
+//            List<Node> value = resp.getValue();
+//            int len = value.size();
+//            for (int i = 0; i < len; i++) {
+//                byte[] decode = value.get(i).decode();
+//                logger.info("target: length:" + decode.length);
+//                InetAddress nodeAddr = IO.getAddrFromBytes(decode, 0);
+//                int port = Utils.bytesToInt(decode, 4, 2);
+//                logger.info(" Peer:IP" + nodeAddr.getHostAddress());
+//                logger.info(" Peer:Port" + port);
+//                if (DhtApp.NODE.isBlackItem(nodeAddr.getHostAddress(), port)) continue;
+//                UtMetadata utMetadata = null;
+//                try {
+//                    utMetadata = new UtMetadata(nodeAddr, port);
+//                    utMetadata.fetchMetadata("546cf15f724d19c4319cc17b179d7e035f89c1f4", self.getKey());
+//                    break;
+//                } catch (SocketTimeoutException e) {
+//                    e.printStackTrace();
+//                    logger.error(e.getMessage());
+//                    DhtApp.NODE.addBlackItem(nodeAddr.getHostAddress(), port);
+//                    if (i == len - 1) TokenManager.clear();
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                    DhtApp.NODE.addBlackItem(nodeAddr.getHostAddress(), port);
+//                    if (i == len - 1) TokenManager.clear();
+//                }
+//            }
+//        }
+//        TokenManager.remove(peers.token);
     }
 
 
@@ -115,7 +115,7 @@ public class DhtClient {
      * @param peer
      */
     public void announcePeer(NodeKey peer) {
-        Response response = krpc.announcePeer(peer);
+        krpc.announcePeer(peer);
     }
 
 //    private Response request(DictionaryNode arg, NodeInfo node, String method) {

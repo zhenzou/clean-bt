@@ -3,8 +3,10 @@ package me.zzhen.bt.dht.base;
 import me.zzhen.bt.utils.IO;
 import me.zzhen.bt.utils.Utils;
 
-import java.io.*;
-import java.net.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Objects;
 
 /**
@@ -41,7 +43,7 @@ public class NodeInfo {
         System.arraycopy(bytes, 0, keydata, 0, 20);
         address = IO.getAddrFromBytes(bytes, 20);
         key = new NodeKey(keydata);
-        port = Utils.bytes2Int(bytes, 24, 2);
+        port = Utils.bytesToInt(bytes, 24, 2);
     }
 
     /**

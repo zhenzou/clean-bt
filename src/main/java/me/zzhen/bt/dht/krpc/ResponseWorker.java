@@ -8,7 +8,6 @@ import me.zzhen.bt.dht.DhtApp;
 import me.zzhen.bt.dht.TokenManager;
 import me.zzhen.bt.dht.base.NodeInfo;
 import me.zzhen.bt.dht.base.NodeKey;
-import me.zzhen.bt.dht.base.Response;
 import me.zzhen.bt.dht.base.Token;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +40,6 @@ public class ResponseWorker extends Thread {
         this.address = address;
         this.port = port;
     }
-
 
     @Override
     public void run() {

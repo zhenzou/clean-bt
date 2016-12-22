@@ -94,7 +94,7 @@ public class UtMetadata {
 
     private void handleResp(byte[] data) {
         logger.info(data.length + "");
-        int len = Utils.bytes2Int(data, 0, 4);
+        int len = Utils.bytesToInt(data, 0, 4);
 
     }
 
@@ -120,7 +120,7 @@ public class UtMetadata {
             while (true) {
                 byte[] msg = readMessage(in);
                 logger.error("msg:" + new String(msg));
-                int length = Utils.bytes2Int(msg, 0, 4);
+                int length = Utils.bytesToInt(msg, 0, 4);
                 logger.error("length:" + length);
                 if (length == 0) continue;
                 int extend = msg[6];

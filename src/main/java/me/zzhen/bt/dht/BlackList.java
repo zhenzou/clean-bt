@@ -2,7 +2,6 @@ package me.zzhen.bt.dht;
 
 import me.zzhen.bt.utils.Utils;
 
-import java.net.InetAddress;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -39,7 +38,7 @@ public class BlackList {
          */
         public BlackListItem(String ip, int port) {
             byte[] bytes = Utils.ipToBytes(ip);
-            this.ip = Utils.bytes2Int(bytes);
+            this.ip = Utils.bytesToInt(bytes);
             this.port = port;
         }
 

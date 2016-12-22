@@ -97,23 +97,31 @@ public interface Utils {
      * @param bytes Big Endian
      * @return
      */
-    static int bytes2Int(byte[] bytes) {
-        return bytes2Int(bytes, 0, bytes.length);
+    static long bytesToLong(byte[] bytes) {
+        return bytesToLong(bytes, 0);
     }
 
     /**
-     * @param bytes   小端，需要reverse
-     * @param reverse 标志是否reverse
+     * @param bytes Big Endian
      * @return
      */
-    static int bytes2Int(byte[] bytes, boolean reverse) {
-        if (reverse) {
-            reverseArray(bytes);
-        }
-        return bytes2Int(bytes, 0, bytes.length);
+    static long bytesToLong(byte[] bytes, int offset) {
+        int len = bytes.length - 8 >= offset ? 8 : bytes.length - offset;
+        if (len <= 0) throw new IllegalArgumentException("offset is tow big for this byte array");
+        byte[] data = new byte[8];
+        System.arraycopy(bytes, 0, data, offset, 8);
+        return Long.parseLong(toHex(data), 16);
     }
 
-    static int bytes2Int(byte[] bytes, int offset, int length) {
+    /**
+     * @param bytes Big Endian
+     * @return
+     */
+    static int bytesToInt(byte[] bytes) {
+        return bytesToInt(bytes, 0, bytes.length);
+    }
+
+    static int bytesToInt(byte[] bytes, int offset, int length) {
         int len = bytes.length;
         length = offset + length;
         int ret = 0;
@@ -125,6 +133,19 @@ public interface Utils {
         }
         return ret;
     }
+
+    /**
+     * @param bytes   小端，需要reverse
+     * @param reverse 标志是否reverse
+     * @return
+     */
+    static int bytesToInt(byte[] bytes, boolean reverse) {
+        if (reverse) {
+            reverseArray(bytes);
+        }
+        return bytesToInt(bytes, 0, bytes.length);
+    }
+
 
     static String bytesToBin(byte[] bytes) {
         StringBuilder sb = new StringBuilder();

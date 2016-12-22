@@ -14,10 +14,10 @@ import java.time.Instant;
 public class Token {
 
     public final NodeKey key;
-    public final int token;
+    public final long token;
     public final Instant time;
 
-    public Token(NodeKey key, int token, Instant time) {
+    public Token(NodeKey key, long token, Instant time) {
         this.key = key;
         this.token = token;
         this.time = time;

@@ -1,7 +1,8 @@
-package me.zzhen.bt.dht.base;
+package me.zzhen.bt.dht.krpc;
 
 import me.zzhen.bt.bencode.*;
 import me.zzhen.bt.dht.TokenManager;
+import me.zzhen.bt.dht.base.NodeKey;
 
 /**
  * Project:CleanBT
