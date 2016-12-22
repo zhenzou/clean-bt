@@ -183,10 +183,11 @@ public interface Utils {
 
     static byte[] ipToBytes(String ip) {
         String[] addrs = ip.split("\\.");
-        assert addrs.length == 4;
+        if (addrs.length != 4) throw new IllegalArgumentException("ip should be a x.x.x.x");
         byte[] bytes = new byte[4];
         for (int i = 0; i < 4; i++) {
             int a = Integer.parseInt(addrs[i]);
+            if (a > 255) throw new IllegalArgumentException("not a legal ip address");
             bytes[i] = (byte) a;
         }
         return bytes;

@@ -8,11 +8,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.LogManager;
 
 /**
  * Project:CleanBT
@@ -26,21 +28,42 @@ public class DhtApp {
     private static final Logger logger = LoggerFactory.getLogger(DhtApp.class.getName());
 
     public static DhtApp NODE;
-    public RouteTable routes;
 
     /**
-     * Client，Server共用一共线程池
+     * Client，Server共用线程池
      */
     public final ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 4);
 
+    /**
+     * 全局路由表
+     */
+    public RouteTable routes;
+    /**
+     * 全局黑名单
+     */
     private BlackList blackList;
+    /**
+     * 本节点信息
+     */
     private NodeInfo self;
+    /**
+     * 本节点ID
+     */
     private NodeKey selfKey;
+
+    /**
+     * DHT 客户端
+     */
     private DhtClient client;
+    /**
+     * DHT 客户端
+     */
     private DhtServer server;
     private Krpc krpc;
 
-
+    /**
+     * DHT 网络启动节点
+     */
     public static final NodeInfo[] BOOTSTRAP_NODE = {
             new NodeInfo("router.bittorrent.com", 6881),
             new NodeInfo("router.utorrent.com", 6881),
@@ -48,6 +71,9 @@ public class DhtApp {
     };
 
 
+    /**
+     * 默认配置
+     */
     private void initDefaultConfig() {
         try {
             InetAddress address = InetAddress.getByName(DhtConfig.SERVER_IP);
@@ -55,7 +81,7 @@ public class DhtApp {
             self = new NodeInfo(address, DhtConfig.SERVER_PORT, selfKey);
             blackList = new BlackList();
             routes = new RouteTable(self);
-            krpc = new Krpc(self.getKey(), routes);
+            krpc = new Krpc(self.getKey());
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
@@ -137,6 +163,8 @@ public class DhtApp {
 
 
     public static void main(String[] args) throws IOException {
+        InputStream in = DhtApp.class.getClassLoader().getResourceAsStream("logger.properties");
+        LogManager.getLogManager().readConfiguration(in);
         DhtApp boot = DhtApp.boot();
     }
 }

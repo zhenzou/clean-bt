@@ -1,6 +1,10 @@
 package me.zzhen.bt;
 
+import me.zzhen.bt.dht.base.NodeKey;
 import me.zzhen.bt.utils.Utils;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.net.InetAddress;
 
@@ -38,7 +42,7 @@ public class UtilsTest {
 
     @org.junit.Test
     public void intToBytes() throws Exception {
-        assertArrayEquals(Utils.int2Bytes(1), new byte[]{0, 0, 0, 1});
+        assertArrayEquals(Utils.intToBytes(1), new byte[]{0, 0, 0, 1});
     }
 
     @org.junit.Test
@@ -46,13 +50,62 @@ public class UtilsTest {
         assertArrayEquals(Utils.hex2Bytes("FF"), new byte[]{-1});
     }
 
+
+    @Rule
+    public ExpectedException expect = ExpectedException.none();
+
     @org.junit.Test
     public void ipToBytes() throws Exception {
-        String ip = "172.16.155.10";
-        byte[] bytes = Utils.ipToBytes(ip);
-        InetAddress addres = InetAddress.getByAddress(bytes);
-        assertEquals(ip, addres.getHostAddress());
+        String[] correct = {"172.16.155.10", "172.16.155.12", "127.0.0.1", "127.0.0.1", "127.22.33.44"};
+        for (String s : correct) {
+            byte[] bytes = Utils.ipToBytes(s);
+            InetAddress addres = InetAddress.getByAddress(bytes);
+            assertEquals(s, addres.getHostAddress());
+        }
+        String tooBig = "1275.22.33.11";
+        expect.expect(IllegalArgumentException.class);
+        Utils.ipToBytes(tooBig);
+        String tooLong = "127.22.33.25.26";
+        expect.expect(IllegalArgumentException.class);
+        Utils.ipToBytes(tooLong);
     }
 
+    @Test
+    public void bytesToBin() {
+        byte[] value = NodeKey.genRandomKey().getValue();
+        String s = Utils.bytesToBin(value);
+        System.out.println(s);
+        System.out.println(s.length());
+    }
 
+    @Test
+    public void bitAt() {
+        byte b = (byte) 0xEF;
+        assertEquals(1, Utils.bitAt(b, 0));
+        assertEquals(1, Utils.bitAt(b, 1));
+        assertEquals(1, Utils.bitAt(b, 2));
+        assertEquals(0, Utils.bitAt(b, 3));
+        assertEquals(1, Utils.bitAt(b, 4));
+        assertEquals(1, Utils.bitAt(b, 5));
+        assertEquals(1, Utils.bitAt(b, 6));
+        assertEquals(1, Utils.bitAt(b, 7));
+        b = (byte) 0xFF;
+        assertEquals(1, Utils.bitAt(b, 0));
+        assertEquals(1, Utils.bitAt(b, 1));
+        assertEquals(1, Utils.bitAt(b, 2));
+        assertEquals(1, Utils.bitAt(b, 3));
+        assertEquals(1, Utils.bitAt(b, 4));
+        assertEquals(1, Utils.bitAt(b, 5));
+        assertEquals(1, Utils.bitAt(b, 6));
+        assertEquals(1, Utils.bitAt(b, 7));
+        b = (byte) 0x00;
+        assertEquals(0, Utils.bitAt(b, 0));
+        assertEquals(0, Utils.bitAt(b, 1));
+        assertEquals(0, Utils.bitAt(b, 2));
+        assertEquals(0, Utils.bitAt(b, 3));
+        assertEquals(0, Utils.bitAt(b, 4));
+        assertEquals(0, Utils.bitAt(b, 5));
+        assertEquals(0, Utils.bitAt(b, 6));
+        assertEquals(0, Utils.bitAt(b, 7));
+    }
 }

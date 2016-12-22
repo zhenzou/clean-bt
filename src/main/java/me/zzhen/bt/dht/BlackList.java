@@ -2,6 +2,7 @@ package me.zzhen.bt.dht;
 
 import me.zzhen.bt.utils.Utils;
 
+import java.net.InetAddress;
 import java.util.HashSet;
 import java.util.Set;
 

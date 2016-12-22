@@ -32,7 +32,7 @@ public class DhtClient {
 
 
     public DhtClient() {
-        krpc = new Krpc(self.getKey(), routeTable);
+        krpc = new Krpc(self.getKey());
 //        krpc.getPeers(BOOTSTRAP_NODE[0], new NodeKey(Utils.hex2Bytes("546cf15f724d19c4319cc17b179d7e035f89c1f4")));
     }
 

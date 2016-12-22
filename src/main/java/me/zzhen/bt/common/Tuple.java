@@ -1,4 +1,4 @@
-package me.zzhen.bt.base;
+package me.zzhen.bt.common;
 
 /**
  * Project:CleanBT

@@ -1,4 +1,4 @@
-package me.zzhen.bt.base;
+package me.zzhen.bt.common;
 
 import me.zzhen.bt.bencode.*;
 import me.zzhen.bt.utils.Utils;
@@ -49,32 +49,21 @@ public class TorrentFile {
     public static final String ED2K = "ed2k";
 
 
-    public static List<Node> mValues;
-
-    public static TorrentFile fromString(String bytes) throws IOException, DecoderException {
-        Decoder decoder = new Decoder(bytes.getBytes());
+    public static TorrentFile fromBytes(byte[] bytes) throws IOException, DecoderException {
+        Decoder decoder = new Decoder(new ByteArrayInputStream(bytes));
         TorrentFile ret = new TorrentFile();
         ret.setFileName("String");
         decoder.setHandler(new TorrentFileHandler(ret));
-        decoder.parse();
-        return ret;
-    }
-
-    public static TorrentFile fromStream(InputStream input) throws IOException, DecoderException {
-        Decoder decoder = new Decoder(input);
-        TorrentFile ret = new TorrentFile();
-        ret.setFileName("String");
-        decoder.setHandler(new TorrentFileHandler(ret));
-        decoder.parse();
+        decoder.decode();
         return ret;
     }
 
     public static TorrentFile fromFile(File file) throws IOException, DecoderException {
-        Decoder decoder = new Decoder(file);
+        Decoder decoder = new Decoder(new FileInputStream(file));
         TorrentFile ret = new TorrentFile();
         ret.setFileName(file.getName());
         decoder.setHandler(new TorrentFileHandler(ret));
-        decoder.parse();
+        decoder.decode();
         return ret;
     }
 

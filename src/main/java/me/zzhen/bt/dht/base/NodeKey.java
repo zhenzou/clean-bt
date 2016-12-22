@@ -78,7 +78,6 @@ public class NodeKey implements Comparable<NodeKey> {
     public int prefix(int i) {
         if (i >= 160 || i < 0) throw new RuntimeException("prefix of node should smaller than 160 and bigger than 0");
         return Utils.bitAt(value[i / 8], i % 8);
-//        return (byte) (value[i / 8] >>> i % 8);
     }
 
     @Override

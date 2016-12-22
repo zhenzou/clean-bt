@@ -25,21 +25,17 @@ public class Krpc {
 
     private static final Logger logger = LoggerFactory.getLogger(Krpc.class.getName());
 
-
-    private TokenManager tokenManager = new TokenManager();
     public static final String METHOD_PING = "ping";
     public static final String METHOD_ANNOUNCE_PEER = "announce_peer";
     public static final String METHOD_GET_PEERS = "get_peers";
     public static final String METHOD_FIND_NODE = "find_node";
 
     private final NodeKey self;
-    private final RouteTable table;
 
     private ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 2);
 
-    public Krpc(NodeKey self, RouteTable table) {
+    public Krpc(NodeKey self) {
         this.self = self;
-        this.table = table;
     }
 
 
