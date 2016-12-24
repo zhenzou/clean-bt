@@ -1,19 +1,12 @@
 package me.zzhen.bt.dht;
 
-import me.zzhen.bt.bencode.DictionaryNode;
-import me.zzhen.bt.bencode.ListNode;
-import me.zzhen.bt.bencode.Node;
-import me.zzhen.bt.dht.base.*;
+import me.zzhen.bt.dht.base.NodeInfo;
+import me.zzhen.bt.dht.base.NodeKey;
+import me.zzhen.bt.dht.base.RouteTable;
 import me.zzhen.bt.dht.krpc.Krpc;
-import me.zzhen.bt.utils.IO;
 import me.zzhen.bt.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.SocketTimeoutException;
-import java.util.List;
 
 /**
  * Project:CleanBT
@@ -147,9 +140,15 @@ public class DhtClient {
 
 
     public void init() {
-//        //test
-//        NodeKey key = new NodeKey(Utils.hex2Bytes("546cf15f724d19c4319cc17b179d7e035f89c1f4"));
-//        getPeers(DhtApp.NODE.getSelf(), key);
+
+        try {
+            Thread.sleep(100000);    //test
+            NodeKey key = new NodeKey(Utils.hex2Bytes("546cf15f724d19c4319cc17b179d7e035f89c1f4"));
+            getPeers(DhtApp.NODE.getSelf(), key);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+//
     }
 
     public static void main(String[] args) {

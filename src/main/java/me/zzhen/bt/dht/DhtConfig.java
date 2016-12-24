@@ -22,7 +22,7 @@ public class DhtConfig {
     /**
      * 请求过时间隔，请求失败，将加入黑名单
      */
-    public static final int CONN_TIMEOUT = 15 * 1000;
+    public static final int CONN_TIMEOUT = 10 * 1000;
     /**
      * Token失效间隔
      */
@@ -30,5 +30,5 @@ public class DhtConfig {
     /**
      * 黑名单大小，超出将自动移除前面的
      */
-    public static final int BLACKLIST_SIZE = 15 * 60 * 1000;
+    public static final int BLACKLIST_SIZE = 15 * 1000;
 }

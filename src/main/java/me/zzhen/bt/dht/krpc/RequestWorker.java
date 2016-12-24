@@ -14,6 +14,8 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketException;
+import java.nio.channels.AsynchronousByteChannel;
 import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.Queue;
@@ -54,6 +56,17 @@ class RequestWorker implements Runnable {
      */
     private String method;
 
+
+    /**
+     * 全局发出请求的socket
+     */
+    private DatagramSocket socket;
+
+    /**
+     * 回调
+     */
+    private RequestCallback callback;
+
     /**
      * 本次请求已经请求过的节点
      * get_peers,find_node,announce_peer中要用
@@ -66,10 +79,11 @@ class RequestWorker implements Runnable {
     private Queue<NodeInfo> requestQueue = new ArrayDeque<>();//TODO 完善
 
 
-    public RequestWorker(DictionaryNode request, NodeInfo target, String method) {
+    public RequestWorker(DictionaryNode request, NodeInfo target, String method, RequestCallback callback) {
         this.request = request;
         this.target = target;
         this.method = method;
+        this.callback = callback;
         if (method.equals(METHOD_FIND_NODE)) {
             DictionaryNode a = (DictionaryNode) request.getNode("a");
             key = new NodeKey(a.getNode("target").decode());
@@ -78,6 +92,8 @@ class RequestWorker implements Runnable {
 
     @Override
     public void run() {
+        prepare();
+        if (socket == null) return;
         switch (method) {
             case METHOD_PING:
                 doPingRequest(target);
@@ -94,41 +110,55 @@ class RequestWorker implements Runnable {
             default:
                 break;
         }
+        socket.close();
+    }
+
+    private void prepare() {
+        try {
+            socket = new DatagramSocket();
+            socket.setSoTimeout(DhtConfig.CONN_TIMEOUT);
+        } catch (SocketException e) {
+            logger.error(e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     /**
      * 最终发出请求的方法
      * TODO NIO
      *
+     * @param target
      * @return
      */
     private DictionaryNode doRequest(NodeInfo target) {
-        logger.info("routes:" + DhtApp.NODE.routes.size());
+        if (target == null) return null;
+        logger.info("routes:" + DhtApp.NODE.routes.size() + ":" + "left:" + requestQueue.size());
         byte[] data = request.encode();//TODO optimize
         DictionaryNode resp = null;
-        try (DatagramSocket socket = new DatagramSocket()) {
+        try {
             InetAddress address = target.getAddress();
-            logger.info("request:" + method + ":" + address.getHostAddress() + ":" + target.getPort() + ":" + String.valueOf(target.getKey()));
-            socket.setSoTimeout(DhtConfig.CONN_TIMEOUT);
+//            logger.info("request to:" + method + ":" + address.getHostAddress() + ":" + target.getPort() + ":" + String.valueOf(target.getKey()));
             DatagramPacket packet = new DatagramPacket(data, 0, data.length, address, target.getPort());
             socket.send(packet);
             byte[] getByte = new byte[1024];
             DatagramPacket result = new DatagramPacket(getByte, 1024);
             socket.receive(result);
-            InetAddress addr = result.getAddress();
-            int port = result.getPort();
-            logger.info("received from " + method + ":" + addr.getHostAddress() + ":" + port);
+//            InetAddress addr = result.getAddress();
+//            int port = result.getPort();
+//            logger.info("received from " + method + ":" + addr.getHostAddress() + ":" + port);
             resp = (DictionaryNode) Decoder.decode(getByte, 0, result.getLength()).get(0);
             Node y = resp.getNode("y");
+            //接到响应,将
+            DhtApp.NODE.addNode(target);
 //            logger.info(getReceivedType(y.toString()));
             return resp;
         } catch (IOException e) {
             logger.error(e.getMessage());
-            DhtApp.NODE.addBlackItem(target.getAddress().getHostAddress(), target.getPort());
+            DhtApp.NODE.addBlackItem(target.getAddress(), target.getPort());
             resp = Response.makeError(target.getKey(), 202, e.getMessage());
             resp.addNode("t", request.getNode("t"));
+            return null;
         }
-        return resp;
     }
 
     private String getReceivedType(String c) {
@@ -169,12 +199,17 @@ class RequestWorker implements Runnable {
             if (values == null) {
                 StringNode nodes = (StringNode) resp.getNode("nodes");
                 byte[] decode = nodes.decode();
-                logger.info("decode len :" + decode.length);
+//                logger.info("decode len :" + decode.length);
                 for (int i = 0; i < decode.length; i += 26) {
                     NodeInfo nodeInfo = new NodeInfo(decode, i);
-                    if (!requestedNode.contains(nodeInfo) && !DhtApp.NODE.isBlackItem(nodeInfo)) {
-                        requestedNode.add(nodeInfo);
-                        requestQueue.add(nodeInfo);
+//                    if (!requestedNode.contains(nodeInfo) && !DhtApp.NODE.isBlackItem(nodeInfo)) {
+//                        requestedNode.add(nodeInfo);
+//                        requestQueue.add(nodeInfo);
+//                    }
+                    if (!callback.requested(nodeInfo) && !DhtApp.NODE.isBlackItem(nodeInfo)) {
+//                        Krpc.requested.add(nodeInfo);
+//                        Krpc.toRequest.add(nodeInfo);
+                        callback.request(request, nodeInfo, method);
                     }
                 }
             } else {
@@ -183,10 +218,10 @@ class RequestWorker implements Runnable {
                 //TODO 回调
             }
         }
-        if (!requestQueue.isEmpty()) {
-            NodeInfo node = requestQueue.poll();
-            doGetPeersRequest(node);
-        }
+//        if (!requestQueue.isEmpty()) {
+//            NodeInfo node = requestQueue.poll();
+//            doGetPeersRequest(node);
+//        }
     }
 
     /**
@@ -200,26 +235,31 @@ class RequestWorker implements Runnable {
                 DictionaryNode arg = (DictionaryNode) resp.getNode("r");
                 StringNode nodes = (StringNode) arg.getNode("nodes");
                 byte[] decode = nodes.decode();
-                logger.info("find node decode len :" + decode.length);
+//                logger.info("find node decode len :" + decode.length);
                 int len = decode.length;
                 for (int i = 0; i < len; i += 26) {
                     NodeInfo nodeInfo = new NodeInfo(decode, i);
                     if (nodeInfo.getKey().equals(key)) {
-                        logger.info("fond node :" + nodeInfo.getAddress().getHostAddress() + ":" + nodeInfo.getPort());
+                        logger.info("found node :" + nodeInfo.getAddress().getHostAddress() + ":" + nodeInfo.getPort());
                     } else {
-                        if (!requestedNode.contains(nodeInfo) && !DhtApp.NODE.isBlackItem(nodeInfo)) {
-                            requestedNode.add(nodeInfo);
-                            requestQueue.add(nodeInfo);
-                            DhtApp.NODE.routes.addNode(nodeInfo);
+//                        if (!requestedNode.contains(nodeInfo) && !DhtApp.NODE.isBlackItem(nodeInfo)) {
+//                            requestedNode.add(nodeInfo);
+//                            requestQueue.add(nodeInfo);
+//                            DhtApp.NODE.routes.addNode(nodeInfo);
+//                        }
+                        if (!callback.requested(nodeInfo) && !DhtApp.NODE.isBlackItem(nodeInfo)) {
+//                            Krpc.requested.add(nodeInfo);
+//                            Krpc.toRequest.add(nodeInfo);
+                            callback.request(request, nodeInfo, method);
                         }
                     }
                 }
             }
         }
-        if (!requestQueue.isEmpty()) {
-            NodeInfo node = requestQueue.poll();
-            doFindNodeRequest(node);
-        }
+//        if (!requestQueue.isEmpty()) {
+//            NodeInfo node = requestQueue.poll();
+//            doFindNodeRequest(node);
+//        }
     }
 
     /**
@@ -229,6 +269,7 @@ class RequestWorker implements Runnable {
      * @return
      */
     private boolean check(DictionaryNode resp) {
+        if (resp == null) return false;
         Node t = resp.getNode("t");
         Node st = request.getNode("t");
         return st.equals(t);

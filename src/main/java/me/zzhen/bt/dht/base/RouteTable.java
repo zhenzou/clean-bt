@@ -33,6 +33,7 @@ public class RouteTable {
     }
 
     public synchronized void addNode(NodeInfo node) {
+        if (node.getKey()==null)return;
         NodeKey key = node.getKey();
         TreeNode item = root;
         int index = 0;

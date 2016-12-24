@@ -1,9 +1,11 @@
 package me.zzhen.bt.dht;
 
-import me.zzhen.bt.bencode.*;
-import me.zzhen.bt.dht.base.*;
+import me.zzhen.bt.bencode.Decoder;
+import me.zzhen.bt.bencode.DictionaryNode;
+import me.zzhen.bt.bencode.Node;
+import me.zzhen.bt.dht.base.NodeInfo;
+import me.zzhen.bt.dht.base.RouteTable;
 import me.zzhen.bt.dht.krpc.Krpc;
-import me.zzhen.bt.dht.krpc.ResponseWorker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,14 +24,12 @@ import java.net.DatagramSocket;
 public class DhtServer {
 
     private NodeInfo self;
-    private RouteTable routeTable;//暂时不存数据库，经常更新
     private Krpc krpc;
     private static final Logger logger = LoggerFactory.getLogger(DhtServer.class.getName());
 
 
-    public DhtServer(NodeInfo self, RouteTable routeTable, Krpc krpc) {
+    public DhtServer(NodeInfo self, Krpc krpc) {
         this.self = self;
-        this.routeTable = routeTable;
         this.krpc = krpc;
     }
 
@@ -48,7 +48,7 @@ public class DhtServer {
                     socket.receive(packet);
                     int length = packet.getLength();
                     Node node = Decoder.decode(bytes, 0, length).get(0);
-                    krpc.response(packet.getAddress(), packet.getPort(), (DictionaryNode) node);
+                    krpc.response(socket, packet.getAddress(), packet.getPort(), (DictionaryNode) node);
 //                    new ResponseWorker(packet.getAddress(), packet.getPort(), (DictionaryNode) node);
                 }
             } catch (IOException e) {

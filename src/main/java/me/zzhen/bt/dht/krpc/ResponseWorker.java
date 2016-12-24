@@ -5,6 +5,7 @@ import me.zzhen.bt.bencode.ListNode;
 import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.bencode.StringNode;
 import me.zzhen.bt.dht.DhtApp;
+import me.zzhen.bt.dht.DhtConfig;
 import me.zzhen.bt.dht.TokenManager;
 import me.zzhen.bt.dht.base.NodeInfo;
 import me.zzhen.bt.dht.base.NodeKey;
@@ -16,6 +17,8 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketTimeoutException;
+import java.nio.channels.AsynchronousByteChannel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,8 +37,10 @@ public class ResponseWorker extends Thread {
     private DictionaryNode request;
     private InetAddress address;
     private int port;
+    private DatagramSocket socket;
 
-    public ResponseWorker(InetAddress address, int port, DictionaryNode request) {
+    public ResponseWorker(DatagramSocket socket, InetAddress address, int port, DictionaryNode request) {
+        this.socket = socket;
         this.request = request;
         this.address = address;
         this.port = port;
@@ -96,6 +101,7 @@ public class ResponseWorker extends Thread {
         arg.addNode("nodes", nodes);
         Token token = TokenManager.newToken(DhtApp.NODE.getSelf().getKey());
         arg.addNode("token", new StringNode(token.token + ""));
+        logger.info("to send response");
         doResponse(address, port, resp);
     }
 
@@ -129,11 +135,14 @@ public class ResponseWorker extends Thread {
 
     public void doResponse(InetAddress address, int port, DictionaryNode resp) {
         byte[] data = resp.encode();//TODO optimize
-        try (DatagramSocket socket = new DatagramSocket()) {
-            socket.setSoTimeout(30 * 1000);
+        try {
+//            socket.setSoTimeout(DhtConfig.CONN_TIMEOUT);
             DatagramPacket packet = new DatagramPacket(data, 0, data.length, address, port);
             socket.send(packet);
-            logger.info("responsed " + ":" + address.getHostAddress() + ":" + port);
+            logger.info("send response" + ":" + address.getHostAddress() + ":" + port);
+        } catch (SocketTimeoutException e) {
+            logger.error(e.getMessage());
+            e.printStackTrace();
         } catch (IOException e) {
             logger.error(e.getMessage());
         }

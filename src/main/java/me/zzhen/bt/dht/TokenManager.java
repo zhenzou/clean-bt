@@ -12,27 +12,26 @@ import java.util.concurrent.atomic.AtomicLong;
  * Project:CleanBT
  * Create Time: 16-12-12.
  * Description:
+ * TODO 实现
  *
  * @author zzhen zzzhen1994@gmail.com
  */
 public class TokenManager {
 
-    //TODO 不使用Timer，而且使用ConcurrentMap
     private static final Random random = new Random();
     private static AtomicLong autoIncId = new AtomicLong();
     private static final Map<NodeKey, List<Token>> tokens = new HashMap<>();
     private static final Timer timer = new Timer();
     private static boolean isRunning = true;
 
-
     static {
         long seconds = DhtConfig.TOKEN_TIMEOUT;
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                clearTokens();
-            }
-        }, seconds, seconds);
+//        timer.schedule(new TimerTask() {
+//            @Override
+//            public void run() {
+//                clearTokens();
+//            }
+//        }, seconds, seconds);
     }
 
     /**
@@ -58,14 +57,14 @@ public class TokenManager {
     public static Token newToken(NodeKey key) {
         long id = autoIncId.addAndGet(1);
         Token token = new Token(key, id, Instant.now());
-        List<Token> keyTokens = tokens.get(key);
-        if (keyTokens != null) {
-            keyTokens.add(token);
-        } else {
-            List<Token> list = new ArrayList<>();
-            list.add(token);
-            tokens.put(key, list);
-        }
+//        List<Token> keyTokens = tokens.get(key);
+//        if (keyTokens != null) {
+//            keyTokens.add(token);
+//        } else {
+//            List<Token> list = new ArrayList<>();
+//            list.add(token);
+//            tokens.put(key, list);
+//        }
         return token;
     }
 

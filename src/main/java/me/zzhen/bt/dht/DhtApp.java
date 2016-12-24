@@ -10,7 +10,10 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayDeque;
+import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,7 +35,7 @@ public class DhtApp {
     /**
      * Client，Server共用线程池
      */
-    public final ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 4);
+//    public final ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 4);
 
     /**
      * 全局路由表
@@ -41,7 +44,7 @@ public class DhtApp {
     /**
      * 全局黑名单
      */
-    private BlackList blackList;
+    private Queue<InetSocketAddress> blackList;
     /**
      * 本节点信息
      */
@@ -52,7 +55,7 @@ public class DhtApp {
     private NodeKey selfKey;
 
     /**
-     * DHT 客户端
+     * DHT 客户端,好像没什么用
      */
     private DhtClient client;
     /**
@@ -79,7 +82,7 @@ public class DhtApp {
             InetAddress address = InetAddress.getByName(DhtConfig.SERVER_IP);
             selfKey = NodeKey.genRandomKey();
             self = new NodeInfo(address, DhtConfig.SERVER_PORT, selfKey);
-            blackList = new BlackList();
+            blackList = new ArrayDeque<>(DhtConfig.BLACKLIST_SIZE);
             routes = new RouteTable(self);
             krpc = new Krpc(self.getKey());
         } catch (UnknownHostException e) {
@@ -91,10 +94,6 @@ public class DhtApp {
         return self;
     }
 
-    public void setSelf(NodeInfo self) {
-        this.self = self;
-    }
-
     public NodeKey getSelfKey() {
         return selfKey;
     }
@@ -104,16 +103,28 @@ public class DhtApp {
         self.setKey(selfKey);
     }
 
-    public boolean isBlackItem(String ip, int port) {
-        return blackList.contains(ip, port);
+    public void addNode(NodeInfo node) {
+        routes.addNode(node);
+    }
+
+    public Queue<InetSocketAddress> getBlackList() {
+        return blackList;
+    }
+
+    public void setBlackList(Queue<InetSocketAddress> blackList) {
+        this.blackList = blackList;
+    }
+
+    public boolean isBlackItem(InetAddress ip, int port) {
+        return blackList.contains(new InetSocketAddress(ip, port));
     }
 
     public boolean isBlackItem(NodeInfo info) {
-        return blackList.contains(info.getAddress().getHostAddress(), info.getPort());
+        return blackList.contains(new InetSocketAddress(info.getAddress().getHostAddress(), info.getPort()));
     }
 
-    public void addBlackItem(String ip, int port) {
-        blackList.add(ip, port);
+    public void addBlackItem(InetAddress ip, int port) {
+        blackList.add(new InetSocketAddress(ip, port));
     }
 
     private void startClient() {
@@ -124,7 +135,7 @@ public class DhtApp {
 
     private void startServer() {
         new Thread(() -> {
-            server = new DhtServer(self, routes, krpc);
+            server = new DhtServer(self, krpc);
             server.init();
         }).start();
     }
@@ -132,7 +143,7 @@ public class DhtApp {
     @Override
     protected void finalize() throws Throwable {
         super.finalize();
-        executor.shutdown();
+//        executor.shutdown();
     }
 
     public void init() {
@@ -161,7 +172,6 @@ public class DhtApp {
         NODE = new DhtApp();
         NODE.init();
     }
-
 
     public static void main(String[] args) throws IOException {
         InputStream in = DhtApp.class.getClassLoader().getResourceAsStream("logger.properties");
