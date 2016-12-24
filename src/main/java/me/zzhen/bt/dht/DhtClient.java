@@ -25,7 +25,7 @@ public class DhtClient {
 
 
     public DhtClient() {
-        krpc = new Krpc(self.getKey());
+        krpc = new Krpc(self.getKey(), null);
 //        krpc.getPeers(BOOTSTRAP_NODE[0], new NodeKey(Utils.hex2Bytes("546cf15f724d19c4319cc17b179d7e035f89c1f4")));
     }
 
@@ -47,7 +47,7 @@ public class DhtClient {
     public void findNode(NodeInfo target, NodeKey key) {
         if (!DhtApp.NODE.isBlackItem(target)) {
             krpc.findNode(target, key);
-//            if (!Response.isError(resp.value)) {
+//            if (!Response.isResponse(resp.value)) {
 //                DictionaryNode value = (DictionaryNode) resp.value;
 //                byte[] decode = value.getNode("nodes").decode();
 //                Node id = value.getNode("id");
@@ -68,7 +68,7 @@ public class DhtClient {
      */
     public void getPeers(NodeInfo node, NodeKey peer) {
         krpc.getPeers(node, peer);
-//        if (!Response.isError(peers.value)) {
+//        if (!Response.isResponse(peers.value)) {
 //            ListNode resp = (ListNode) peers.value;
 //            List<Node> value = resp.getValue();
 //            int len = value.size();
@@ -97,7 +97,7 @@ public class DhtClient {
 //                }
 //            }
 //        }
-//        TokenManager.remove(peers.token);
+//        TokenManager.remove(peers.id);
     }
 
 
@@ -113,7 +113,7 @@ public class DhtClient {
 
 //    private Response request(DictionaryNode arg, NodeInfo node, String method) {
 //        try {
-//            return executor.submit(new Krpc.RequestWorker(arg, node, method)).get();
+//            return executor.submit(new Krpc.ResponseProcessor(arg, node, method)).get();
 //        } catch (InterruptedException | ExecutionException e) {
 //            logger.error(e.getMessage());
 //            e.printStackTrace();
@@ -140,14 +140,14 @@ public class DhtClient {
 
 
     public void init() {
-
-        try {
-            Thread.sleep(100000);    //test
-            NodeKey key = new NodeKey(Utils.hex2Bytes("546cf15f724d19c4319cc17b179d7e035f89c1f4"));
-            getPeers(DhtApp.NODE.getSelf(), key);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+//
+//        try {
+//            Thread.sleep(10000);    //test
+//            NodeKey key = new NodeKey(Utils.hex2Bytes("546cf15f724d19c4319cc17b179d7e035f89c1f4"));
+//            getPeers(DhtApp.NODE.getSelf(), key);
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
 //
     }
 

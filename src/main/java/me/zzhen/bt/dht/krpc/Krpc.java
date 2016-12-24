@@ -1,21 +1,17 @@
 package me.zzhen.bt.dht.krpc;
 
 import me.zzhen.bt.bencode.DictionaryNode;
-import me.zzhen.bt.bencode.IntNode;
 import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.bencode.StringNode;
-import me.zzhen.bt.dht.DhtConfig;
+import me.zzhen.bt.dht.DhtApp;
 import me.zzhen.bt.dht.base.NodeInfo;
 import me.zzhen.bt.dht.base.NodeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.print.attribute.standard.RequestingUserName;
 import java.io.IOException;
 import java.net.*;
-import java.util.ArrayDeque;
 import java.util.HashSet;
-import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -38,15 +34,18 @@ public class Krpc implements RequestCallback {
 
     private final NodeKey self;
 
-    public static volatile Queue<NodeInfo> toRequest = new ArrayDeque<>();
+    private DatagramSocket socket;
+
     public static volatile Set<NodeInfo> requested = new HashSet<>();
     /**
      * 试试吧,现在开8个线程----以后切换AIO吧
      */
-    private ExecutorService executor = Executors.newFixedThreadPool(2 * Runtime.getRuntime().availableProcessors() + 6);
+    private ExecutorService sender = Executors.newSingleThreadExecutor();
+    private ExecutorService receiver = Executors.newSingleThreadExecutor();
 
-    public Krpc(NodeKey self) {
+    public Krpc(NodeKey self, DatagramSocket socket) {
         this.self = self;
+        this.socket = socket;
     }
 
 
@@ -57,7 +56,7 @@ public class Krpc implements RequestCallback {
      * @return
      */
     public void ping(NodeInfo node) {
-        DictionaryNode request = Request.makeRequest(node.getKey(), METHOD_PING);
+        DictionaryNode request = Message.makeRequest(node, METHOD_PING);
         DictionaryNode arg = new DictionaryNode();
         arg.addNode("id", new StringNode(self.getValue()));
         request.addNode("a", arg);
@@ -72,7 +71,7 @@ public class Krpc implements RequestCallback {
      * @return
      */
     public void findNode(NodeInfo target, NodeKey id) {
-        DictionaryNode msg = Request.makeRequest(id, METHOD_FIND_NODE);
+        DictionaryNode msg = Message.makeRequest(target, METHOD_FIND_NODE);
         DictionaryNode arg = new DictionaryNode();
         arg.addNode("target", new StringNode(id.getValue()));
         arg.addNode("id", new StringNode(self.getValue()));
@@ -87,7 +86,7 @@ public class Krpc implements RequestCallback {
      * @param peer
      */
     public void getPeers(NodeInfo target, NodeKey peer) {
-        DictionaryNode msg = Request.makeRequest(peer, METHOD_GET_PEERS);
+        DictionaryNode msg = Message.makeRequest(target, METHOD_GET_PEERS);
         DictionaryNode arg = new DictionaryNode();
         arg.addNode("info_hash", new StringNode(peer.getValue()));
         arg.addNode("id", new StringNode(self.getValue()));
@@ -102,14 +101,14 @@ public class Krpc implements RequestCallback {
      * @param peer
      */
     public void announcePeer(NodeKey peer) {
-        DictionaryNode req = Request.makeRequest(peer, METHOD_ANNOUNCE_PEER);
-        req.addNode("q", new StringNode(METHOD_ANNOUNCE_PEER));
-        DictionaryNode arg = new DictionaryNode();
-        arg.addNode("info_hash", new StringNode(self.getValue()));
-        arg.addNode("port", new IntNode(DhtConfig.SERVER_PORT));
-        arg.addNode("id", new StringNode(self.getValue()));
-        req.addNode("a", arg);
-        request(req, null, METHOD_ANNOUNCE_PEER);
+//        DictionaryNode req = Message.makeRequest(peer, METHOD_ANNOUNCE_PEER);
+//        req.addNode("q", new StringNode(METHOD_ANNOUNCE_PEER));
+//        DictionaryNode arg = new DictionaryNode();
+//        arg.addNode("info_hash", new StringNode(self.getValue()));
+//        arg.addNode("port", new IntNode(DhtConfig.SERVER_PORT));
+//        arg.addNode("id", new StringNode(self.getValue()));
+//        req.addNode("a", arg);
+//        request(req, null, METHOD_ANNOUNCE_PEER);
     }
 
     @Override
@@ -119,28 +118,15 @@ public class Krpc implements RequestCallback {
 
     /**
      * @param request
-     * @param node
+     * @param target
      * @param method
      * @return
      */
     @Override
-    public void request(DictionaryNode request, NodeInfo node, String method) {
-//            try {
-//                CompletableFuture<Response> future = CompletableFuture.supplyAsync(
-//                        () -> {
-//                            RequestWorker worker = new RequestWorker(request, node, method);
-//                            try {
-//                                return worker.call();
-//                            } catch (Exception e) {
-//                                e.printStackTrace();
-//                            }
-//                            return null;
-//                        }).thenApply((response -> response));
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            }
-        executor.execute(new RequestWorker(request, node, method, this));
-        requested.add(node);
+    public void request(DictionaryNode request, NodeInfo target, String method) {
+        sender.execute(new RequestWorker(socket, request, target, method));
+        requested.add(target);
+        logger.info("routes:" + DhtApp.NODE.routes.size() + ":requested:" + requested.size());
     }
 
 
@@ -169,14 +155,26 @@ public class Krpc implements RequestCallback {
         }
     }
 
-    public void response(DatagramSocket socket, InetAddress address, int port, DictionaryNode node) {
-        executor.execute(new ResponseWorker(socket, address, port, node));
+    /**
+     * 处理响应的方法,包括
+     *
+     * @param address
+     * @param port
+     * @param node
+     */
+    public void response(InetAddress address, int port, DictionaryNode node) {
+        if (Message.isResponse(node)) {
+            logger.info("response form :" + address.getHostAddress() + ":" + port);
+            receiver.execute(new ResponseProcessor(node, address, port, this));
+        } else if (Message.isRequest(node)) {
+            receiver.execute(new ResponseWorker(socket, address, port, node));
+        }
+        logger.info("routes:" + DhtApp.NODE.routes.size() + ":requested:" + requested.size());
     }
-
 
     @Override
     protected void finalize() throws Throwable {
         super.finalize();
-        executor.shutdown();
+        sender.shutdown();
     }
 }

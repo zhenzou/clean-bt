@@ -9,9 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.Executor;
@@ -30,12 +28,10 @@ public class DhtApp {
 
     private static final Logger logger = LoggerFactory.getLogger(DhtApp.class.getName());
 
-    public static DhtApp NODE;
-
     /**
-     * Client，Server共用线程池
+     * 全局节点单例
      */
-//    public final ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 4);
+    public static DhtApp NODE;
 
     /**
      * 全局路由表
@@ -59,10 +55,18 @@ public class DhtApp {
      */
     private DhtClient client;
     /**
-     * DHT 客户端
+     * DHT 服务端
      */
     private DhtServer server;
+    /**
+     * 全局Krpc
+     */
     private Krpc krpc;
+
+    /**
+     * 全局Socket,负责请求和响应
+     */
+    private DatagramSocket socket;
 
     /**
      * DHT 网络启动节点
@@ -72,7 +76,6 @@ public class DhtApp {
             new NodeInfo("router.utorrent.com", 6881),
             new NodeInfo("dht.transmissionbt.com", 6881)
     };
-
 
     /**
      * 默认配置
@@ -84,8 +87,11 @@ public class DhtApp {
             self = new NodeInfo(address, DhtConfig.SERVER_PORT, selfKey);
             blackList = new ArrayDeque<>(DhtConfig.BLACKLIST_SIZE);
             routes = new RouteTable(self);
-            krpc = new Krpc(self.getKey());
-        } catch (UnknownHostException e) {
+            socket = new DatagramSocket(DhtConfig.SERVER_PORT);
+//            socket.setSoTimeout(DhtConfig.CONN_TIMEOUT);
+            krpc = new Krpc(selfKey, socket);
+        } catch (UnknownHostException | SocketException e) {
+            logger.error(e.getMessage());
             e.printStackTrace();
         }
     }
@@ -104,15 +110,13 @@ public class DhtApp {
     }
 
     public void addNode(NodeInfo node) {
-        routes.addNode(node);
+        if (!node.equals(self)) {
+            routes.addNode(node);
+        }
     }
 
     public Queue<InetSocketAddress> getBlackList() {
         return blackList;
-    }
-
-    public void setBlackList(Queue<InetSocketAddress> blackList) {
-        this.blackList = blackList;
     }
 
     public boolean isBlackItem(InetAddress ip, int port) {
@@ -135,7 +139,7 @@ public class DhtApp {
 
     private void startServer() {
         new Thread(() -> {
-            server = new DhtServer(self, krpc);
+            server = new DhtServer(socket, self, krpc);
             server.init();
         }).start();
     }

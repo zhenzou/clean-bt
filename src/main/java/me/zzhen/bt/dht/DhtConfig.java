@@ -16,7 +16,7 @@ public class DhtConfig {
     /**
      * DHT Server监听端口
      */
-    public static final int SERVER_PORT = 6882;
+    public static final int SERVER_PORT = 6881;
 
     public static final int RETRY_TIME = 2;
     /**
@@ -24,9 +24,9 @@ public class DhtConfig {
      */
     public static final int CONN_TIMEOUT = 10 * 1000;
     /**
-     * Token失效间隔
+     * Token失效间隔 单位为秒
      */
-    public static final int TOKEN_TIMEOUT = 15 * 60 * 1000;
+    public static final int TOKEN_TIMEOUT = 15 * 60;
     /**
      * 黑名单大小，超出将自动移除前面的
      */

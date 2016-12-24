@@ -4,7 +4,7 @@ import me.zzhen.bt.bencode.Decoder;
 import me.zzhen.bt.bencode.DictionaryNode;
 import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.dht.base.NodeInfo;
-import me.zzhen.bt.dht.base.RouteTable;
+import me.zzhen.bt.dht.krpc.AutoFindNodeWorker;
 import me.zzhen.bt.dht.krpc.Krpc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +12,9 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Project:CleanBT
@@ -23,39 +26,51 @@ import java.net.DatagramSocket;
  */
 public class DhtServer {
 
-    private NodeInfo self;
-    private Krpc krpc;
     private static final Logger logger = LoggerFactory.getLogger(DhtServer.class.getName());
 
+    private NodeInfo self;
+    private Krpc krpc;
+    private DatagramSocket socket;
 
-    public DhtServer(NodeInfo self, Krpc krpc) {
+    private ScheduledExecutorService autoFindNode = Executors.newScheduledThreadPool(1);
+
+    public DhtServer(DatagramSocket socket, NodeInfo self, Krpc krpc) {
+        this.socket = socket;
         this.self = self;
         this.krpc = krpc;
+    }
+
+    private void listen() {
+        new Thread(() -> {
+            try {
+                while (true) {
+                    byte[] bytes = new byte[1024];
+                    DatagramPacket packet = new DatagramPacket(bytes, 1024);
+                    socket.receive(packet);
+                    int length = packet.getLength();
+                    try {
+                        Node node = Decoder.decode(bytes, 0, length).get(0);
+                        krpc.response(packet.getAddress(), packet.getPort(), (DictionaryNode) node);
+                    } catch (RuntimeException e) {
+                        logger.error(e.getMessage());
+                        e.printStackTrace();
+                    }
+                }
+            } catch (IOException e) {
+                logger.error(e.getMessage());
+                e.printStackTrace();
+            } finally {
+                logger.info("socket close");
+                socket.close();
+            }
+        }).start();
     }
 
     private void join() {
         for (NodeInfo target : DhtApp.BOOTSTRAP_NODE) {
             krpc.findNode(target, self.getKey());
         }
-    }
-
-    private void listen() {
-        new Thread(() -> {
-            try (DatagramSocket socket = new DatagramSocket(DhtConfig.SERVER_PORT)) {
-                while (true) {
-                    byte[] bytes = new byte[1024];
-                    DatagramPacket packet = new DatagramPacket(bytes, 1024);
-                    socket.receive(packet);
-                    int length = packet.getLength();
-                    Node node = Decoder.decode(bytes, 0, length).get(0);
-                    krpc.response(socket, packet.getAddress(), packet.getPort(), (DictionaryNode) node);
-//                    new ResponseWorker(packet.getAddress(), packet.getPort(), (DictionaryNode) node);
-                }
-            } catch (IOException e) {
-                logger.error(e.getMessage());
-                e.printStackTrace();
-            }
-        }).start();
+        autoFindNode.scheduleAtFixedRate(new AutoFindNodeWorker(krpc), 1, 1, TimeUnit.MINUTES);
     }
 
     public void init() {

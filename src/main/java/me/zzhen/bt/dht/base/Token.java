@@ -1,6 +1,6 @@
 package me.zzhen.bt.dht.base;
 
-import me.zzhen.bt.dht.base.NodeKey;
+import me.zzhen.bt.dht.DhtConfig;
 
 import java.time.Instant;
 
@@ -13,13 +13,44 @@ import java.time.Instant;
  */
 public class Token {
 
-    public final NodeKey key;
-    public final long token;
-    public final Instant time;
+    /**
+     * 请求的目标节点ID或者资源hash
+     */
+    public final NodeInfo target;
+    /**
+     * id
+     */
+    public final long id;
+    /**
+     * token生成的时间
+     */
+    public final Instant time = Instant.now();
 
-    public Token(NodeKey key, long token, Instant time) {
-        this.key = key;
-        this.token = token;
-        this.time = time;
+    /**
+     * id 对应的请求的方法
+     */
+    public final String method;
+
+    public Token(NodeInfo target, long id, String method) {
+        this.target = target;
+        this.id = id;
+        this.method = method;
+    }
+
+    /**
+     * @return 当前token是否有效
+     */
+    public boolean isLive() {
+        return time.plusSeconds(DhtConfig.TOKEN_TIMEOUT).isAfter(Instant.now());
+    }
+
+    @Override
+    public String toString() {
+        return "Token{" +
+                "target=" + target +
+                ", id=" + id +
+                ", time=" + time +
+                ", method='" + method + '\'' +
+                '}';
     }
 }

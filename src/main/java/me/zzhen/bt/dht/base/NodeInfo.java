@@ -107,6 +107,16 @@ public class NodeInfo {
         this.port = port;
     }
 
+    @Override
+    public String toString() {
+        return "NodeInfo{" +
+                "hostName='" + hostName + '\'' +
+                ", port=" + port +
+                ", key=" + String.valueOf(key) +
+                ", address=" + address +
+                '}';
+    }
+
     /**
      * @return nodeinfo的编码，ID IP/Port 一共26个字节
      */
@@ -114,8 +124,8 @@ public class NodeInfo {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
             baos.write(key.getValue());
-            baos.write(address.getAddress());
-            baos.write((char) port);
+            baos.write(Utils.ipToBytes(address.getHostAddress()));
+            baos.write(Utils.intToBytes(port), 2, 2);
         } catch (IOException e) {
             e.printStackTrace();
         }

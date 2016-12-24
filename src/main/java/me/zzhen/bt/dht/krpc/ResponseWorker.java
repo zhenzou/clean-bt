@@ -5,20 +5,20 @@ import me.zzhen.bt.bencode.ListNode;
 import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.bencode.StringNode;
 import me.zzhen.bt.dht.DhtApp;
-import me.zzhen.bt.dht.DhtConfig;
-import me.zzhen.bt.dht.TokenManager;
+import me.zzhen.bt.dht.base.TokenManager;
 import me.zzhen.bt.dht.base.NodeInfo;
 import me.zzhen.bt.dht.base.NodeKey;
 import me.zzhen.bt.dht.base.Token;
+import me.zzhen.bt.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketTimeoutException;
-import java.nio.channels.AsynchronousByteChannel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,34 +48,29 @@ public class ResponseWorker extends Thread {
 
     @Override
     public void run() {
-        onRequest(address, port, request);
+        response(address, port, request);
     }
 
-    public void onRequest(InetAddress address, int port, DictionaryNode node) {
-        logger.info("response from " + address.getHostAddress() + ":" + port);
-        Node method = node.getNode("y");
+    public void response(InetAddress address, int port, DictionaryNode node) {
+        Node method = node.getNode("q");
+        logger.info(method + "  request from :" + address.getHostAddress() + ":" + port);
         Node t = node.getNode("t");
-        DictionaryNode value = (DictionaryNode) node.getNode("a");
-        Node id = value.getNode("id");
+        DictionaryNode arg = (DictionaryNode) node.getNode("a");
+        Node id = arg.getNode("id");
+        DhtApp.NODE.addNode(new NodeInfo(address, port, new NodeKey(id.decode())));
         switch (method.toString()) {
             case METHOD_PING:
                 doResponsePing(address, port, t);
                 break;
             case METHOD_GET_PEERS:
-                DictionaryNode arg1 = value;
-                byte[] info_hashes = arg1.getNode("info_hash").decode();
-                for (byte info_hash : info_hashes) {
-                    System.out.print(info_hash + ",");
-                }
-                System.out.println();
-                doResponseGetPeers(address, port, value.getNode("info_hash"));
+                doResponseGetPeers(address, port, t, arg.getNode("info_hash"));
                 break;
             case METHOD_FIND_NODE:
-                Node target = value.getNode("target");
+                Node target = arg.getNode("target");
                 doResponseFindNode(address, port, target);
                 break;
             case METHOD_ANNOUNCE_PEER:
-                doResponseAnnouncePeer(address, port, value);
+                doResponseAnnouncePeer(address, port, arg);
                 break;
             default:
                 break;
@@ -83,60 +78,70 @@ public class ResponseWorker extends Thread {
     }
 
     private void doResponsePing(InetAddress address, int port, Node t) {
-        DictionaryNode resp = Response.makeResponse(DhtApp.NODE.getSelf().getKey());
-        resp.addNode("t", t);
+        DictionaryNode resp = Message.makeResponse(t);
+        DictionaryNode arg = new DictionaryNode();
+        arg.addNode("id", new StringNode(DhtApp.NODE.getSelfKey().getValue()));
+        arg.addNode("r", arg);
         doResponse(address, port, resp);
     }
 
-    private void doResponseGetPeers(InetAddress address, int port, Node t) {
-        DictionaryNode resp = Response.makeResponse(DhtApp.NODE.getSelf().getKey());
-        resp.addNode("t", t);
+    private void doResponseGetPeers(InetAddress address, int port, Node t, Node hash) {
+        DictionaryNode resp = Message.makeResponse(t);
         //TODO PeerManager
-        DictionaryNode arg = (DictionaryNode) resp.getNode("r");
-        List<NodeInfo> infos = DhtApp.NODE.routes.closest8Nodes(new NodeKey(t.decode()));
-        ListNode nodes = new ListNode();
+        List<NodeInfo> infos = DhtApp.NODE.routes.closest8Nodes(new NodeKey(hash.decode()));
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
         for (NodeInfo info : infos) {
-            nodes.addNode(new StringNode(info.compactNodeInfo()));
+            try {
+                baos.write(info.compactNodeInfo());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
+        StringNode nodes = new StringNode(baos.toByteArray());
+        DictionaryNode arg = Message.makrArg();
         arg.addNode("nodes", nodes);
-        Token token = TokenManager.newToken(DhtApp.NODE.getSelf().getKey());
-        arg.addNode("token", new StringNode(token.token + ""));
-        logger.info("to send response");
+        Token token = TokenManager.newToken(DhtApp.NODE.getSelf(), Krpc.METHOD_GET_PEERS);
+        arg.addNode("token", new StringNode(token.id + ""));
+        resp.addNode("r", arg);
         doResponse(address, port, resp);
     }
 
     private void doResponseFindNode(InetAddress address, int port, Node t) {
-        DictionaryNode resp = Response.makeResponse(DhtApp.NODE.getSelf().getKey());
-        resp.addNode("t", t);
-        DictionaryNode arg = (DictionaryNode) resp.getNode("r");
+        DictionaryNode resp = Message.makeResponse(t);
         List<NodeInfo> infos = new ArrayList<>();
         infos.add(DhtApp.NODE.getSelf());//将自己添加到发送给别人的节点
         infos.addAll(DhtApp.NODE.routes.closest8Nodes(new NodeKey(t.decode())));
-        ListNode nodes = new ListNode();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
         for (NodeInfo info : infos) {
-            nodes.addNode(new StringNode(info.compactNodeInfo()));
+            try {
+                baos.write(info.compactNodeInfo());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
+        StringNode nodes = new StringNode(baos.toByteArray());
+        DictionaryNode arg = Message.makrArg();
         arg.addNode("nodes", nodes);//TODO values
+        resp.addNode("r", arg);
         doResponse(address, port, resp);
     }
 
     private void doResponseAnnouncePeer(InetAddress address, int port, Node t) {
-        DictionaryNode resp = Response.makeResponse(DhtApp.NODE.getSelf().getKey());
-        resp.addNode("t", t);
-        DictionaryNode arg = (DictionaryNode) resp.getNode("r");
+        DictionaryNode resp = Message.makeResponse(t);
+        DictionaryNode arg = Message.makrArg();
         List<NodeInfo> infos = DhtApp.NODE.routes.closest8Nodes(new NodeKey(t.decode()));
         ListNode nodes = new ListNode();
         for (NodeInfo info : infos) {
             nodes.addNode(new StringNode(info.compactNodeInfo()));
         }
         arg.addNode("nodes", nodes);//TODO values
+        resp.addNode("r", arg);
         doResponse(address, port, resp);
     }
 
     public void doResponse(InetAddress address, int port, DictionaryNode resp) {
         byte[] data = resp.encode();//TODO optimize
         try {
-//            socket.setSoTimeout(DhtConfig.CONN_TIMEOUT);
             DatagramPacket packet = new DatagramPacket(data, 0, data.length, address, port);
             socket.send(packet);
             logger.info("send response" + ":" + address.getHostAddress() + ":" + port);
