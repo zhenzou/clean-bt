@@ -38,6 +38,4 @@ public interface RequestCallback {
     void onGetPeer(InetAddress address, int port, DictionaryNode data);
 
     void onFindNode(InetAddress address, int port, DictionaryNode data);
-
-    boolean requested(NodeInfo node);
 }

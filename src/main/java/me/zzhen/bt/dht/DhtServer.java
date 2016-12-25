@@ -73,9 +73,7 @@ public class DhtServer {
             krpc.findNode(target, self.getKey());
         }
         //定时,自动向邻居节点发送find_node请求
-        autoFindNode.scheduleAtFixedRate(() -> {
-            DhtApp.NODE.routes.refresh(krpc);
-        }, 1, 1, TimeUnit.SECONDS);
+        autoFindNode.scheduleAtFixedRate(() -> DhtApp.NODE.routes.refresh(krpc), 30, 30, TimeUnit.SECONDS);
     }
 
 

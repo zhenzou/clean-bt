@@ -150,7 +150,6 @@ class ResponseProcessor implements Runnable {
             }
         } else {
             logger.info("nodes :" + values.getValue().size());
-            //TODO fetch 回调
             List<InetSocketAddress> peers = values.getValue().stream().map(node -> {
                 byte[] bytes = node.decode();
                 return new InetSocketAddress(IO.getAddrFromBytes(bytes, 0), Utils.bytesToInt(bytes, 4, 2));

@@ -198,7 +198,7 @@ public class ResponseWorker extends Thread {
      * @param arg     请求的参数,包括 id,info_hash,port,token
      */
     public void doResponse(InetAddress address, int port, DictionaryNode arg) {
-        byte[] data = arg.encode();//TODO optimize
+        byte[] data = arg.encode();
         try {
             DatagramPacket packet = new DatagramPacket(data, 0, data.length, address, port);
             socket.send(packet);

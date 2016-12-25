@@ -77,15 +77,16 @@ public class MetadataWorker implements Runnable {
 
     public static final int BLOCK_SIZE = 16 * 1024;
 
-    @Override
-    public void run() {
-
-    }
 
     public MetadataWorker(InetAddress address, int port, String hash) {
         this.address = address;
         this.port = port;
         this.hash = hash;
+    }
+
+    @Override
+    public void run() {
+        fetchMetadata();
     }
 
     private void handleResp(byte[] data) {
@@ -213,10 +214,8 @@ public class MetadataWorker implements Runnable {
 
 
     /**
-     * @param infoHash
-     * @param key
      */
-    public void fetchMetadata(String infoHash, NodeKey key) {
+    public void fetchMetadata() {
 
         try (Socket socket = new Socket()) {
             logger.info("init");
@@ -241,7 +240,7 @@ public class MetadataWorker implements Runnable {
                 int pieceNum = 0;
                 if (type == EXTENDED) {
                     int extendId = data[1];
-                    //握手
+
                     if (extendId == 0) {
                         if (pieces.size() != 0) return;
                         DictionaryNode meta = (DictionaryNode) Decoder.decode(data, 2, length - 2).get(0);
@@ -264,7 +263,6 @@ public class MetadataWorker implements Runnable {
                     }
                 }
             }
-
         } catch (SocketTimeoutException e) {
             DhtApp.NODE.addBlackItem(address, port);
             logger.error(e.getMessage());

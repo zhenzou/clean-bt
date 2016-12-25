@@ -41,8 +41,9 @@ public class Krpc implements RequestCallback {
     /**
      * 试试吧,现在开8个线程----以后切换AIO吧
      */
-    private ExecutorService sender = Executors.newSingleThreadExecutor();
+    private ExecutorService sender = Executors.newFixedThreadPool(2 * Runtime.getRuntime().availableProcessors() + 1);
     private ExecutorService receiver = Executors.newSingleThreadExecutor();
+    private ExecutorService fetcher = Executors.newSingleThreadExecutor();
 
     public Krpc(NodeKey self, DatagramSocket socket) {
         this.self = self;
@@ -112,7 +113,6 @@ public class Krpc implements RequestCallback {
 //        request(req, null, METHOD_ANNOUNCE_PEER);
     }
 
-    @Override
     public boolean requested(NodeInfo node) {
         return requested.contains(node);
     }
@@ -125,9 +125,10 @@ public class Krpc implements RequestCallback {
      */
     @Override
     public void request(DictionaryNode request, NodeInfo target, String method) {
-        if (!requested.contains(target) &&! DhtApp.NODE.isBlackItem(target)) {
+        if (!DhtApp.NODE.isBlackItem(target)) {
             sender.execute(new RequestWorker(socket, request, target, method));
             requested.add(target);
+            DhtApp.NODE.addNode(target);
         }
     }
 
@@ -159,7 +160,7 @@ public class Krpc implements RequestCallback {
 
     @Override
     public void onAnnouncePeer(InetAddress address, int port, String data) {
-        sender.execute(new MetadataWorker(address, port, data));
+        fetcher.execute(new MetadataWorker(address, port, data));
     }
 
     @Override
@@ -187,7 +188,6 @@ public class Krpc implements RequestCallback {
     @Override
     public void response(InetAddress address, int port, DictionaryNode node) {
         if (Message.isResponse(node)) {
-//            logger.info("response form :" + address.getHostAddress() + ":" + port);
             receiver.execute(new ResponseProcessor(node, address, port, this));
         } else if (Message.isRequest(node)) {
             receiver.execute(new ResponseWorker(socket, address, port, node, this));

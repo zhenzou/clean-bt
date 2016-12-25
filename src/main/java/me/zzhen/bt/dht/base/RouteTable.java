@@ -1,12 +1,11 @@
 package me.zzhen.bt.dht.base;
 
+import me.zzhen.bt.common.Bitmap;
 import me.zzhen.bt.common.Tuple;
 import me.zzhen.bt.dht.krpc.Krpc;
-import me.zzhen.bt.utils.Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.math.BigInteger;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -23,6 +22,7 @@ import java.util.Set;
  */
 public class RouteTable {
 
+    private static final Logger logger = LoggerFactory.getLogger(RouteTable.class.getName());
     /**
      * 路由表的节点数
      */
@@ -46,7 +46,7 @@ public class RouteTable {
     public RouteTable(NodeInfo self) {
         this.self = self;
         root = new TreeNode((byte) 0);
-        Bucket init = new Bucket(BigInteger.ONE, new BigInteger("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16));
+        Bucket init = new Bucket(0);
         buckets.add(init);
         root.value = init;
     }
@@ -56,16 +56,16 @@ public class RouteTable {
     }
 
     public synchronized void addNode(NodeInfo node) {
-        if (node.getKey() == null) return;
         NodeKey key = node.getKey();
+        if (key == null) return;
         TreeNode item = root;
         int index = 0;
         while (item.value == null && index < 160) {
-            int prefix = key.prefix(index);
-            if (prefix == 0) {
-                item = item.right;
-            } else {
+            boolean prefix = key.prefix(index);
+            if (prefix) {
                 item = item.left;
+            } else {
+                item = item.right;
             }
             index++;
         }
@@ -98,7 +98,7 @@ public class RouteTable {
             if (!bucket.checkRange(self.getKey())) {
                 type2++;
                 System.out.println("not in range:" + type2);
-                return false;
+//                return false;
             }
             Tuple<Bucket, Bucket> spit = bucket.spit();
             TreeNode left = new TreeNode((byte) 1);
@@ -107,10 +107,10 @@ public class RouteTable {
             right.value = spit._2;
             item.left = left;
             item.right = right;
+            buckets.remove(item.value);
             item.value = null;
             buckets.add(spit._1);
             buckets.add(spit._2);
-            buckets.remove(item);
             if (left.value.checkRange(key)) addNodeToBucket(node, left);
             else addNodeToBucket(node, right);
         } else {
@@ -159,11 +159,11 @@ public class RouteTable {
         TreeNode item = root;
         int index = 0;
         while (item.value == null && index < 160) {
-            int prefix = key.prefix(index);
-            if (prefix == 0) {
-                item = item.right;
-            } else {
+            boolean prefix = key.prefix(index);
+            if (prefix) {
                 item = item.left;
+            } else {
+                item = item.right;
             }
             index++;
         }
@@ -171,13 +171,16 @@ public class RouteTable {
     }
 
     public void refresh(Krpc krpc) {
+        int i = 0;
         Object[] objects = buckets.toArray();
         for (Object object : objects) {
             Bucket bucket = (Bucket) object;
             for (NodeInfo node : bucket.nodes) {
-                krpc.findNode(node, NodeKey.genRandomKey());
+                i++;
+                krpc.findNode(node, bucket.randomChildKey());
             }
         }
+        logger.info("refresh for :" + i + " 个节点");
     }
 
     /**
@@ -204,27 +207,19 @@ public class RouteTable {
 
         Instant localChange = Instant.now();
 
-        int left;//在[0,left)出现1则不在范围内
-        int right;//[left,right)之间，至少有一个为1的位置
+        private Bitmap prefix;
 
-        /**
-         *
-         */
-        BigInteger min;
-        BigInteger max;
-
-        /**
-         * @param left  高字节
-         * @param right 低字节
-         */
-        public Bucket(int left, int right) {
-            this.left = left;
-            this.right = right;
+        public Bucket(int size) {
+            prefix = new Bitmap(size);
         }
 
-        public Bucket(BigInteger min, BigInteger max) {
-            this.min = min;
-            this.max = max;
+        /**
+         * @param
+         */
+        public Bucket(Bitmap old, boolean val) {
+            prefix = new Bitmap(old.size + 1);
+            prefix.or(old);
+            prefix.set(prefix.size - 1, val);
         }
 
         private List<NodeInfo> nodes = new ArrayList<>(8);
@@ -237,44 +232,26 @@ public class RouteTable {
          * @return
          */
         Tuple<Bucket, Bucket> spit() {
-//            int mid = left + 1;
-            BigInteger mid = min.add(max).divide(BigInteger.valueOf(2));//相加除以２
-
-//            Bucket rightBucket = new Bucket(mid, right);
-            Bucket rightBucket = new Bucket(min, mid);
+            if (prefix.size == 160) return null;
+            Bucket rightBucket = new Bucket(prefix, false);
             for (NodeInfo node : nodes) {
                 if (rightBucket.checkRange(node.getKey())) rightBucket.addNode(node);
             }
-//            Bucket leftBucket = new Bucket(left, mid);
-            Bucket leftBucket = new Bucket(mid, max);
+            Bucket leftBucket = new Bucket(prefix, true);
             for (NodeInfo node : nodes) {
                 if (leftBucket.checkRange(node.getKey())) leftBucket.addNode(node);
-
             }
             return new Tuple<>(leftBucket, rightBucket);
         }
 
         public NodeKey randomChildKey() {
-            byte[] bytes = max.add(min).divide(BigInteger.valueOf(2)).toByteArray();
-            if (bytes.length < 20) {
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                int len = 20 - bytes.length;
-                for (int i = 0; i < len; i++) {
-                    baos.write(0);
-                }
-                try {
-                    baos.write(bytes);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                return new NodeKey(baos.toByteArray());
-            } else if (bytes.length > 20) {
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                baos.write(bytes, 0, 20);
-                return new NodeKey(baos.toByteArray());
-            } else {
-                return new NodeKey(bytes);
+            NodeKey key = NodeKey.genRandomKey();
+            Bitmap bits = key.getBits();
+            int size = prefix.size;
+            for (int i = 0; i < size; i++) {
+                bits.set(i, prefix.get(i));
             }
+            return key;
         }
 
         /**
@@ -284,36 +261,12 @@ public class RouteTable {
          * @return
          */
         boolean checkRange(NodeKey key) {
-            BigInteger bi = new BigInteger(Utils.bytesToBin(key.getValue()), 2);
-            if (bi.compareTo(min) >= 0 && bi.compareTo(max) < 0) return true;
-//            return checkRight(key) && checkLeft(key);
-            return false;
-        }
-
-        /**
-         * TODO 修复这个方法的问题
-         * 暂时使用BigInteger吧
-         *
-         * @param key
-         * @return
-         */
-        private boolean checkLeft(NodeKey key) {
             int len = key.getValue().length;
-            for (int i = 0; i < left && i < len; i++) {
-                if (key.prefix(i) == 1) return false;
+            for (int i = 0; i < prefix.size && i < len; i++) {
+                if (key.prefix(i) != prefix.get(i)) return false;
             }
             return true;
         }
-
-
-        private boolean checkRight(NodeKey key) {
-            int len = key.getValue().length;
-            for (int i = left; i < right && i < len; i++) {
-                if (key.prefix(i) == 1) return true;
-            }
-            return false;
-        }
-
 
         /**
          * 在前面已经处理已经存在的情况，在这里不需要再次处理
@@ -350,15 +303,12 @@ public class RouteTable {
 
             Bucket bucket = (Bucket) o;
 
-            if (!min.equals(bucket.min)) return false;
-            return max.equals(bucket.max);
+            return prefix.equals(bucket.prefix);
         }
 
         @Override
         public int hashCode() {
-            int result = min.hashCode();
-            result = 31 * result + max.hashCode();
-            return result;
+            return prefix.hashCode();
         }
 
         /**

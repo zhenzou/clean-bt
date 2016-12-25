@@ -4,7 +4,6 @@ import me.zzhen.bt.dht.base.NodeInfo;
 import me.zzhen.bt.dht.base.NodeKey;
 import me.zzhen.bt.dht.base.RouteTable;
 import me.zzhen.bt.dht.krpc.Krpc;
-import me.zzhen.bt.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

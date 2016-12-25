@@ -107,15 +107,6 @@ public class NodeInfo {
         this.port = port;
     }
 
-    @Override
-    public String toString() {
-        return "NodeInfo{" +
-                "hostName='" + hostName + '\'' +
-                ", port=" + port +
-                ", key=" + String.valueOf(key) +
-                ", address=" + address +
-                '}';
-    }
 
     /**
      * @return nodeinfo的编码，ID IP/Port 一共26个字节
@@ -150,8 +141,11 @@ public class NodeInfo {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
+
         NodeInfo nodeInfo = (NodeInfo) o;
+
         if (port != nodeInfo.port) return false;
+        if (hostName != null ? !hostName.equals(nodeInfo.hostName) : nodeInfo.hostName != null) return false;
         if (!key.equals(nodeInfo.key)) return false;
         return address.equals(nodeInfo.address);
     }
@@ -163,4 +157,15 @@ public class NodeInfo {
         result = 31 * result + address.hashCode();
         return result;
     }
+
+    @Override
+    public String toString() {
+        return "NodeInfo{" +
+                "hostName='" + hostName + '\'' +
+                ", port=" + port +
+                ", key=" + String.valueOf(key) +
+                ", address=" + address +
+                '}';
+    }
+
 }
