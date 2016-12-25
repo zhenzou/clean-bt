@@ -31,4 +31,7 @@ public class DhtConfig {
      * 黑名单大小，超出将自动移除前面的
      */
     public static final int BLACKLIST_SIZE = 15 * 1000;
+
+
+    public static final int BLOCK_SIZE = 16 * 1024;
 }

@@ -1,13 +1,18 @@
 package me.zzhen.bt.dht.base;
 
 import me.zzhen.bt.common.Tuple;
+import me.zzhen.bt.dht.krpc.Krpc;
 import me.zzhen.bt.utils.Utils;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Project:CleanBT
@@ -18,14 +23,32 @@ import java.util.List;
  */
 public class RouteTable {
 
+    /**
+     * 路由表的节点数
+     */
     private int size;
-    private TreeNode root = new TreeNode((byte) 0);//前缀树，根节点，不使用
+
+    /**
+     * 前缀树，根节点，不使用
+     */
+    private TreeNode root = new TreeNode((byte) 0);
+
+    /**
+     * 本地DHT节点的信息
+     */
     private final NodeInfo self;
+
+    /**
+     * 便于更新
+     */
+    private Set<Bucket> buckets = new HashSet<>();
 
     public RouteTable(NodeInfo self) {
         this.self = self;
         root = new TreeNode((byte) 0);
-        root.value = new Bucket(BigInteger.ONE, new BigInteger("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16));
+        Bucket init = new Bucket(BigInteger.ONE, new BigInteger("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16));
+        buckets.add(init);
+        root.value = init;
     }
 
     public int size() {
@@ -33,7 +56,7 @@ public class RouteTable {
     }
 
     public synchronized void addNode(NodeInfo node) {
-        if (node.getKey()==null)return;
+        if (node.getKey() == null) return;
         NodeKey key = node.getKey();
         TreeNode item = root;
         int index = 0;
@@ -51,6 +74,10 @@ public class RouteTable {
         }
     }
 
+
+    public int repeat = 0;
+    public int type2 = 0;
+
     /**
      * 添加Node信息到响应的Bucket中
      * 如果Bucket满了，则分裂
@@ -62,9 +89,17 @@ public class RouteTable {
     private boolean addNodeToBucket(NodeInfo node, TreeNode item) {
         Bucket bucket = item.value;
         NodeKey key = node.getKey();
-        if (bucket.contains(node)) return false;
+        if (bucket.contains(node)) {
+            repeat++;
+            System.out.println("repeat:" + repeat);
+            return false;
+        }
         if (bucket.size() == 8) {
-            if (!bucket.checkRange(self.getKey())) return false;
+            if (!bucket.checkRange(self.getKey())) {
+                type2++;
+                System.out.println("not in range:" + type2);
+                return false;
+            }
             Tuple<Bucket, Bucket> spit = bucket.spit();
             TreeNode left = new TreeNode((byte) 1);
             left.value = spit._1;
@@ -73,6 +108,9 @@ public class RouteTable {
             item.left = left;
             item.right = right;
             item.value = null;
+            buckets.add(spit._1);
+            buckets.add(spit._2);
+            buckets.remove(item);
             if (left.value.checkRange(key)) addNodeToBucket(node, left);
             else addNodeToBucket(node, right);
         } else {
@@ -130,6 +168,16 @@ public class RouteTable {
             index++;
         }
         return item.value.nodes;
+    }
+
+    public void refresh(Krpc krpc) {
+        Object[] objects = buckets.toArray();
+        for (Object object : objects) {
+            Bucket bucket = (Bucket) object;
+            for (NodeInfo node : bucket.nodes) {
+                krpc.findNode(node, NodeKey.genRandomKey());
+            }
+        }
     }
 
     /**
@@ -206,6 +254,29 @@ public class RouteTable {
             return new Tuple<>(leftBucket, rightBucket);
         }
 
+        public NodeKey randomChildKey() {
+            byte[] bytes = max.add(min).divide(BigInteger.valueOf(2)).toByteArray();
+            if (bytes.length < 20) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                int len = 20 - bytes.length;
+                for (int i = 0; i < len; i++) {
+                    baos.write(0);
+                }
+                try {
+                    baos.write(bytes);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                return new NodeKey(baos.toByteArray());
+            } else if (bytes.length > 20) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                baos.write(bytes, 0, 20);
+                return new NodeKey(baos.toByteArray());
+            } else {
+                return new NodeKey(bytes);
+            }
+        }
+
         /**
          * 右子树包含
          *
@@ -254,6 +325,7 @@ public class RouteTable {
                 return;
             }
             nodes.add(info);
+            refresh();
         }
 
         public int size() {
@@ -271,6 +343,23 @@ public class RouteTable {
             return null;
         }
 
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            Bucket bucket = (Bucket) o;
+
+            if (!min.equals(bucket.min)) return false;
+            return max.equals(bucket.max);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = min.hashCode();
+            result = 31 * result + max.hashCode();
+            return result;
+        }
 
         /**
          * 处理Bucket定时刷新问题

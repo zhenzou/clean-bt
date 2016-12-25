@@ -1,11 +1,8 @@
 package me.zzhen.bt.bencode;
 
-import me.zzhen.bt.utils.Utils;
-
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Project:CleanBT

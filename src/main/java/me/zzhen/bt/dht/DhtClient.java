@@ -80,9 +80,9 @@ public class DhtClient {
 //                logger.info(" Peer:IP" + nodeAddr.getHostAddress());
 //                logger.info(" Peer:Port" + port);
 //                if (DhtApp.NODE.isBlackItem(nodeAddr.getHostAddress(), port)) continue;
-//                UtMetadata utMetadata = null;
+//                MetadataWorker utMetadata = null;
 //                try {
-//                    utMetadata = new UtMetadata(nodeAddr, port);
+//                    utMetadata = new MetadataWorker(nodeAddr, port);
 //                    utMetadata.fetchMetadata("546cf15f724d19c4319cc17b179d7e035f89c1f4", self.getKey());
 //                    break;
 //                } catch (SocketTimeoutException e) {

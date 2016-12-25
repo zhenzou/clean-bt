@@ -4,6 +4,7 @@ import me.zzhen.bt.bencode.DictionaryNode;
 import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.bencode.StringNode;
 import me.zzhen.bt.dht.DhtApp;
+import me.zzhen.bt.dht.base.MetadataWorker;
 import me.zzhen.bt.dht.base.NodeInfo;
 import me.zzhen.bt.dht.base.NodeKey;
 import org.slf4j.Logger;
@@ -56,7 +57,7 @@ public class Krpc implements RequestCallback {
      * @return
      */
     public void ping(NodeInfo node) {
-        DictionaryNode request = Message.makeRequest(node, METHOD_PING);
+        DictionaryNode request = Message.makeRequest(node.getKey(), METHOD_PING);
         DictionaryNode arg = new DictionaryNode();
         arg.addNode("id", new StringNode(self.getValue()));
         request.addNode("a", arg);
@@ -71,7 +72,7 @@ public class Krpc implements RequestCallback {
      * @return
      */
     public void findNode(NodeInfo target, NodeKey id) {
-        DictionaryNode msg = Message.makeRequest(target, METHOD_FIND_NODE);
+        DictionaryNode msg = Message.makeRequest(id, METHOD_FIND_NODE);
         DictionaryNode arg = new DictionaryNode();
         arg.addNode("target", new StringNode(id.getValue()));
         arg.addNode("id", new StringNode(self.getValue()));
@@ -86,7 +87,7 @@ public class Krpc implements RequestCallback {
      * @param peer
      */
     public void getPeers(NodeInfo target, NodeKey peer) {
-        DictionaryNode msg = Message.makeRequest(target, METHOD_GET_PEERS);
+        DictionaryNode msg = Message.makeRequest(peer, METHOD_GET_PEERS);
         DictionaryNode arg = new DictionaryNode();
         arg.addNode("info_hash", new StringNode(peer.getValue()));
         arg.addNode("id", new StringNode(self.getValue()));
@@ -124,9 +125,10 @@ public class Krpc implements RequestCallback {
      */
     @Override
     public void request(DictionaryNode request, NodeInfo target, String method) {
-        sender.execute(new RequestWorker(socket, request, target, method));
-        requested.add(target);
-        logger.info("routes:" + DhtApp.NODE.routes.size() + ":requested:" + requested.size());
+        if (!requested.contains(target) &&! DhtApp.NODE.isBlackItem(target)) {
+            sender.execute(new RequestWorker(socket, request, target, method));
+            requested.add(target);
+        }
     }
 
 
@@ -155,6 +157,26 @@ public class Krpc implements RequestCallback {
         }
     }
 
+    @Override
+    public void onAnnouncePeer(InetAddress address, int port, String data) {
+        sender.execute(new MetadataWorker(address, port, data));
+    }
+
+    @Override
+    public void onPing(InetAddress address, int port, DictionaryNode data) {
+
+    }
+
+    @Override
+    public void onGetPeer(InetAddress address, int port, DictionaryNode data) {
+
+    }
+
+    @Override
+    public void onFindNode(InetAddress address, int port, DictionaryNode data) {
+
+    }
+
     /**
      * 处理响应的方法,包括
      *
@@ -162,12 +184,13 @@ public class Krpc implements RequestCallback {
      * @param port
      * @param node
      */
+    @Override
     public void response(InetAddress address, int port, DictionaryNode node) {
         if (Message.isResponse(node)) {
-            logger.info("response form :" + address.getHostAddress() + ":" + port);
+//            logger.info("response form :" + address.getHostAddress() + ":" + port);
             receiver.execute(new ResponseProcessor(node, address, port, this));
         } else if (Message.isRequest(node)) {
-            receiver.execute(new ResponseWorker(socket, address, port, node));
+            receiver.execute(new ResponseWorker(socket, address, port, node, this));
         }
         logger.info("routes:" + DhtApp.NODE.routes.size() + ":requested:" + requested.size());
     }

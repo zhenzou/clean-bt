@@ -58,7 +58,7 @@ public class RequestWorker implements Runnable {
             InetAddress address = target.getAddress();
             DatagramPacket packet = new DatagramPacket(data, 0, data.length, address, target.getPort());
             socket.send(packet);
-            logger.info(method + " request to:" + ":" + address.getHostAddress() + ":" + target.getPort() + ":" + String.valueOf(target.getKey()));
+//            logger.info(method + " request to:" + ":" + address.getHostAddress() + ":" + target.getPort() + ":" + String.valueOf(target.getKey()));
         } catch (IOException e) {
             logger.error(e.getMessage());
             DhtApp.NODE.addBlackItem(target.getAddress(), target.getPort());

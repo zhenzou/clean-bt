@@ -132,13 +132,25 @@ public class NodeInfo {
         return baos.toByteArray();
     }
 
+    /**
+     * @return nodeinfo的编码 IP/Port 一共6个字节
+     */
+    public byte[] compactIpPort() {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try {
+            baos.write(Utils.ipToBytes(address.getHostAddress()));
+            baos.write(Utils.intToBytes(port), 2, 2);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return baos.toByteArray();
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-
         NodeInfo nodeInfo = (NodeInfo) o;
-
         if (port != nodeInfo.port) return false;
         if (!key.equals(nodeInfo.key)) return false;
         return address.equals(nodeInfo.address);

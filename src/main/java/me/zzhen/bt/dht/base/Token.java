@@ -16,7 +16,7 @@ public class Token {
     /**
      * 请求的目标节点ID或者资源hash
      */
-    public final NodeInfo target;
+    public final NodeKey target;
     /**
      * id
      */
@@ -31,7 +31,7 @@ public class Token {
      */
     public final String method;
 
-    public Token(NodeInfo target, long id, String method) {
+    public Token(NodeKey target, long id, String method) {
         this.target = target;
         this.id = id;
         this.method = method;

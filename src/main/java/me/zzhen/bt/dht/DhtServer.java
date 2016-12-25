@@ -4,7 +4,6 @@ import me.zzhen.bt.bencode.Decoder;
 import me.zzhen.bt.bencode.DictionaryNode;
 import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.dht.base.NodeInfo;
-import me.zzhen.bt.dht.krpc.AutoFindNodeWorker;
 import me.zzhen.bt.dht.krpc.Krpc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,8 +51,11 @@ public class DhtServer {
                         Node node = Decoder.decode(bytes, 0, length).get(0);
                         krpc.response(packet.getAddress(), packet.getPort(), (DictionaryNode) node);
                     } catch (RuntimeException e) {
+                        logger.error("error :" + packet.getAddress().getHostAddress());
+                        logger.error("error :" + packet.getPort());
+                        logger.error("error :" + packet.getLength());
                         logger.error(e.getMessage());
-                        e.printStackTrace();
+                        DhtApp.NODE.addBlackItem(packet.getAddress(), packet.getPort());
                     }
                 }
             } catch (IOException e) {
@@ -70,8 +72,12 @@ public class DhtServer {
         for (NodeInfo target : DhtApp.BOOTSTRAP_NODE) {
             krpc.findNode(target, self.getKey());
         }
-        autoFindNode.scheduleAtFixedRate(new AutoFindNodeWorker(krpc), 1, 1, TimeUnit.MINUTES);
+        //定时,自动向邻居节点发送find_node请求
+        autoFindNode.scheduleAtFixedRate(() -> {
+            DhtApp.NODE.routes.refresh(krpc);
+        }, 1, 1, TimeUnit.SECONDS);
     }
+
 
     public void init() {
         listen();

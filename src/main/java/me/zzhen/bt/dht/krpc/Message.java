@@ -3,9 +3,9 @@ package me.zzhen.bt.dht.krpc;
 import me.zzhen.bt.bencode.*;
 import me.zzhen.bt.dht.DhtApp;
 import me.zzhen.bt.dht.base.NodeInfo;
-import me.zzhen.bt.dht.base.TokenManager;
 import me.zzhen.bt.dht.base.NodeKey;
 import me.zzhen.bt.dht.base.Token;
+import me.zzhen.bt.dht.base.TokenManager;
 
 /**
  * Project:CleanBT
@@ -47,7 +47,7 @@ public class Message {
         return resp != null && "e".equals(resp.getNode("y").toString());
     }
 
-    public static DictionaryNode makeRequest(NodeInfo target, String method) {
+    public static DictionaryNode makeRequest(NodeKey target, String method) {
         DictionaryNode node = new DictionaryNode();
         node.addNode("t", new StringNode(TokenManager.newToken(target, method).id + ""));
         node.addNode("y", new StringNode("q"));
@@ -63,7 +63,7 @@ public class Message {
         return node;
     }
 
-    public static DictionaryNode makeError(NodeInfo target, int errno, String msg) {
+    public static DictionaryNode makeError(NodeKey target, int errno, String msg) {
         DictionaryNode node = new DictionaryNode();
         node.addNode("t", new StringNode(TokenManager.newToken(target, msg).id + ""));
         node.addNode("y", new StringNode("e"));

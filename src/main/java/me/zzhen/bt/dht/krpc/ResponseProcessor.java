@@ -3,10 +3,8 @@ package me.zzhen.bt.dht.krpc;
 
 import me.zzhen.bt.bencode.*;
 import me.zzhen.bt.dht.DhtApp;
-import me.zzhen.bt.dht.base.NodeInfo;
-import me.zzhen.bt.dht.base.NodeKey;
-import me.zzhen.bt.dht.base.Token;
-import me.zzhen.bt.dht.base.TokenManager;
+import me.zzhen.bt.dht.base.*;
+import me.zzhen.bt.utils.IO;
 import me.zzhen.bt.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +13,9 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static me.zzhen.bt.dht.krpc.Krpc.*;
 
@@ -84,6 +85,8 @@ class ResponseProcessor implements Runnable {
         long id = Long.parseLong(resp.getNode("t").toString());
         Token token = TokenManager.getToken(id);
         if (token == null) return;
+        key = token.target;
+        TokenManager.remove(id);
         resp = (DictionaryNode) resp.getNode("r");
         DhtApp.NODE.addNode(new NodeInfo(address, port, new NodeKey(resp.getNode("id").decode())));
         method = token.method;
@@ -102,44 +105,6 @@ class ResponseProcessor implements Runnable {
                 break;
             default:
                 break;
-        }
-    }
-
-    /**
-     * 最终发出请求的方法
-     * TODO NIO
-     *
-     * @param target
-     * @return
-     */
-    private DictionaryNode doRequest(NodeInfo target) {
-        if (target == null) return null;
-//        logger.info("routes:" + DhtApp.NODE.routes.size() + ":" + "left:" + requestQueue.size());
-        byte[] data = resp.encode();//TODO optimize
-        DictionaryNode resp = null;
-        try {
-            InetAddress address = target.getAddress();
-//            logger.info("resp to:" + method + ":" + address.getHostAddress() + ":" + target.getPort() + ":" + String.valueOf(target.getKey()));
-            DatagramPacket packet = new DatagramPacket(data, 0, data.length, address, target.getPort());
-//            socket.send(packet);
-            byte[] getByte = new byte[1024];
-            DatagramPacket result = new DatagramPacket(getByte, 1024);
-//            socket.receive(result);
-//            InetAddress addr = result.getAddress();
-//            int port = result.getPort();
-//            logger.info("received from " + method + ":" + addr.getHostAddress() + ":" + port);
-            resp = (DictionaryNode) Decoder.decode(getByte, 0, result.getLength()).get(0);
-            Node y = resp.getNode("y");
-            //接到响应,将
-            DhtApp.NODE.addNode(target);
-//            logger.info(getReceivedType(y.toString()));
-            return resp;
-        } catch (IOException e) {
-            logger.error(e.getMessage());
-            DhtApp.NODE.addBlackItem(target.getAddress(), target.getPort());
-            resp = Message.makeError(target, 202, e.getMessage());
-            resp.addNode("t", this.resp.getNode("t"));
-            return null;
         }
     }
 
@@ -162,12 +127,10 @@ class ResponseProcessor implements Runnable {
         return method;
     }
 
-
     /**
      * 处理ping方法的响应
      */
     private void processPing() {
-        //TODO 检测t和对应的ID
         DhtApp.NODE.routes.addNode(target);
     }
 
@@ -176,7 +139,6 @@ class ResponseProcessor implements Runnable {
      */
     private void processGetPeers() {
         //TODO 真正的实现Token管理
-//        long token = Long.parseLong(Utils.toHex(resp.getNode("id").decode()), 16);
         ListNode values = (ListNode) resp.getNode("values");
         if (values == null) {
             StringNode nodes = (StringNode) resp.getNode("nodes");
@@ -184,13 +146,16 @@ class ResponseProcessor implements Runnable {
             logger.info("length :" + decode.length);
             for (int i = 0; i < decode.length; i += 26) {
                 NodeInfo nodeInfo = new NodeInfo(decode, i);
-//                logger.info(nodeInfo.getAddress() + ":" + nodeInfo.getPort());
                 callback.request(resp, nodeInfo, method);
             }
         } else {
             logger.info("nodes :" + values.getValue().size());
-            //TODO fetch
-            //TODO 回调
+            //TODO fetch 回调
+            List<InetSocketAddress> peers = values.getValue().stream().map(node -> {
+                byte[] bytes = node.decode();
+                return new InetSocketAddress(IO.getAddrFromBytes(bytes, 0), Utils.bytesToInt(bytes, 4, 2));
+            }).collect(Collectors.toList());
+            PeerManager.PM.addAllPeer(key, peers);
         }
     }
 
@@ -200,14 +165,13 @@ class ResponseProcessor implements Runnable {
     private void processFindNode() {
         StringNode nodes = (StringNode) resp.getNode("nodes");
         byte[] decode = nodes.decode();
-//                logger.info("find node decode len :" + decode.length);
         int len = decode.length;
+        logger.info("length :" + decode.length);
         for (int i = 0; i < len; i += 26) {
             NodeInfo nodeInfo = new NodeInfo(decode, i);
             if (nodeInfo.getKey().equals(key)) {
                 logger.info("found node :" + nodeInfo.getAddress().getHostAddress() + ":" + nodeInfo.getPort());
             }
-            logger.info(nodeInfo.getAddress() + ":" + nodeInfo.getPort());
             callback.request(this.resp, nodeInfo, method);
         }
     }
@@ -226,6 +190,11 @@ class ResponseProcessor implements Runnable {
         return st.equals(t);
     }
 
+    /**
+     * TODO 其实没什么用,自己
+     *
+     * @param resp
+     */
     private void processAnnouncePeer(DictionaryNode resp) {
 
     }

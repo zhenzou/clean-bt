@@ -5,20 +5,14 @@ import me.zzhen.bt.bencode.ListNode;
 import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.bencode.StringNode;
 import me.zzhen.bt.dht.DhtApp;
-import me.zzhen.bt.dht.base.TokenManager;
-import me.zzhen.bt.dht.base.NodeInfo;
-import me.zzhen.bt.dht.base.NodeKey;
-import me.zzhen.bt.dht.base.Token;
+import me.zzhen.bt.dht.base.*;
 import me.zzhen.bt.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.SocketTimeoutException;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,16 +28,36 @@ import static me.zzhen.bt.dht.krpc.Krpc.*;
 public class ResponseWorker extends Thread {
 
     private static final Logger logger = LoggerFactory.getLogger(ResponseWorker.class.getName());
+
+    /**
+     * 请求的全部内容
+     */
     private DictionaryNode request;
+
+    /**
+     * 情趣的来源地址
+     */
     private InetAddress address;
+
+    /**
+     * 请求的来源端口
+     */
     private int port;
+
+    private RequestCallback callback;
+
+    /**
+     * 全局socket
+     */
     private DatagramSocket socket;
 
-    public ResponseWorker(DatagramSocket socket, InetAddress address, int port, DictionaryNode request) {
+    public ResponseWorker(DatagramSocket socket, InetAddress address, int port, DictionaryNode request, RequestCallback callback) {
         this.socket = socket;
         this.request = request;
         this.address = address;
         this.port = port;
+        this.callback = callback;
+
     }
 
     @Override
@@ -70,13 +84,20 @@ public class ResponseWorker extends Thread {
                 doResponseFindNode(address, port, target);
                 break;
             case METHOD_ANNOUNCE_PEER:
-                doResponseAnnouncePeer(address, port, arg);
+                doResponseAnnouncePeer(address, port, t, arg);
                 break;
             default:
                 break;
         }
     }
 
+    /**
+     * 响应ping请求
+     *
+     * @param address
+     * @param port
+     * @param t
+     */
     private void doResponsePing(InetAddress address, int port, Node t) {
         DictionaryNode resp = Message.makeResponse(t);
         DictionaryNode arg = new DictionaryNode();
@@ -85,27 +106,51 @@ public class ResponseWorker extends Thread {
         doResponse(address, port, resp);
     }
 
+    /**
+     * 响应get_peers请求
+     *
+     * @param address
+     * @param port
+     * @param t
+     * @param hash
+     */
     private void doResponseGetPeers(InetAddress address, int port, Node t, Node hash) {
         DictionaryNode resp = Message.makeResponse(t);
-        //TODO PeerManager
-        List<NodeInfo> infos = DhtApp.NODE.routes.closest8Nodes(new NodeKey(hash.decode()));
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        for (NodeInfo info : infos) {
-            try {
-                baos.write(info.compactNodeInfo());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        StringNode nodes = new StringNode(baos.toByteArray());
+        List<InetSocketAddress> peers = PeerManager.PM.getPeers(new NodeKey(hash.decode()));
         DictionaryNode arg = Message.makrArg();
-        arg.addNode("nodes", nodes);
-        Token token = TokenManager.newToken(DhtApp.NODE.getSelf(), Krpc.METHOD_GET_PEERS);
+        if (peers != null) {
+            ListNode values = new ListNode();
+            for (InetSocketAddress peer : peers) {
+                StringNode node = new StringNode(PeerManager.compact(peer));
+                values.addNode(node);
+            }
+            arg.addNode("values", values);
+        } else {
+            List<NodeInfo> infos = DhtApp.NODE.routes.closest8Nodes(new NodeKey(hash.decode()));
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            for (NodeInfo info : infos) {
+                try {
+                    baos.write(info.compactNodeInfo());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            StringNode nodes = new StringNode(baos.toByteArray());
+            arg.addNode("nodes", nodes);
+        }
+        Token token = TokenManager.newToken(new NodeKey(hash.decode()), Krpc.METHOD_GET_PEERS);
         arg.addNode("token", new StringNode(token.id + ""));
         resp.addNode("r", arg);
         doResponse(address, port, resp);
     }
 
+    /**
+     * 响应find_node请求
+     *
+     * @param address
+     * @param port
+     * @param t
+     */
     private void doResponseFindNode(InetAddress address, int port, Node t) {
         DictionaryNode resp = Message.makeResponse(t);
         List<NodeInfo> infos = new ArrayList<>();
@@ -126,25 +171,38 @@ public class ResponseWorker extends Thread {
         doResponse(address, port, resp);
     }
 
-    private void doResponseAnnouncePeer(InetAddress address, int port, Node t) {
+    /**
+     * 响应announce_peer请求
+     *
+     * @param address 发送请求节点的IP地址
+     * @param port    发送请求节点的端口
+     * @param t       token
+     * @param req     请求内容
+     */
+    private void doResponseAnnouncePeer(InetAddress address, int port, Node t, DictionaryNode req) {
+        logger.info("info_hash:" + Utils.toHex(req.getNode("info_hash").decode()));
+        logger.info("address:" + address.getHostAddress());
+        logger.info("port:" + port);
         DictionaryNode resp = Message.makeResponse(t);
         DictionaryNode arg = Message.makrArg();
-        List<NodeInfo> infos = DhtApp.NODE.routes.closest8Nodes(new NodeKey(t.decode()));
-        ListNode nodes = new ListNode();
-        for (NodeInfo info : infos) {
-            nodes.addNode(new StringNode(info.compactNodeInfo()));
-        }
-        arg.addNode("nodes", nodes);//TODO values
         resp.addNode("r", arg);
         doResponse(address, port, resp);
+        callback.onAnnouncePeer(address, port, Utils.toHex(req.getNode("info_hash").decode()).toLowerCase());
     }
 
-    public void doResponse(InetAddress address, int port, DictionaryNode resp) {
-        byte[] data = resp.encode();//TODO optimize
+    /**
+     * 最终响应的方法
+     *
+     * @param address
+     * @param port
+     * @param arg     请求的参数,包括 id,info_hash,port,token
+     */
+    public void doResponse(InetAddress address, int port, DictionaryNode arg) {
+        byte[] data = arg.encode();//TODO optimize
         try {
             DatagramPacket packet = new DatagramPacket(data, 0, data.length, address, port);
             socket.send(packet);
-            logger.info("send response" + ":" + address.getHostAddress() + ":" + port);
+//            logger.info("send response" + ":" + address.getHostAddress() + ":" + port + ":" + arg.toString());
         } catch (SocketTimeoutException e) {
             logger.error(e.getMessage());
             e.printStackTrace();

@@ -2,6 +2,7 @@ package me.zzhen.bt.dht;
 
 import me.zzhen.bt.dht.base.NodeInfo;
 import me.zzhen.bt.dht.base.NodeKey;
+import me.zzhen.bt.dht.base.PeerManager;
 import me.zzhen.bt.dht.base.RouteTable;
 import me.zzhen.bt.dht.krpc.Krpc;
 import org.slf4j.Logger;
@@ -90,6 +91,7 @@ public class DhtApp {
             socket = new DatagramSocket(DhtConfig.SERVER_PORT);
 //            socket.setSoTimeout(DhtConfig.CONN_TIMEOUT);
             krpc = new Krpc(selfKey, socket);
+            PeerManager.init();
         } catch (UnknownHostException | SocketException e) {
             logger.error(e.getMessage());
             e.printStackTrace();
@@ -110,9 +112,9 @@ public class DhtApp {
     }
 
     public void addNode(NodeInfo node) {
-        if (!node.equals(self)) {
+        if (!node.equals(self))
             routes.addNode(node);
-        }
+
     }
 
     public Queue<InetSocketAddress> getBlackList() {
