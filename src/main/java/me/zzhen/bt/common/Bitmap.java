@@ -13,7 +13,7 @@ import java.util.Arrays;
  */
 public class Bitmap {
     public final int size;
-    private byte[] data;
+    private final byte[] data;
 
     public Bitmap(int size) {
         this.size = size;
@@ -140,8 +140,7 @@ public class Bitmap {
 
         Bitmap bitmap = (Bitmap) o;
 
-        if (size != bitmap.size) return false;
-        return Arrays.equals(data, bitmap.data);
+        return size == bitmap.size && Arrays.equals(data, bitmap.data);
     }
 
     @Override
