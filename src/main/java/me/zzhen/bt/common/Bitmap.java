@@ -48,12 +48,27 @@ public class Bitmap {
         set(index, true);
     }
 
+    /**
+     * 将指定的bit值设为0
+     *
+     * @param index
+     */
+    public void clear(int index) {
+        set(index, false);
+    }
+
+
+    /**
+     * 将指定位置的bit设为指定的值
+     *
+     * @param index
+     * @param val
+     */
     public void set(int index, boolean val) {
         int pos = index / 8;
         int mod = index % 8;
         byte tmp = data[pos];
         byte i = tmp;
-//        byte i = (byte) (tmp << 7 - mod);
         if (val) {
             i |= (1 << (7 - mod));
             data[pos] = (byte) (i | tmp);
@@ -63,34 +78,60 @@ public class Bitmap {
         }
     }
 
+    /**
+     * 按位与，如果长度不一样则按照短的
+     *
+     * @param other
+     */
     public void or(Bitmap other) {
-        int minsize = size > other.size ? other.size : size;
-        int len = minsize / 8;
-        if (minsize % 8 != 0) {
-            len++;
-        }
-        for (int i = 0; i < len; i++) {
-            data[i] |= other.data[i];
-        }
+        op(other, OP_OR);
+
     }
 
     public void and(Bitmap other) {
-        int minsize = size > other.size ? other.size : size;
-        int len = minsize / 8;
-        if (minsize % 8 != 0) {
-            len++;
-        }
-        for (int i = 0; i < len; i++) {
-            data[i] &= other.data[i];
-        }
+        op(other, OP_AND);
+
     }
 
-    /**
-     * @param index
-     */
-    public void clear(int index) {
-        set(index, false);
+    public void xor(Bitmap other) {
+        op(other, OP_XOR);
     }
+
+    public static final int OP_OR = 11;
+    public static final int OP_AND = 22;
+    public static final int OP_XOR = 33;
+
+    /**
+     * @param other
+     * @param op    操作类型 11 or,22,and,33 xor
+     */
+    private void op(Bitmap other, int op) {
+        int min = size > other.size ? other.size : size;
+        int len = min / 8;
+        if (min % 8 != 0) len++;
+        //optimize
+        switch (op) {
+            case OP_OR:
+                for (int i = 0; i < len; i++) {
+                    data[i] |= other.data[i];
+                }
+                break;
+            case OP_AND:
+                for (int i = 0; i < len; i++) {
+                    data[i] &= other.data[i];
+                }
+                break;
+            case OP_XOR:
+                for (int i = 0; i < len; i++) {
+                    data[i] ^= other.data[i];
+                }
+                break;
+            default:
+                break;
+        }
+
+    }
+
 
     @Override
     public boolean equals(Object o) {
