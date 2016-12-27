@@ -28,14 +28,14 @@ public interface IO {
     }
 
     static byte[] readKBytes(InputStream input, int k) {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(k);
         int c = -1;
         int count = 0;
         BufferedInputStream buffer = new BufferedInputStream(input);
         try {
             while (count < k && (c = buffer.read()) != -1) {
                 baos.write(c);
-                k++;
+                count++;
             }
         } catch (IOException e) {
             e.printStackTrace();

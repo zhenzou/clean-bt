@@ -1,5 +1,6 @@
 package me.zzhen.bt.dht.base;
 
+import com.sun.xml.internal.messaging.saaj.soap.StringDataContentHandler;
 import com.sun.xml.internal.org.jvnet.mimepull.DecodingException;
 import me.zzhen.bt.bencode.*;
 import me.zzhen.bt.dht.DhtApp;
@@ -54,9 +55,6 @@ public class MetadataWorker implements Runnable {
     public static final byte PEER_MSG_CANCEL = 8;
 
     public static final int EXTENDED = 20;
-
-
-    private Socket socket;
 
     /**
      * 请求的资源的info_hash
@@ -151,7 +149,7 @@ public class MetadataWorker implements Runnable {
     private DictionaryNode buildShake() {
         DictionaryNode msg = new DictionaryNode();
         DictionaryNode head = new DictionaryNode();
-        msg.addNode("ut_metadata", new IntNode(1));
+        head.addNode("ut_metadata", new IntNode(1));
         msg.addNode("m", head);
         return msg;
     }
@@ -163,19 +161,17 @@ public class MetadataWorker implements Runnable {
         return msg;
     }
 
-    public void sendHandleShake(OutputStream out) {
+    public void sendHandleShake(OutputStream out) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream(49 + 19);
 //        baos.write(19 & 0xFF);
 //        RESERVED[5] |= 0x10;
-        try {
+
 //            baos.write(PSTR.getBytes());
-            baos.write(RESERVED);
-            baos.write(Utils.hex2Bytes(hash));
-            baos.write(NodeKey.genRandomKey().getValue());
-            out.write(baos.toByteArray());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        baos.write(RESERVED);
+        baos.write(Utils.hex2Bytes(hash));
+        baos.write(NodeKey.genRandomKey().getValue());
+        out.write(baos.toByteArray());
+
     }
 
     public boolean onHandShake(InputStream in) {
@@ -191,82 +187,35 @@ public class MetadataWorker implements Runnable {
         try {
             baos.write(new byte[]{EXTENDED, 0});
             baos.write(buildShake().encode());
-            out.write(baos.toByteArray());
+            sendMessage(out, baos.toByteArray());
         } catch (IOException e) {
             logger.error(e.getMessage());
             e.printStackTrace();
         }
     }
 
-    private void fetchPieces(OutputStream out, InputStream in, int ut, int pieceNum, int size) {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        for (int i = 0; i < pieceNum; i++) {
-            baos.write(EXTENDED);
-            baos.write(ut);
-            try {
-                baos.write(buildRequestMsg(i).encode());
-                out.write(baos.toByteArray());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+
+    private void sendMessage(OutputStream out, byte[] data) {
+        int len = data.length;
+        byte[] lens = Utils.intToBytes(len);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(data.length + 4);
+        try {
+            baos.write(lens);
+            baos.write(data);
+            out.write(baos.toByteArray());
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
 
-    /**
-     */
-    public void fetchMetadata() {
-
-        try (Socket socket = new Socket()) {
-            logger.info("init");
-            socket.setSoTimeout(DhtConfig.CONN_TIMEOUT);
-            socket.connect(new InetSocketAddress(address, port));
-            logger.info("over");
-            OutputStream out = socket.getOutputStream();
-            InputStream in = socket.getInputStream();
-            sendHandleShake(out);//先能用，以后再处理
-            //握手失败
-            if (!onHandShake(in)) return;
-            //握手成功,继续发送支持扩展协议的消息
-            byte[][] bytes = null;
-            sendExtHandShake(out);
-            while (true) {
-                int length = Utils.bytesToInt(IO.readKBytes(in, 4));
-                if (length == 0) return;
-                byte[] data = IO.readAllBytes(in);
-                if (data.length != length) logger.error("msg error");
-                int type = data[0];
-                ByteArrayOutputStream pieces = new ByteArrayOutputStream();
-                int pieceNum = 0;
-                if (type == EXTENDED) {
-                    int extendId = data[1];
-
-                    if (extendId == 0) {
-                        if (pieces.size() != 0) return;
-                        DictionaryNode meta = (DictionaryNode) Decoder.decode(data, 2, length - 2).get(0);
-                        DictionaryNode m = (DictionaryNode) meta.getNode("m");
-                        int ut = Integer.parseInt(m.getNode(MSG_UT_METADATA).toString());
-                        int size = Integer.parseInt(meta.getNode("metadata_size").toString());
-                        pieceNum = size / BLOCK_SIZE;
-                        if (size % BLOCK_SIZE != 0) pieceNum++;
-                        bytes = new byte[pieceNum][];
-                        fetchPieces(out, in, pieceNum, ut, size);
-                    } else {
-                        if (bytes == null) continue;
-                        if (readPiece(bytes, data, 2, pieceNum)) {
-                            for (byte[] b : bytes) {
-                                pieces.write(b);
-                                logger.info("ut::::" + pieces.toString());
-                            }
-                            return;
-                        }
-                    }
-                }
-            }
-        } catch (SocketTimeoutException e) {
-            DhtApp.NODE.addBlackItem(address, port);
-            logger.error(e.getMessage());
-            e.printStackTrace();
+    private void fetchPieces(OutputStream out, int ut, int pieceNum) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        baos.write(EXTENDED);
+        baos.write(ut);
+        try {
+            baos.write(buildRequestMsg(pieceNum).encode());
+            out.write(baos.toByteArray());
         } catch (IOException e) {
             logger.error(e.getMessage());
             e.printStackTrace();
@@ -279,7 +228,7 @@ public class MetadataWorker implements Runnable {
      * @param offset
      * @param pieceNum
      */
-    private boolean readPiece(byte[][] bytes, byte[] data, int offset, int pieceNum) {
+    private int readPiece(byte[][] bytes, byte[] data, int offset, int pieceNum) {
         DictionaryNode msg = null;
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         baos.write(data, 2, data.length - 2);
@@ -302,24 +251,92 @@ public class MetadataWorker implements Runnable {
         }
         DictionaryNode node = new DictionaryNode(args);
         int msgType = Integer.parseInt(args.get(MSG_TYPE).toString());
-        if (msgType != MSG_DATA) return false;
+        if (msgType != MSG_DATA) return -1;
         int p = Integer.parseInt(args.get(MSG_PIECE).toString());
         baos.reset();
         int msgLen = node.encode().length;
         baos.write(data, offset + msgLen, data.length - offset - msgLen);
         bytes[p] = baos.toByteArray();
-        return p == pieceNum;
+        return p;
     }
 
 
-//
-//    public static void main(String[] args) {
-//        try {
-//            MetadataWorker metadataWorker = new MetadataWorker(InetAddress.getByName("92.246.163.84"), 27323);
-//            metadataWorker.fetchMetadata("e10106f82675e2387586a7b9ce3f7f4c5157237f", NodeKey.genRandomKey());
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
+    public void fetchMetadata() {
+        try (Socket socket = new Socket()) {
+            logger.info("init");
+            socket.setSoTimeout(DhtConfig.CONN_TIMEOUT);
+            socket.connect(new InetSocketAddress(address, port));
+            logger.info("over");
+            OutputStream out = socket.getOutputStream();
+            InputStream in = socket.getInputStream();
+            sendHandleShake(out);
+            logger.info("handshake over");
+            //握手失败
+            if (!onHandShake(in)) return;
+            logger.info("handshake success");
+            //握手成功,继续发送支持扩展协议的消息
+            sendExtHandShake(out);
+            byte[][] bytes = null;
+            int totalPiece = 0;
+            int curPiece = 0;
+            int ut = 0;
+            while (true) {
+                byte[] head = IO.readKBytes(in, 6);
+                int length = Utils.bytesToInt(head, 0, 4);
+                logger.info("length:" + length);
+                if (length == 0) return;
+                int msgId = head[4];
+                int extendId = head[5];
+                logger.info("type:" + msgId);
+                logger.info("extend:" + extendId);
+                byte[] data = IO.readAllBytes(in);
+                logger.info("data length:" + data.length);
+                logger.info("data:" + new String(data));
+                if (data.length != length) logger.error("msg error");
+                ByteArrayOutputStream pieces = new ByteArrayOutputStream();
+                if (msgId == EXTENDED) {
+                    if (extendId == 0) {
+                        logger.info("收到最后的握手信息");
+                        if (bytes != null) return;
+                        logger.info("解析握手信息");
+                        DictionaryNode meta = (DictionaryNode) Decoder.decode(data, 0, length).get(0);
+                        DictionaryNode m = (DictionaryNode) meta.getNode("m");
+                        ut = Integer.parseInt(m.getNode(MSG_UT_METADATA).toString());
+                        int size = Integer.parseInt(meta.getNode(MSG_METADATA_SIZE).toString());
+                        totalPiece = size / BLOCK_SIZE;
+                        if (size % BLOCK_SIZE != 0) totalPiece++;
+                        logger.info("piece num :" + totalPiece);
+                        bytes = new byte[totalPiece][];
+                        fetchPieces(out, curPiece, ut);
+                        curPiece++;
+                    } else {
+                        if (bytes == null) continue;
+                        logger.info("已经握手完毕，准备接收数据");
+                        int piece = readPiece(bytes, data, curPiece, totalPiece);
+                        curPiece++;
+                        if (piece > 0) {
+                            if (piece == (totalPiece - 1)) {
+                                for (byte[] b : bytes) {
+                                    pieces.write(b);
+                                    logger.info("ut::::" + pieces.toString());
+                                }
+                                return;
+                            } else {
+                                fetchPieces(out, piece + 1, ut);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (SocketTimeoutException e) {
+            DhtApp.NODE.addBlackItem(address, port);
+            logger.error(e.getMessage());
+            e.printStackTrace();
+        } catch (IOException e) {
+            logger.error(e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
 
 }

@@ -131,7 +131,7 @@ class ResponseProcessor implements Runnable {
      * 处理ping方法的响应
      */
     private void processPing() {
-        DhtApp.NODE.routes.addNode(target);
+//        DhtApp.NODE.routes.addNode(target);
     }
 
     /**
@@ -165,7 +165,7 @@ class ResponseProcessor implements Runnable {
         StringNode nodes = (StringNode) resp.getNode("nodes");
         byte[] decode = nodes.decode();
         int len = decode.length;
-        logger.info("length :" + decode.length);
+//        logger.info("length :" + decode.length);
         for (int i = 0; i < len; i += 26) {
             NodeInfo nodeInfo = new NodeInfo(decode, i);
             if (nodeInfo.getKey().equals(key)) {

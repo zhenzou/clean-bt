@@ -111,7 +111,6 @@ public class DhtApp {
     public void addNode(NodeInfo node) {
         if (!node.equals(self))
             routes.addNode(node);
-
     }
 
     public Queue<InetSocketAddress> getBlackList() {
@@ -137,22 +136,18 @@ public class DhtApp {
 
 
     private void startServer() {
-        new Thread(() -> {
-            server = new DhtServer(socket, self, krpc);
-            server.init();
-        }).start();
+        server = new DhtServer(socket, self, krpc);
+        server.init();
     }
 
     @Override
     protected void finalize() throws Throwable {
         super.finalize();
-//        executor.shutdown();
     }
 
     public void init() {
         initDefaultConfig();
         startServer();
-        startClient();
     }
 
     /**

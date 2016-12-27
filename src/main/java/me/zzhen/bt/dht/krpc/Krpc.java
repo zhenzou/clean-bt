@@ -37,12 +37,11 @@ public class Krpc implements RequestCallback {
 
     private DatagramSocket socket;
 
-    public static volatile Set<NodeInfo> requested = new HashSet<>();
     /**
      * 试试吧,现在开8个线程----以后切换AIO吧
      */
     private ExecutorService sender = Executors.newFixedThreadPool(2 * Runtime.getRuntime().availableProcessors() + 1);
-    private ExecutorService receiver = Executors.newSingleThreadExecutor();
+    private ExecutorService receiver = Executors.newFixedThreadPool(2 * Runtime.getRuntime().availableProcessors() + 1);
     private ExecutorService fetcher = Executors.newSingleThreadExecutor();
 
     public Krpc(NodeKey self, DatagramSocket socket) {
@@ -113,10 +112,6 @@ public class Krpc implements RequestCallback {
 //        request(req, null, METHOD_ANNOUNCE_PEER);
     }
 
-    public boolean requested(NodeInfo node) {
-        return requested.contains(node);
-    }
-
     /**
      * @param request
      * @param target
@@ -127,34 +122,7 @@ public class Krpc implements RequestCallback {
     public void request(DictionaryNode request, NodeInfo target, String method) {
         if (!DhtApp.NODE.isBlackItem(target)) {
             sender.execute(new RequestWorker(socket, request, target, method));
-            requested.add(target);
             DhtApp.NODE.addNode(target);
-        }
-    }
-
-
-    private String getMetadata(InetAddress nodeAddr, int port) {
-        try (Socket socket = new Socket(nodeAddr, port)) {
-
-        } catch (IOException e) {
-            logger.error(e.getMessage());
-        }
-        return "";
-    }
-
-    public void response(NodeInfo nodeInfo, Node data) {
-        byte[] encode = data.encode();
-        if (nodeInfo != null) {
-            try (DatagramSocket socket = new DatagramSocket()) {
-                socket.setSoTimeout(30 * 1000);
-                InetAddress address = nodeInfo.getAddress();
-                DatagramPacket packet = new DatagramPacket(encode, 0, encode.length, address, nodeInfo.getPort());
-                socket.send(packet);
-            } catch (SocketTimeoutException e) {
-                logger.error(e.getMessage());
-            } catch (IOException e) {
-                logger.info(e.getMessage());
-            }
         }
     }
 
@@ -192,12 +160,11 @@ public class Krpc implements RequestCallback {
         } else if (Message.isRequest(node)) {
             receiver.execute(new ResponseWorker(socket, address, port, node, this));
         }
-        logger.info("routes:" + DhtApp.NODE.routes.size() + ":requested:" + requested.size());
     }
 
     @Override
     protected void finalize() throws Throwable {
-        super.finalize();
         sender.shutdown();
+        super.finalize();
     }
 }

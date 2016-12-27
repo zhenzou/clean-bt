@@ -67,7 +67,7 @@ public class ResponseWorker extends Thread {
 
     public void response(InetAddress address, int port, DictionaryNode node) {
         Node method = node.getNode("q");
-        logger.info(method + "  request from :" + address.getHostAddress() + ":" + port);
+//        logger.info(method + "  request from :" + address.getHostAddress() + ":" + port);
         Node t = node.getNode("t");
         DictionaryNode arg = (DictionaryNode) node.getNode("a");
         Node id = arg.getNode("id");
@@ -117,7 +117,7 @@ public class ResponseWorker extends Thread {
     private void doResponseGetPeers(InetAddress address, int port, Node t, Node hash) {
         DictionaryNode resp = Message.makeResponse(t);
         List<InetSocketAddress> peers = PeerManager.PM.getPeers(new NodeKey(hash.decode()));
-        DictionaryNode arg = Message.makrArg();
+        DictionaryNode arg = Message.makeArg();
         if (peers != null) {
             ListNode values = new ListNode();
             for (InetSocketAddress peer : peers) {
@@ -165,7 +165,7 @@ public class ResponseWorker extends Thread {
             }
         }
         StringNode nodes = new StringNode(baos.toByteArray());
-        DictionaryNode arg = Message.makrArg();
+        DictionaryNode arg = Message.makeArg();
         arg.addNode("nodes", nodes);//TODO values
         resp.addNode("r", arg);
         doResponse(address, port, resp);
@@ -180,12 +180,17 @@ public class ResponseWorker extends Thread {
      * @param req     请求内容
      */
     private void doResponseAnnouncePeer(InetAddress address, int port, Node t, DictionaryNode req) {
+        Node impliedPort = req.getNode("implied_port");
+        if (impliedPort == null || "0".equals(String.valueOf(impliedPort))) {
+            port = Integer.parseInt(req.getNode("port").toString());
+        }
         logger.info("info_hash:" + Utils.toHex(req.getNode("info_hash").decode()));
         logger.info("address:" + address.getHostAddress());
         logger.info("port:" + port);
         DictionaryNode resp = Message.makeResponse(t);
-        DictionaryNode arg = Message.makrArg();
+        DictionaryNode arg = Message.makeArg();
         resp.addNode("r", arg);
+        //TODO check token
         doResponse(address, port, resp);
         callback.onAnnouncePeer(address, port, Utils.toHex(req.getNode("info_hash").decode()).toLowerCase());
     }

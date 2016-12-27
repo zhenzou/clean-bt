@@ -70,7 +70,6 @@ public class NodeKey implements Comparable<NodeKey> {
      * @return 第 i 个 bit的值 0 or 1
      */
     public boolean prefix(int i) {
-        if (i >= 160 || i < 0) throw new RuntimeException("prefix of node should smaller than 160 and bigger than 0");
         return value.get(i);
     }
 
@@ -81,6 +80,7 @@ public class NodeKey implements Comparable<NodeKey> {
 
     /**
      * 为了兼容以前的代码,以后有时间重构吧
+     * TODO 删除
      *
      * @return
      */

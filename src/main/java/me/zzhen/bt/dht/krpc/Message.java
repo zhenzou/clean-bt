@@ -21,6 +21,13 @@ public class Message {
     public final DictionaryNode arg;
     public final Token token;
 
+    /**
+     * TODO 将现在的请求参数改为使用Message，增加类型
+     *
+     * @param method
+     * @param arg
+     * @param token
+     */
     public Message(String method, DictionaryNode arg, Token token) {
         this.method = method;
         this.arg = arg;
@@ -74,11 +81,9 @@ public class Message {
         return node;
     }
 
-    public static DictionaryNode makrArg() {
+    public static DictionaryNode makeArg() {
         DictionaryNode node = new DictionaryNode();
         node.addNode("id", new StringNode(DhtApp.NODE.getSelfKey().getValue()));
         return node;
     }
-
-
 }

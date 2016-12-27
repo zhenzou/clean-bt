@@ -72,9 +72,9 @@ public class TokenManager {
 
     @Override
     protected void finalize() throws Throwable {
-        super.finalize();
         tokens.clear();
         timer.cancel();
+        super.finalize();
     }
 
     public static void remove(long id) {

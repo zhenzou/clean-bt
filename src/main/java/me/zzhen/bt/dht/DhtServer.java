@@ -1,5 +1,6 @@
 package me.zzhen.bt.dht;
 
+import me.zzhen.bt.Main;
 import me.zzhen.bt.bencode.Decoder;
 import me.zzhen.bt.bencode.DictionaryNode;
 import me.zzhen.bt.bencode.Node;
@@ -8,7 +9,9 @@ import me.zzhen.bt.dht.krpc.Krpc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.util.concurrent.Executors;
@@ -42,8 +45,8 @@ public class DhtServer {
     private void listen() {
         new Thread(() -> {
             try {
+                byte[] bytes = new byte[1024];
                 while (true) {
-                    byte[] bytes = new byte[1024];
                     DatagramPacket packet = new DatagramPacket(bytes, 1024);
                     socket.receive(packet);
                     int length = packet.getLength();
@@ -54,6 +57,11 @@ public class DhtServer {
                         logger.error("error :" + packet.getAddress().getHostAddress());
                         logger.error("error :" + packet.getPort());
                         logger.error("error :" + packet.getLength());
+                        logger.info(new String(bytes));
+                        OutputStream out = new FileOutputStream("/home/mos/tmp" + (Math.random() * 100) + ".tmp");
+                        out.write(bytes);
+                        out.flush();
+                        out.close();
                         logger.error(e.getMessage());
                         DhtApp.NODE.addBlackItem(packet.getAddress(), packet.getPort());
                     }
@@ -73,7 +81,7 @@ public class DhtServer {
             krpc.findNode(target, self.getKey());
         }
         //定时,自动向邻居节点发送find_node请求
-        autoFindNode.scheduleAtFixedRate(() -> DhtApp.NODE.routes.refresh(krpc), 30, 30, TimeUnit.SECONDS);
+        autoFindNode.scheduleAtFixedRate(() -> DhtApp.NODE.routes.refresh(krpc), DhtConfig.AUTO_FIND, DhtConfig.AUTO_FIND, TimeUnit.SECONDS);
     }
 
 
