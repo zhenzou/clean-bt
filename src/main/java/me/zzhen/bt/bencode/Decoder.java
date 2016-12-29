@@ -1,5 +1,7 @@
 package me.zzhen.bt.bencode;
 
+import me.zzhen.bt.utils.Utils;
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,8 +17,18 @@ import java.util.List;
 public class Decoder {
 
     private InputStream input;
-    private EventHandler handler;
+    /**
+     * 事件回调
+     */
+    private EventHandler event;
+
+    /**
+     * 错误处理
+     */
+    private ErrorHandler error;
     private List<Node> nodes = new ArrayList<>();
+
+    private int pos = -1;
 
     public static List<Node> decode(byte[] input) throws IOException {
         return decode(new ByteArrayInputStream(input));
@@ -62,7 +74,6 @@ public class Decoder {
 
     /**
      * 解析下一个Node
-     * TODO 增加错误位置
      *
      * @param c 当前输入的字符 应该是 i,d,l或者数字
      * @return 当前节点的Node结构
@@ -84,7 +95,8 @@ public class Decoder {
                 if (Character.isDigit(c)) {
                     node = decodeString(c);
                 } else {
-                    throw new DecoderException("not a legal char");
+                   if (handleError(c))
+                       throw new DecoderException("not a legal char in " + pos + " byte");
                 }
                 break;
         }
@@ -103,17 +115,21 @@ public class Decoder {
         int c;
         StringBuilder len = new StringBuilder();
         len.append((char) cur);
+        pos++;
         while ((c = input.read()) != -1 && (char) c != StringNode.STRING_VALUE_START) {
+            pos++;
             if (Character.isDigit(c)) {
                 len.append((char) c);
             } else {
-                throw new DecoderException("expect a digital but found " + c);
+                if (handleError((char) c)) break;
+                throw new DecoderException("expect a digital in " + pos + " but found " + c);
             }
         }
         long length = Long.parseLong(len.toString().trim());
         long i = 0;
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         while (i < length && (c = input.read()) != -1) {
+            pos++;
             baos.write(c & 0xFF);
             i++;
         }
@@ -123,8 +139,8 @@ public class Decoder {
 
         StringNode node = new StringNode(baos.toByteArray());
         //TODO 设计更好用的API 但是现在还是就是将这个东西做出来 能用吧
-        if (handler != null) {
-            handler.handleStringNode(node);
+        if (event != null) {
+            event.handleStringNode(node);
         }
         return node;
     }
@@ -140,7 +156,9 @@ public class Decoder {
         String key = "";
         DictionaryNode dic = new DictionaryNode();
         boolean inKey = true;
+        pos++;
         while ((c = input.read()) != -1 && (char) c != DictionaryNode.DIC_END) {
+            pos++;
             Node node = null;
             char cur = (char) c;
             if (inKey) {
@@ -148,15 +166,15 @@ public class Decoder {
                     key = decodeString(c).toString();
                     inKey = false;
                 } else {
-                    System.out.println(cur);
+                    if (handleError(cur)) break;
                     throw new DecoderException("key of dic must be string,found digital");
                 }
             } else {
                 node = decodeNext(cur);
                 dic.addNode(key, node);
                 inKey = true;
-                if (handler != null) {
-                    handler.handleDictionaryNode(key, node);
+                if (event != null) {
+                    event.handleDictionaryNode(key, node);
                 }
             }
         }
@@ -166,8 +184,10 @@ public class Decoder {
     private Node decodeList() throws IOException {
         ListNode list = new ListNode();
         int c;
+        pos++;
         while ((c = input.read()) != -1 && (char) c != ListNode.LIST_END) {
             char cc = (char) c;
+            pos++;
             Node node = decodeNext(cc);
             list.addNode(node);
         }
@@ -177,15 +197,32 @@ public class Decoder {
     private Node decodeInt() throws IOException {
         StringBuilder sb = new StringBuilder();
         int c = -1;
+        pos++;
         while ((c = input.read()) != -1 && c != IntNode.INT_END) {
+            pos++;
             char cc = (char) c;
             if (Character.isDigit(cc)) {
                 sb.append(cc);
             } else {
-                throw new DecoderException("expect a digital but found " + cc);
+                if (handleError(cc)) break;
+                throw new DecoderException("expect a digital in " + pos + " but found " + cc);
             }
         }
         return new IntNode(sb.toString());
+    }
+
+    /**
+     * TODO 更加通用
+     *
+     * @param cc
+     * @return
+     */
+    private boolean handleError(char cc) {
+        if (error != null && error.toNext()) {
+            error.skip(pos, cc, input);
+            return true;
+        }
+        return false;
     }
 
     public List<Node> getValue() {
@@ -193,11 +230,58 @@ public class Decoder {
     }
 
     public EventHandler getHandler() {
-        return handler;
+        return event;
     }
 
     public void setHandler(EventHandler handler) {
-        this.handler = handler;
+        this.event = handler;
+    }
+
+    public ErrorHandler getError() {
+        return error;
+    }
+
+    public void setError(ErrorHandler error) {
+        this.error = error;
+    }
+
+    private static class MetadataErrorHandler implements ErrorHandler {
+
+        @Override
+        public int skip(int pos, char cur, InputStream input) {
+            int count = 0;
+            int c = -1;
+            try {
+                while ((c = input.read()) != -1 && c != IntNode.INT_END) {
+                    count++;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return count;
+        }
+
+        @Override
+        public boolean toNext() {
+            return true;
+        }
+    }
+
+    public static void main(String[] args) {
+        String s = "64313a65693165343a69707634343ab7693332343a6970763631363a2002b7693332000000000000b769333231323a636f6d706c6574655f61676f692d3165313a6d6431313a75706c6f61645f6f6e6c7969336531313a6c745f646f6e746861766569376531323a75745f686f6c6570756e636869346531313a75745f6d65746164617461693265363a75745f70657869316531303a75745f636f6d6d656e746936656531333a6d657461646174615f73697a6569313733373265313a7069333037363665343a726571716932353565313a7631353acebc546f7272656e7420332e342e39323a797069353133353665363a796f75726970343a2bf1e04865";
+//        String s = "64313a65693165343a69707634343ab7693332343a6970763631363a2002b7693332000000000000b769333231323a636f6d706c6574655f61676f692d3165313a6d6431313a75706c6f61645f6f6e6c7969336531313a6c745f646f6e746861766569376531323a75745f686f6c6570756e636869346531313a75745f6d65746164617461693265363a75745f70657869316531303a75745f636f6d6d656e746936656531333a6d657461646174615f73697a6569313733373265313a7069333037363665343a726571716932353565313a7631353acebc546f7272656e7420332e342e39323a797069353133353665363a796f75726970343a2bf1e04865";
+        byte[] bytes = Utils.hex2Bytes(s);
+
+        try {
+            Decoder decoder = new Decoder(new ByteArrayInputStream(bytes));
+            decoder.setError(new MetadataErrorHandler());
+            decoder.decode();
+            List<Node> decode = decoder.getValue();
+            Node node = decode.get(0);
+            System.out.println(node.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }

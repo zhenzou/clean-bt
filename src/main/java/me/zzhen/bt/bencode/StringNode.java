@@ -2,6 +2,7 @@ package me.zzhen.bt.bencode;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 
@@ -15,6 +16,35 @@ import java.util.Arrays;
  *         Description:
  */
 public class StringNode implements Node {
+
+    public static StringNode decode(InputStream input) throws IOException {
+        int pos = 0;
+        int c;
+        StringBuilder len = new StringBuilder();
+
+        while ((c = input.read()) != -1 && (char) c != StringNode.STRING_VALUE_START) {
+            pos++;
+            if (Character.isDigit(c)) {
+                len.append((char) c);
+            } else {
+                throw new DecoderException("expect a digital in " + pos + " but found " + (char) c);
+            }
+        }
+        long length = Long.parseLong(len.toString().trim());
+        long i = 0;
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        while (i < length && (c = input.read()) != -1) {
+            pos++;
+            baos.write(c & 0xFF);
+            i++;
+        }
+        if (i < length) {
+            throw new DecoderException("illegal string node , except " + length + " char but found " + i);
+        }
+
+        StringNode node = new StringNode(baos.toByteArray());
+        return node;
+    }
 
     static final char STRING_VALUE_START = ':';
 

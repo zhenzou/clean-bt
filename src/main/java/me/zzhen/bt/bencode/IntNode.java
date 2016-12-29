@@ -15,8 +15,25 @@ import java.io.*;
  */
 public class IntNode implements Node {
 
-    static final char INT_START = 'i';
-    static final char INT_END = 'e';
+    public static IntNode decode(InputStream input) throws IOException {
+        int pos = 0;
+        StringBuilder sb = new StringBuilder();
+        int c = -1;
+        while ((c = input.read()) != -1 && c != IntNode.INT_END) {
+            pos++;
+            char cc = (char) c;
+            if (Character.isDigit(cc)) {
+                sb.append(cc);
+            } else {
+                throw new DecoderException("expect a digital in " + pos + " but found " + cc);
+            }
+        }
+        return new IntNode(sb.toString());
+    }
+
+
+    public static final char INT_START = 'i';
+    public static final char INT_END = 'e';
 
     private String value;
 

@@ -2,6 +2,8 @@ package me.zzhen.bt.bencode;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.PushbackInputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,6 +16,20 @@ import java.util.List;
  *         Description:
  */
 public class ListNode implements Node {
+
+    public static ListNode decode(InputStream input) throws IOException {
+        int pos = 0;
+        ListNode list = new ListNode();
+        int c;
+        pos++;
+        while ((c = input.read()) != -1 && (char) c != ListNode.LIST_END) {
+            char cc = (char) c;
+            pos++;
+            Node node = DictionaryNode.decodeNext(new PushbackInputStream(input), cc, pos);
+            list.addNode(node);
+        }
+        return list;
+    }
 
     static final char LIST_START = 'l';
     static final char LIST_END = 'e';
