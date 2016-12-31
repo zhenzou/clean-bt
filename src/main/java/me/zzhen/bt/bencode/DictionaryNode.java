@@ -24,7 +24,7 @@ public class DictionaryNode implements Node {
         int pos = 0;
         PushbackInputStream push = new PushbackInputStream(input);
         int c = push.read();
-        if (c == -1 || c != DIC_START) throw new DecoderException("dic should start with d");
+        if (c == -1 || c != DIC_START) throw new DecoderException("dic should start with " + DIC_START);
         String key = "";
         DictionaryNode dic = new DictionaryNode();
         boolean inKey = true;
@@ -42,7 +42,6 @@ public class DictionaryNode implements Node {
                     throw new DecoderException("key of dic must be string,found digital");
                 }
             } else {
-//                push.unread(c);
                 node = decodeNext(push, cur, pos);
                 dic.addNode(key, node);
                 inKey = true;
@@ -61,6 +60,7 @@ public class DictionaryNode implements Node {
      */
     public static Node decodeNext(PushbackInputStream input, char c, int pos) throws IOException {
         Node node = null;
+        input.unread(c);
         switch (c) {
             case IntNode.INT_START:
                 node = IntNode.decode(input);
@@ -69,12 +69,10 @@ public class DictionaryNode implements Node {
                 node = ListNode.decode(input);
                 break;
             case DictionaryNode.DIC_START:
-                input.unread(c);
                 node = decode(input);
                 break;
             default:
                 if (Character.isDigit(c)) {
-                    input.unread(c);
                     node = StringNode.decode(input);
                 } else {
                     throw new DecoderException("not a legal char in " + pos + " byte");

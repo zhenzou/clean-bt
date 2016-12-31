@@ -18,10 +18,12 @@ import java.util.Arrays;
 public class StringNode implements Node {
 
     public static StringNode decode(InputStream input) throws IOException {
-        int pos = 0;
         int c;
+        if ((c = input.read()) != -1 && !Character.isDigit(c))
+            throw new IllegalArgumentException("ListNode must start with digital");
+        int pos = 1;
         StringBuilder len = new StringBuilder();
-
+        len.append((char) c);
         while ((c = input.read()) != -1 && (char) c != StringNode.STRING_VALUE_START) {
             pos++;
             if (Character.isDigit(c)) {
@@ -41,14 +43,12 @@ public class StringNode implements Node {
         if (i < length) {
             throw new DecoderException("illegal string node , except " + length + " char but found " + i);
         }
-
-        StringNode node = new StringNode(baos.toByteArray());
-        return node;
+        return new StringNode(baos.toByteArray());
     }
 
     static final char STRING_VALUE_START = ':';
 
-    byte[] value;
+    private byte[] value;
 
     /**
      * 不用处理编码问题
