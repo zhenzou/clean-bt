@@ -9,10 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -33,7 +30,7 @@ public class RouteTable {
     private int size;
 
     /**
-     * 前缀树，根节点，不使用
+     * 前缀树，根节点
      */
     private TreeNode root = new TreeNode((byte) 0);
 
@@ -45,7 +42,9 @@ public class RouteTable {
     /**
      * 便于更新,不然会重复请求相同的节点
      */
-    private List<Bucket> buckets = new ArrayList<>();
+//    private List<Bucket> buckets = new ArrayList<>();
+
+    private PriorityQueue<Bucket> buckets = new PriorityQueue<>();
 
     private final ReentrantLock lock = new ReentrantLock();
 
@@ -71,18 +70,16 @@ public class RouteTable {
         if (key == null) return;
         try {
             lock.lock();
-            if (size < DhtConfig.ROUTETABLE_SIZE) {
-                TreeNode item = findTreeNode(key);
-                if (item.value == null) return;
-                if (addNodeToBucket(node, item)) {
-                    size++;
-                }
+            if (size > DhtConfig.ROUTETABLE_SIZE) return;
+            TreeNode item = findTreeNode(key);
+            if (item.value == null) return;
+            if (addNodeToBucket(node, item)) {
+                size++;
             }
         } finally {
             lock.unlock();
         }
     }
-
 
     public int repeat = 0;
 
@@ -104,6 +101,7 @@ public class RouteTable {
         }
         if (bucket.size() == 8) {
             if (!bucket.checkRange(self.getKey())) {
+                bucket.addCandidate(node);
                 return false;
             }
             Tuple<Bucket, Bucket> spit = bucket.split();
@@ -176,15 +174,15 @@ public class RouteTable {
     public void refresh(Krpc krpc) {
         try {
             if (lock.tryLock(10, TimeUnit.SECONDS)) {
-                buckets.stream()
+                buckets.stream().filter(bucket -> !bucket.isActive() && !(bucket.size() == 0))
                         .flatMap(bucket -> bucket.nodes.stream())
                         .limit(DhtConfig.AUTO_FIND_SIZE)
                         .forEach(wrapper -> {
                             krpc.findNode(wrapper.node, wrapper.bucket.randomChildKey());
                             keys.add(wrapper.node.getKey());
                         });
-//                buckets.forEach(bucket -> bucket.refresh(krpc));
-                keys.forEach(this::remove);
+                buckets.forEach(bucket -> bucket.refresh(krpc));
+                keys.forEach(key -> remove(key, krpc));
                 keys.clear();
                 lock.unlock();
             }
@@ -193,6 +191,7 @@ public class RouteTable {
         }
         logger.info("repeat:" + repeat + "routes:" + size);
     }
+
 
     /**
      * 找到key在当前对应的节点
@@ -221,14 +220,12 @@ public class RouteTable {
      *
      * @param key
      */
-    public void remove(NodeKey key) {
+    public void remove(NodeKey key, Krpc krpc) {
         TreeNode item = findTreeNode(key);
         Bucket bucket = item.value;
-//        if (!bucket.isActive()) {
-            buckets.remove(bucket);
-            bucket.replace(key);
-            buckets.add(item.value);
-//        }
+        buckets.remove(bucket);
+        bucket.replace(key, krpc);
+        buckets.add(bucket);
     }
 
     /**
@@ -280,7 +277,7 @@ public class RouteTable {
          * @return
          */
         public boolean isActive() {
-            return lastActive.plus(DhtConfig.NODE_FRESH, ChronoUnit.MINUTES).isAfter(Instant.now());
+            return lastActive.plusSeconds(DhtConfig.NODE_FRESH).isAfter(Instant.now());
         }
 
         /**
@@ -289,7 +286,7 @@ public class RouteTable {
          * @return
          */
         public boolean isDead() {
-            return lastActive.plus(3 * DhtConfig.NODE_FRESH, ChronoUnit.MINUTES).isBefore(Instant.now());
+            return lastActive.plusSeconds(3 * DhtConfig.NODE_FRESH).isBefore(Instant.now());
         }
 
         /**
@@ -307,9 +304,7 @@ public class RouteTable {
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
-
             NodeInfoWrapper that = (NodeInfoWrapper) o;
-
             return node.equals(that.node);
         }
 
@@ -317,17 +312,19 @@ public class RouteTable {
         public int hashCode() {
             return node.hashCode();
         }
-
     }
 
     /**
      * 节点的最直接的容器
      */
-    private class Bucket {
+    private class Bucket implements Comparable<Bucket> {
 
         private Instant lastActive = Instant.now();
 
         private final Bitmap prefix;
+
+        private Deque<NodeInfo> candidates = new ArrayDeque<>(8);
+
 
         public Bucket(int size) {
             prefix = new Bitmap(size);
@@ -338,9 +335,6 @@ public class RouteTable {
          * 新节点排在后面
          */
         private List<NodeInfoWrapper> nodes = new ArrayList<>(8);
-
-        private Deque<NodeInfo> candidates = new ArrayDeque<>(2);//TODO optimize
-
 
         /**
          * 根据给予的Bitmap和值构造新的Bitmap
@@ -377,7 +371,7 @@ public class RouteTable {
         /**
          * 生成一个在当前Bucket的范围内的id
          *
-         * @return
+         * @return 当前的ID
          */
         public NodeKey randomChildKey() {
             NodeKey key = NodeKey.genRandomKey();
@@ -404,31 +398,30 @@ public class RouteTable {
         /**
          * 将info节点删除，用候选节点替换
          *
-         * @param info
+         * @param key
+         * @param krpc
          */
-        public void replace(NodeKey info) {
-            NodeInfoWrapper node = remove(info);
+        public void replace(NodeKey key, Krpc krpc) {
+            NodeInfoWrapper node = remove(key);
+            boolean isInserted = false;
             if (node != null) {
                 if (!candidates.isEmpty()) {
-                    NodeInfoWrapper wrapper = new NodeInfoWrapper(candidates.getLast(), this);
+                    NodeInfoWrapper wrapper = new NodeInfoWrapper(candidates.getFirst(), this);
                     int len = nodes.size();
                     for (int i = 0; i < len; i++) {
-                        if (nodes.get(i).compareTo(wrapper) < 0) {
+                        NodeInfoWrapper info = nodes.get(i);
+                        if (info.compareTo(wrapper) < 0) {
                             nodes.add(i, wrapper);
-                            return;
+                            isInserted = true;
+                            candidates.poll();
+                            break;
                         }
+                        krpc.findNode(info.node, randomChildKey());
                     }
                     lastActive = Instant.now();
                 }
-                addNode(node.node);
+                if (!isInserted) addNode(node.node);
             }
-        }
-
-        public void addCadidate(NodeInfo info) {
-            if (candidates.size() == 2) {
-                candidates.poll();
-            }
-            candidates.add(info);
         }
 
         /**
@@ -441,6 +434,12 @@ public class RouteTable {
             nodes.add(new NodeInfoWrapper(info, this));
             lastActive = Instant.now();
         }
+
+        public void addCandidate(NodeInfo info) {
+            if (candidates.size() == 8) candidates.poll();
+            candidates.add(info);
+        }
+
 
         public int size() {
             return nodes.size();
@@ -456,12 +455,9 @@ public class RouteTable {
          * @param key
          * @return
          */
-        NodeInfo getNode(NodeKey key) {
-//            nodes.stream().filter(node -> node.getKey().equals(key)).findFirst();
-            for (NodeInfoWrapper node : nodes) {
-                if (node.node.getKey().equals(key)) return node.node;
-            }
-            return null;
+        public NodeInfo getNode(NodeKey key) {
+            Optional<NodeInfoWrapper> first = nodes.stream().filter(node -> node.node.getKey().equals(key)).findFirst();
+            return first.map(wrapper -> wrapper.node).orElse(null);
         }
 
         /**
@@ -473,11 +469,8 @@ public class RouteTable {
         public NodeInfoWrapper remove(NodeKey key) {
             int size = nodes.size();
             for (int i = 0; i < size; i++) {
-                if (nodes.get(i).node.getKey().equals(key)) {
-                    return nodes.remove(i);
-                }
+                if (nodes.get(i).node.getKey().equals(key)) return nodes.remove(i);
             }
-//            return nodes.removeIf(node -> node.node.getKey().equals(key));
             return null;
         }
 
@@ -487,7 +480,7 @@ public class RouteTable {
          * @return
          */
         public boolean isActive() {
-            return Instant.now().plus(DhtConfig.BUCKET_FRESH, ChronoUnit.MINUTES).isAfter(lastActive);
+            return lastActive.plus(DhtConfig.BUCKET_FRESH, ChronoUnit.SECONDS).isAfter(Instant.now());
         }
 
         /**
@@ -495,20 +488,7 @@ public class RouteTable {
          * locked
          */
         public void refresh(Krpc krpc) {
-//            //TODO 提高性能，修改设计，代码好看
-//            nodes.stream().filter(NodeInfoWrapper::isActive).findFirst().ifPresent(wrapper -> krpc.ping(wrapper.node));
-            int len = nodes.size();
-            List<NodeInfoWrapper> remove = new ArrayList<>();
-            for (int i = 0; i < len; i++) {
-                NodeInfoWrapper wrapper = nodes.get(i);
-                if (wrapper.isDead()) {
-                    remove.add(wrapper);
-                } else if (!wrapper.isActive()) {
-                    krpc.ping(wrapper.node);
-                }
-            }
-            nodes.removeAll(remove);
-            size = size - remove.size();
+            nodes.stream().filter(wrapper -> !wrapper.isActive()).forEach(wrapper -> krpc.ping(wrapper.node));
             lastActive = Instant.now();
         }
 
@@ -522,13 +502,17 @@ public class RouteTable {
             lastActive = Instant.now();
         }
 
+
+        @Override
+        public String toString() {
+            return prefix.toString();
+        }
+
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
-
             Bucket bucket = (Bucket) o;
-
             return prefix.equals(bucket.prefix);
         }
 
@@ -537,5 +521,9 @@ public class RouteTable {
             return prefix.hashCode();
         }
 
+        @Override
+        public int compareTo(Bucket o) {
+            return lastActive.compareTo(o.lastActive);
+        }
     }
 }

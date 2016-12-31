@@ -128,7 +128,11 @@ public class Krpc implements RequestCallback {
 
     @Override
     public void onAnnouncePeer(InetAddress address, int port, String data) {
-        fetcher.execute(new MetadataWorker(address, port, data));
+        if (!DhtApp.NODE.isBlackItem(address, port)) {
+            fetcher.execute(new MetadataWorker(address, port, data));
+        } else {
+            logger.info("this is a black item");
+        }
     }
 
     @Override
@@ -155,16 +159,11 @@ public class Krpc implements RequestCallback {
      */
     @Override
     public void response(InetAddress address, int port, DictionaryNode node) {
+        DhtApp.NODE.removeBlackItem(address,port);
         if (Message.isResponse(node)) {
             receiver.execute(new ResponseProcessor(node, address, port, this));
         } else if (Message.isRequest(node)) {
             receiver.execute(new ResponseWorker(socket, address, port, node, this));
         }
-    }
-
-    @Override
-    protected void finalize() throws Throwable {
-        sender.shutdown();
-        super.finalize();
     }
 }

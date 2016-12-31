@@ -11,8 +11,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.*;
-import java.util.ArrayDeque;
-import java.util.Queue;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.LogManager;
 
 /**
@@ -38,7 +38,7 @@ public class DhtApp {
     /**
      * 全局黑名单
      */
-    private Queue<InetSocketAddress> blackList;
+    private volatile Set<InetSocketAddress> blacklist;
     /**
      * 本节点信息
      */
@@ -83,10 +83,9 @@ public class DhtApp {
             InetAddress address = InetAddress.getByName(DhtConfig.SERVER_IP);
             selfKey = NodeKey.genRandomKey();
             self = new NodeInfo(address, DhtConfig.SERVER_PORT, selfKey);
-            blackList = new ArrayDeque<>(DhtConfig.BLACKLIST_SIZE);
+            blacklist = new HashSet<>(DhtConfig.BLACKLIST_SIZE);
             routes = new RouteTable(self);
             socket = new DatagramSocket(DhtConfig.SERVER_PORT);
-//            socket.setSoTimeout(DhtConfig.CONN_TIMEOUT);
             krpc = new Krpc(selfKey, socket);
             PeerManager.init();
         } catch (UnknownHostException | SocketException e) {
@@ -113,20 +112,28 @@ public class DhtApp {
             routes.addNode(node);
     }
 
-    public Queue<InetSocketAddress> getBlackList() {
-        return blackList;
+    public boolean isBlackItem(InetAddress ip, int port) {
+        return blacklist.contains(new InetSocketAddress(ip, port));
     }
 
-    public boolean isBlackItem(InetAddress ip, int port) {
-        return blackList.contains(new InetSocketAddress(ip, port));
+    public void removeBlackItem(InetAddress ip, int port) {
+        blacklist.remove(new InetSocketAddress(ip, port));
+    }
+
+    public boolean isBlackItem(InetSocketAddress address) {
+        return blacklist.contains(address);
     }
 
     public boolean isBlackItem(NodeInfo info) {
-        return blackList.contains(new InetSocketAddress(info.getAddress().getHostAddress(), info.getPort()));
+        return blacklist.contains(new InetSocketAddress(info.getAddress().getHostAddress(), info.getPort()));
     }
 
     public void addBlackItem(InetAddress ip, int port) {
-        blackList.add(new InetSocketAddress(ip, port));
+        blacklist.add(new InetSocketAddress(ip, port));
+    }
+
+    public void addBlackItem(InetSocketAddress address) {
+        blacklist.add(address);
     }
 
     private void startClient() {
@@ -134,16 +141,11 @@ public class DhtApp {
         client.init();
     }
 
-
     private void startServer() {
         server = new DhtServer(socket, self, krpc);
         server.init();
     }
 
-    @Override
-    protected void finalize() throws Throwable {
-        super.finalize();
-    }
 
     public void init() {
         initDefaultConfig();
@@ -161,19 +163,10 @@ public class DhtApp {
         return NODE;
     }
 
-    /**
-     * TODO 自定义配置启动
-     *
-     * @param config
-     */
-    public static void boot(DhtConfig config) {
-        NODE = new DhtApp();
-        NODE.init();
-    }
 
     public static void main(String[] args) throws IOException {
         InputStream in = DhtApp.class.getClassLoader().getResourceAsStream("logger.properties");
-        LogManager.getLogManager().readConfiguration(in);
+        if (in != null) LogManager.getLogManager().readConfiguration(in);
         DhtApp boot = DhtApp.boot();
     }
 }

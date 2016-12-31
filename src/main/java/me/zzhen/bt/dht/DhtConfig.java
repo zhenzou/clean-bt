@@ -22,11 +22,11 @@ public class DhtConfig {
     /**
      * 请求过时间隔，请求失败，将加入黑名单
      */
-    public static final int CONN_TIMEOUT = 10 * 1000;
+    public static final int CONN_TIMEOUT = 15 * 1000;
     /**
-     * Token失效间隔 单位为秒
+     * Token失效间隔 单位为分钟
      */
-    public static final int TOKEN_TIMEOUT = 15 * 60;
+    public static final int TOKEN_TIMEOUT = 15;
     /**
      * 黑名单大小，超出将自动移除前面的
      */
@@ -43,11 +43,11 @@ public class DhtConfig {
     /**
      * bucket 刷新间隔，单位为秒
      */
-    public static final int BUCKET_FRESH = 10;
+    public static final int BUCKET_FRESH = 5;
     /**
      * 每个节点的有效时间，单位为秒
      */
-    public static final int NODE_FRESH = 10;
+    public static final int NODE_FRESH = 5;
     /**
      * 自动查找间隔,时间为秒
      */

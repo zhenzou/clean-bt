@@ -9,12 +9,10 @@ import me.zzhen.bt.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static me.zzhen.bt.dht.krpc.Krpc.*;
@@ -83,49 +81,32 @@ class ResponseProcessor implements Runnable {
     @Override
     public void run() {
         long id = Long.parseLong(resp.getNode("t").toString());
-        Token token = TokenManager.getToken(id);
-        if (token == null) return;
-        key = token.target;
-        TokenManager.remove(id);
-        resp = (DictionaryNode) resp.getNode("r");
-        DhtApp.NODE.addNode(new NodeInfo(address, port, new NodeKey(resp.getNode("id").decode())));
-        method = token.method;
-        switch (method) {
-            case METHOD_PING:
-                processPing();
-                break;
-            case METHOD_GET_PEERS:
-                processGetPeers();
-                break;
-            case METHOD_FIND_NODE:
-                processFindNode();
-                break;
-            case METHOD_ANNOUNCE_PEER:
-                processAnnouncePeer(resp);
-                break;
-            default:
-                break;
-        }
+        Optional<Token> optional = TokenManager.getToken(id);
+        optional.ifPresent(token -> {
+            key = token.target;
+            resp = (DictionaryNode) resp.getNode("r");
+            DhtApp.NODE.addNode(new NodeInfo(address, port, new NodeKey(resp.getNode("id").decode())));
+            method = token.method;
+            switch (method) {
+                case METHOD_PING:
+                    processPing();
+                    break;
+                case METHOD_GET_PEERS:
+                    processGetPeers();
+                    break;
+                case METHOD_FIND_NODE:
+                    processFindNode();
+                    break;
+                case METHOD_ANNOUNCE_PEER:
+                    processAnnouncePeer(resp);
+                    break;
+                default:
+                    break;
+            }
+        });
+
     }
 
-    private String getReceivedType(String c) {
-        String method;
-        switch (c) {
-            case "r":
-                method = "response";
-                break;
-            case "e":
-                method = "error";
-                break;
-            case "q":
-                method = "resp";
-                break;
-            default:
-                method = "default";
-                break;
-        }
-        return method;
-    }
 
     /**
      * 处理ping方法的响应
@@ -145,7 +126,7 @@ class ResponseProcessor implements Runnable {
             byte[] decode = nodes.decode();
             logger.info("length :" + decode.length);
             for (int i = 0; i < decode.length; i += 26) {
-                NodeInfo nodeInfo = new NodeInfo(decode, i);
+                NodeInfo nodeInfo = NodeInfo.fromBytes(decode, i);
                 callback.request(resp, nodeInfo, method);
             }
         } else {
@@ -167,7 +148,7 @@ class ResponseProcessor implements Runnable {
         int len = decode.length;
 //        logger.info("length :" + decode.length);
         for (int i = 0; i < len; i += 26) {
-            NodeInfo nodeInfo = new NodeInfo(decode, i);
+            NodeInfo nodeInfo = NodeInfo.fromBytes(decode, i);
             if (nodeInfo.getKey().equals(key)) {
                 logger.info("found node :" + nodeInfo.getAddress().getHostAddress() + ":" + nodeInfo.getPort());
             }
@@ -177,20 +158,7 @@ class ResponseProcessor implements Runnable {
 
 
     /**
-     * 检查返回来的t的值是否与发出请求的t值一致
-     *
-     * @param resp
-     * @return
-     */
-    private boolean check(DictionaryNode resp) {
-        if (resp == null) return false;
-        Node t = resp.getNode("t");
-        Node st = this.resp.getNode("t");
-        return st.equals(t);
-    }
-
-    /**
-     * TODO 其实没什么用,自己
+     * TODO 实现
      *
      * @param resp
      */

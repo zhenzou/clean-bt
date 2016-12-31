@@ -85,7 +85,6 @@ public class Bitmap {
      */
     public void or(Bitmap other) {
         op(other, OP_OR);
-
     }
 
     public void and(Bitmap other) {
@@ -129,9 +128,12 @@ public class Bitmap {
             default:
                 break;
         }
-
     }
 
+    @Override
+    public String toString() {
+        return Utils.toHex(data);
+    }
 
     @Override
     public boolean equals(Object o) {

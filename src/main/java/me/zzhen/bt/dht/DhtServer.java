@@ -1,19 +1,17 @@
 package me.zzhen.bt.dht;
 
-import me.zzhen.bt.Main;
-import me.zzhen.bt.bencode.Decoder;
 import me.zzhen.bt.bencode.DictionaryNode;
-import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.dht.base.NodeInfo;
+import me.zzhen.bt.dht.base.TokenManager;
 import me.zzhen.bt.dht.krpc.Krpc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -45,25 +43,23 @@ public class DhtServer {
     private void listen() {
         new Thread(() -> {
             try {
-                byte[] bytes = new byte[1024];
                 while (true) {
+                    byte[] bytes = new byte[1024];
                     DatagramPacket packet = new DatagramPacket(bytes, 1024);
                     socket.receive(packet);
                     int length = packet.getLength();
                     try {
-                        Node node = Decoder.decode(bytes, 0, length).get(0);
-                        krpc.response(packet.getAddress(), packet.getPort(), (DictionaryNode) node);
+//                        Node node = Decoder.decode(bytes, 0, length).get(0);
+                        DictionaryNode node = DictionaryNode.decode(new ByteArrayInputStream(bytes, 0, length));
+                        InetAddress address = packet.getAddress();
+                        int port = packet.getPort();
+                        DhtApp.NODE.removeBlackItem(address, port);
+                        krpc.response(address, port, node);
                     } catch (RuntimeException e) {
                         logger.error("error :" + packet.getAddress().getHostAddress());
                         logger.error("error :" + packet.getPort());
                         logger.error("error :" + packet.getLength());
-                        logger.info(new String(bytes));
-                        OutputStream out = new FileOutputStream("/home/mos/tmp" + (Math.random() * 100) + ".tmp");
-                        out.write(bytes);
-                        out.flush();
-                        out.close();
                         logger.error(e.getMessage());
-                        DhtApp.NODE.addBlackItem(packet.getAddress(), packet.getPort());
                     }
                 }
             } catch (IOException e) {
@@ -82,6 +78,8 @@ public class DhtServer {
         }
         //定时,自动向邻居节点发送find_node请求
         autoFindNode.scheduleAtFixedRate(() -> DhtApp.NODE.routes.refresh(krpc), DhtConfig.AUTO_FIND, DhtConfig.AUTO_FIND, TimeUnit.SECONDS);
+        //定时清理过期Token
+        autoFindNode.scheduleAtFixedRate(TokenManager::clearTokens, DhtConfig.TOKEN_TIMEOUT, DhtConfig.TOKEN_TIMEOUT, TimeUnit.MINUTES);
     }
 
 

@@ -1,6 +1,7 @@
 package me.zzhen.bt;
 
 import me.zzhen.bt.dht.base.NodeKey;
+import me.zzhen.bt.utils.IO;
 import me.zzhen.bt.utils.Utils;
 import org.junit.Rule;
 import org.junit.Test;
@@ -43,11 +44,31 @@ public class UtilsTest {
     @org.junit.Test
     public void intToBytes() throws Exception {
         assertArrayEquals(Utils.intToBytes(1), new byte[]{0, 0, 0, 1});
+        InetAddress addr = InetAddress.getByName("82.221.103.244");
+        byte[] address = addr.getAddress();
+
+        assertEquals(addr, InetAddress.getByAddress(address));
+    }
+
+    @org.junit.Test
+    public void bytesToInt() throws Exception {
+        assertArrayEquals(Utils.intToBytes(1), new byte[]{0, 0, 0, 1});
+        InetAddress addr = InetAddress.getByName("82.221.103.244");
+        byte[] address = addr.getAddress();
+
+        assertEquals(addr, InetAddress.getByAddress(address));
     }
 
     @org.junit.Test
     public void hexToBytes() throws Exception {
-        assertArrayEquals(Utils.hex2Bytes("FF"), new byte[]{-1});
+//        assertArrayEquals(Utils.hex2Bytes("FF"), new byte[]{-1});
+//        byte[] bytes = Utils.hex2Bytes("498b50");
+//        System.out.println(bytes.length);
+//        InetAddress addr = IO.getAddrFromBytes(bytes, 0);
+//        System.out.println(addr.getHostAddress());
+//        System.out.println(Utils.bytesToInt(bytes, 4, 2));
+        byte[] bytes = Utils.hex2Bytes("64313a65693165343a6970763434");
+        System.out.println(new String(bytes));
     }
 
 

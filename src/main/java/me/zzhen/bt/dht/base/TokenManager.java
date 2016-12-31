@@ -3,47 +3,32 @@ package me.zzhen.bt.dht.base;
 import me.zzhen.bt.dht.DhtConfig;
 
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
-import java.util.Timer;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Project:CleanBT
  * Create Time: 16-12-12.
  * Description:
- * TODO 实现
+ * 管理请求的t字段和get_peers的token字段
  *
  * @author zzhen zzzhen1994@gmail.com
  */
 public class TokenManager {
 
-    private static AtomicLong autoIncId = new AtomicLong();
-    private static final Map<Long, Token> tokens = new HashMap<>();
-    private static final Timer timer = new Timer();
-    private static boolean isRunning = true;
+    /**
+     * token自增ID
+     */
+    private static volatile AtomicLong autoIncId = new AtomicLong();
+    private static final ConcurrentHashMap<Long, Token> tokens = new ConcurrentHashMap<>();
 
-    static {
-        long seconds = DhtConfig.TOKEN_TIMEOUT;
-//        timer.schedule(new TimerTask() {
-//            @Override
-//            public void run() {
-//                clearTokens();
-//            }
-//        }, seconds, seconds);
-    }
 
     /**
-     * 没有严格检查，随便吧，反正token过期时间就是节点自己定义的
+     * 删除过期的token
      */
-    private static void clearTokens() {
-        Instant now = Instant.now();
-        for (Map.Entry<Long, Token> entry : tokens.entrySet()) {
-            if (entry.getValue().isLive()) {
-                //remove
-            }
-        }
+    public static void clearTokens() {
+        tokens.entrySet().removeIf(entry -> !entry.getValue().isLive());
     }
 
     /**
@@ -58,26 +43,13 @@ public class TokenManager {
         return token;
     }
 
-    public static synchronized void clear() {
-        if (isRunning) {
-            tokens.clear();
-            timer.cancel();
-            isRunning = false;
-        }
-    }
-
-    public static Token getToken(long id) {
-        return tokens.get(id);
-    }
-
-    @Override
-    protected void finalize() throws Throwable {
-        tokens.clear();
-        timer.cancel();
-        super.finalize();
-    }
-
-    public static void remove(long id) {
-        tokens.remove(id);
+    /**
+     * 获取的同时删除对应的token
+     *
+     * @param id
+     * @return
+     */
+    public static Optional<Token> getToken(long id) {
+        return Optional.of(tokens.remove(id));
     }
 }

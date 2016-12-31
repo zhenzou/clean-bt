@@ -62,6 +62,7 @@ public class ResponseWorker extends Thread {
 
     @Override
     public void run() {
+        if (DhtApp.NODE.isBlackItem(address, port)) return;
         response(address, port, request);
     }
 
@@ -126,7 +127,9 @@ public class ResponseWorker extends Thread {
             }
             arg.addNode("values", values);
         } else {
-            List<NodeInfo> infos = DhtApp.NODE.routes.closest8Nodes(new NodeKey(hash.decode()));
+            List<NodeInfo> infos = new ArrayList<>();
+            infos.add(DhtApp.NODE.getSelf());
+            infos.addAll(DhtApp.NODE.routes.closest8Nodes(new NodeKey(hash.decode())));
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             for (NodeInfo info : infos) {
                 try {

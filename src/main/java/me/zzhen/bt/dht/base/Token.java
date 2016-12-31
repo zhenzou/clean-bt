@@ -14,13 +14,15 @@ import java.time.Instant;
 public class Token {
 
     /**
-     * 请求的目标节点ID或者资源hash
-     */
-    public final NodeKey target;
-    /**
      * id
      */
     public final long id;
+
+    /**
+     * 请求的目标节点ID或者资源hash或者announce_peer对应的额资源hash
+     */
+    public final NodeKey target;
+
     /**
      * token生成的时间
      */
@@ -31,7 +33,7 @@ public class Token {
      */
     public final String method;
 
-    public Token(NodeKey target, long id, String method) {
+    Token(NodeKey target, long id, String method) {
         this.target = target;
         this.id = id;
         this.method = method;

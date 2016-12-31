@@ -17,46 +17,50 @@ import java.util.Objects;
  * @author zzhen zzzhen1994@gmail.com
  */
 public class NodeInfo {
-    public String hostName;
-    public int port;
+
+
+    /**
+     * 节点的域名或者点分IP地址
+     */
+    private String name;
+
+    /**
+     * 节点的端口
+     */
+    private int port;
+
+    /**
+     * 节点的ID
+     */
     public NodeKey key;
+
+    /**
+     * 节点的IP地址
+     */
     private InetAddress address;
 
-    /**
-     * 一般用于
-     *
-     * @param address
-     * @param port
-     * @param key
-     */
-    public NodeInfo(InetAddress address, int port, NodeKey key) {
-        this.port = port;
-        this.key = key;
-        this.address = address;
-    }
 
     /**
-     *
-     */
-    public NodeInfo(byte[] bytes) {
-        byte[] keydata = new byte[20];
-        System.arraycopy(bytes, 0, keydata, 0, 20);
-        address = IO.getAddrFromBytes(bytes, 20);
-        key = new NodeKey(keydata);
-        port = Utils.bytesToInt(bytes, 24, 2);
-    }
-
-    /**
-     * TODO factory
      * 暂时就是支持完整的NodeInfo
      * 包括ID，IP，Port
+     * 没有检测长度
      *
      * @param bytes
      * @param offset
      */
-    public NodeInfo(byte[] bytes, int offset) {
-        this(Utils.getSomeByte(bytes, offset, 26));
+    public static NodeInfo fromBytes(byte[] bytes, int offset) {
+        return fromBytes(Utils.getSomeByte(bytes, offset, 26));
     }
+
+    public static NodeInfo fromBytes(byte[] bytes) {
+        byte[] keydata = new byte[20];
+        System.arraycopy(bytes, 0, keydata, 0, 20);
+        InetAddress address = IO.getAddrFromBytes(bytes, 20);
+        NodeKey key = new NodeKey(keydata);
+        int port = Utils.bytesToInt(bytes, 24, 2);
+        return new NodeInfo(address, port, key);
+    }
+
 
     /**
      * 一般Bootstrap RouteTreeNode 初始化使用
@@ -68,20 +72,30 @@ public class NodeInfo {
         this(host, port, null);
     }
 
+
+    /**
+     * @param address
+     * @param port
+     * @param key
+     */
+    public NodeInfo(InetAddress address, int port, NodeKey key) {
+        this.port = port;
+        this.key = key;
+        this.address = address;
+    }
+
+
     public NodeInfo(String host, int port, NodeKey key) {
-        this.hostName = host;
+        this.name = host;
         this.port = port;
         this.key = key;
         try {
-            initAddress();
+            address = InetAddress.getByName(name);
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
     }
 
-    private void initAddress() throws UnknownHostException {
-        address = InetAddress.getByName(hostName);
-    }
 
     public void setKey(NodeKey key) {
         this.key = key;
@@ -145,7 +159,7 @@ public class NodeInfo {
         NodeInfo nodeInfo = (NodeInfo) o;
 
         if (port != nodeInfo.port) return false;
-        if (hostName != null ? !hostName.equals(nodeInfo.hostName) : nodeInfo.hostName != null) return false;
+        if (name != null ? !name.equals(nodeInfo.name) : nodeInfo.name != null) return false;
         if (!key.equals(nodeInfo.key)) return false;
         return address.equals(nodeInfo.address);
     }
@@ -161,7 +175,7 @@ public class NodeInfo {
     @Override
     public String toString() {
         return "NodeInfo{" +
-                "hostName='" + hostName + '\'' +
+                "name='" + name + '\'' +
                 ", port=" + port +
                 ", key=" + String.valueOf(key) +
                 ", address=" + address +

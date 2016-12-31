@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
  * Project:CleanBT
  * Create Time: 2016/10/29.
  * Description:
- * DHT节点服务器，用于处理其他节点的请求
+ * TODO 接受使用者的请求，然后在DHTServer中查找
  *
  * @author zzhen zzzhen1994@gmail.com
  */
@@ -19,19 +19,18 @@ public class DhtClient {
 
     private static final Logger logger = LoggerFactory.getLogger(DhtClient.class.getName());
     private NodeInfo self;
-    private RouteTable routeTable;//暂时不存数据库，经常更新
+    private RouteTable routes;//暂时不存数据库，经常更新
     private Krpc krpc;
 
 
     public DhtClient() {
         krpc = new Krpc(self.getKey(), null);
-//        krpc.getPeers(BOOTSTRAP_NODE[0], new NodeKey(Utils.hex2Bytes("546cf15f724d19c4319cc17b179d7e035f89c1f4")));
     }
 
 
     public DhtClient(NodeInfo self, RouteTable routeTable, Krpc krpc) {
         this.self = self;
-        this.routeTable = routeTable;
+        this.routes = routeTable;
         this.krpc = krpc;
 //        krpc.getPeers(BOOTSTRAP_NODE[0], new NodeKey(Utils.hex2Bytes("546cf15f724d19c4319cc17b179d7e035f89c1f4")));
     }
@@ -53,7 +52,7 @@ public class DhtClient {
 //                int len = decode.length;
 //                for (int i = 0; i < len; i += 26) {
 //                    NodeInfo nodeInfo = new NodeInfo(decode, i);
-//                    if (!DhtApp.NODE.isBlackItem(nodeInfo)) routeTable.addNode(nodeInfo);
+//                    if (!DhtApp.NODE.isBlackItem(nodeInfo)) routes.addNode(nodeInfo);
 //                }
 //            }
         }
@@ -129,12 +128,12 @@ public class DhtClient {
         self.setKey(key);
     }
 
-    public RouteTable getRouteTable() {
-        return routeTable;
+    public RouteTable getRoutes() {
+        return routes;
     }
 
-    public void setRouteTable(RouteTable routeTable) {
-        this.routeTable = routeTable;
+    public void setRoutes(RouteTable routes) {
+        this.routes = routes;
     }
 
 

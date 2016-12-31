@@ -1,7 +1,9 @@
 package me.zzhen.bt.dht.base;
 
+import me.zzhen.bt.dht.krpc.Krpc;
 import org.junit.Test;
 
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -34,11 +36,11 @@ public class RouteTableTest {
         NodeKey local = NodeKey.genRandomKey();
         RouteTable table = new RouteTable(new NodeInfo(InetAddress.getLocalHost(), 100, local));
         for (String id : ids) {
-            table.addNode(new NodeInfo(id.getBytes()));
+            table.addNode(NodeInfo.fromBytes(id.getBytes()));
         }
         assertEquals(4, table.size());
         for (String id : ids) {
-            table.addNode(new NodeInfo(id.getBytes()));
+            table.addNode(NodeInfo.fromBytes(id.getBytes()));
         }
         assertEquals(4, table.size());
     }
@@ -48,11 +50,14 @@ public class RouteTableTest {
     public void addNode() throws Exception {
         NodeKey local = NodeKey.genRandomKey();
         RouteTable table = new RouteTable(new NodeInfo(InetAddress.getLocalHost(), 100, local));
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 1000000; i++) {
             NodeKey key = NodeKey.genRandomKey();
             NodeInfo info = new NodeInfo(InetAddress.getLocalHost(), 200, key);
             table.addNode(info);
+//            table.remove(key);
         }
+        table.refresh(new Krpc(local, new DatagramSocket()));
+        System.out.println(table.size());
 
 //        table.preOrderPrint(table.getRoot(), "");
 //        System.out.println(table.ttSize);

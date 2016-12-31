@@ -29,17 +29,23 @@ public class NodeKeyTest {
         NodeKey key = NodeKey.genRandomKey();
         char[] s = Utils.bytesToBin(key.getValue()).toCharArray();
         for (int i = 0; i < 160; i++) {
-            assertEquals(true, key.prefix(i) == Integer.parseInt(s[i] + ""));
+            assertEquals(true, key.prefix(i) == (Integer.parseInt(s[i] + "") == 1));
         }
         key = NodeKey.genRandomKey();
         s = Utils.bytesToBin(key.getValue()).toCharArray();
         for (int i = 0; i < 160; i++) {
-            assertEquals(true, key.prefix(i) == Integer.parseInt(s[i] + ""));
+            assertEquals(true, key.prefix(i) == (Integer.parseInt(s[i] + "") == 1));
         }
         key = NodeKey.genRandomKey();
         s = Utils.bytesToBin(key.getValue()).toCharArray();
         for (int i = 0; i < 160; i++) {
-            assertEquals(true, key.prefix(i) == Integer.parseInt(s[i] + ""));
+            assertEquals(true, key.prefix(i) == (Integer.parseInt(s[i] + "") == 1));
+        }
+
+        byte[] bytes = new byte[20];
+        key = new NodeKey(bytes);
+        for (int i = 0; i < 160; i++) {
+            assertEquals(true, !key.prefix(i));
         }
     }
 
