@@ -109,7 +109,7 @@ public class DhtClient {
         krpc.announcePeer(peer);
     }
 
-//    private Response request(DictionaryNode arg, NodeInfo node, String method) {
+//    private Response send(DictionaryNode arg, NodeInfo node, String method) {
 //        try {
 //            return executor.submit(new Krpc.ResponseProcessor(arg, node, method)).get();
 //        } catch (InterruptedException | ExecutionException e) {

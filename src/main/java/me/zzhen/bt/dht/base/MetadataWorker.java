@@ -55,7 +55,7 @@ public class MetadataWorker implements Runnable {
     /**
      * 请求的资源的info_hash
      */
-    private String hash;
+    private byte[] hash;
 
     /**
      * 请求的来源地址
@@ -70,7 +70,7 @@ public class MetadataWorker implements Runnable {
     public static final int BLOCK_SIZE = 16 * 1024;
 
 
-    public MetadataWorker(InetAddress address, int port, String hash) {
+    public MetadataWorker(InetAddress address, int port, byte[] hash) {
         this.address = new InetSocketAddress(address, port);
         this.port = port;
         this.hash = hash;
@@ -119,7 +119,7 @@ public class MetadataWorker implements Runnable {
             baos.write(PSTR.length());
             RESERVED[5] |= 0x10;
             baos.write(PSTR.getBytes());
-            baos.write(Utils.hex2Bytes(hash));
+            baos.write(hash);
             baos.write(NodeKey.genRandomKey().getValue());
             out.write(baos.toByteArray());
         } catch (IOException e) {

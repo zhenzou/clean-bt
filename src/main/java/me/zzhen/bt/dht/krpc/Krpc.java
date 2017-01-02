@@ -1,16 +1,21 @@
 package me.zzhen.bt.dht.krpc;
 
 import me.zzhen.bt.bencode.DictionaryNode;
+import me.zzhen.bt.bencode.ListNode;
+import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.bencode.StringNode;
 import me.zzhen.bt.dht.DhtApp;
-import me.zzhen.bt.dht.base.MetadataWorker;
-import me.zzhen.bt.dht.base.NodeInfo;
-import me.zzhen.bt.dht.base.NodeKey;
+import me.zzhen.bt.dht.base.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -35,10 +40,18 @@ public class Krpc implements RequestCallback {
     private DatagramSocket socket;
 
     /**
-     * 试试吧,现在开8个线程----以后切换AIO吧
+     * 主要的线程发送线程池
      */
-    private ExecutorService sender = Executors.newFixedThreadPool(2 * Runtime.getRuntime().availableProcessors() + 1);
-    private ExecutorService receiver = Executors.newFixedThreadPool(2 * Runtime.getRuntime().availableProcessors() + 1);
+    private ExecutorService sender = Executors.newFixedThreadPool(2 * Runtime.getRuntime().availableProcessors() + 2);
+
+    /**
+     * 请求处理线程池
+     */
+    private ExecutorService receiver = Executors.newFixedThreadPool(2);
+
+    /**
+     * 获取MetaData的线程池
+     */
     private ExecutorService fetcher = Executors.newSingleThreadExecutor();
 
     public Krpc(NodeKey self, DatagramSocket socket) {
@@ -58,7 +71,7 @@ public class Krpc implements RequestCallback {
         DictionaryNode arg = new DictionaryNode();
         arg.addNode("id", new StringNode(self.getValue()));
         request.addNode("a", arg);
-        request(request, node, METHOD_PING);
+        send(request, node);
     }
 
     /**
@@ -74,7 +87,7 @@ public class Krpc implements RequestCallback {
         arg.addNode("target", new StringNode(id.getValue()));
         arg.addNode("id", new StringNode(self.getValue()));
         msg.addNode("a", arg);
-        request(msg, target, METHOD_FIND_NODE);
+        send(msg, target);
     }
 
     /**
@@ -89,7 +102,7 @@ public class Krpc implements RequestCallback {
         arg.addNode("info_hash", new StringNode(peer.getValue()));
         arg.addNode("id", new StringNode(self.getValue()));
         msg.addNode("a", arg);
-        request(msg, target, METHOD_GET_PEERS);
+        send(msg, target);
     }
 
     /**
@@ -106,22 +119,22 @@ public class Krpc implements RequestCallback {
 //        arg.addNode("port", new IntNode(DhtConfig.SERVER_PORT));
 //        arg.addNode("id", new StringNode(self.getValue()));
 //        req.addNode("a", arg);
-//        request(req, null, METHOD_ANNOUNCE_PEER);
+//        send(req, null, METHOD_ANNOUNCE_PEER);
     }
 
     /**
+     * 使用连接池将数据发送出去
+     *
      * @param request
      * @param target
-     * @param method
      * @return
      */
-    public void request(DictionaryNode request, NodeInfo target, String method) {
+    public void send(DictionaryNode request, NodeInfo target) {
         if (!DhtApp.NODE.isBlackItem(target)) {
-            sender.execute(new RequestWorker(socket, request, target, method));
+            sender.execute(new DataSendWorker(socket, request, target));
             DhtApp.NODE.addNode(target);
         }
     }
-
 
     /**
      * 处理响应的方法,包括
@@ -142,51 +155,105 @@ public class Krpc implements RequestCallback {
 
     /**
      * 响应ping请求
+     * 在线程池中执行
      *
-     * @param address
-     * @param port
-     * @param data
+     * @param src
+     * @param t
      */
     @Override
-    public void onPing(InetAddress address, int port, DictionaryNode data) {
-
+    public void onPing(NodeInfo src, Node t) {
+        DictionaryNode resp = Message.makeResponse(t);
+        DictionaryNode arg = new DictionaryNode();
+        arg.addNode("id", new StringNode(DhtApp.NODE.getSelfKey().getValue()));
+        arg.addNode("r", arg);
+        send(resp, src);
     }
+
 
     /**
      * 响应get_peer请求
      *
-     * @param address
-     * @param port
-     * @param target
+     * @param src 请求来源
+     * @param t
+     * @param id  请求的资源ID
      */
     @Override
-    public void onGetPeer(InetAddress address, int port, NodeKey target) {
-
+    public void onGetPeer(NodeInfo src, Node t, Node id) {
+        DictionaryNode resp = Message.makeResponse(t);
+        List<InetSocketAddress> peers = PeerManager.PM.getPeers(new NodeKey(id.decode()));
+        DictionaryNode arg = Message.makeArg();
+        if (peers != null) {
+            ListNode values = new ListNode();
+            for (InetSocketAddress peer : peers) {
+                StringNode node = new StringNode(PeerManager.compact(peer));
+                values.addNode(node);
+            }
+            arg.addNode("values", values);
+        } else {
+            List<NodeInfo> infos = new ArrayList<>();
+            infos.add(DhtApp.NODE.getSelf());
+            infos.addAll(DhtApp.NODE.routes.closest8Nodes(new NodeKey(id.decode())));
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            for (NodeInfo info : infos) {
+                try {
+                    baos.write(info.compactNodeInfo());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            StringNode nodes = new StringNode(baos.toByteArray());
+            arg.addNode("nodes", nodes);
+        }
+        Token token = TokenManager.newToken(new NodeKey(id.decode()), Krpc.METHOD_GET_PEERS);
+        arg.addNode("token", new StringNode(token.id + ""));
+        resp.addNode("r", arg);
+        send(resp, src);
     }
+
 
     /**
      * 响应find_node请求
      *
-     * @param address
-     * @param port
-     * @param target
+     * @param src
+     * @param t
+     * @param id
      */
     @Override
-    public void onFindNode(InetAddress address, int port, NodeKey target) {
-
+    public void onFindNode(NodeInfo src, Node t, NodeKey id) {
+        DictionaryNode resp = Message.makeResponse(t);
+        List<NodeInfo> infos = new ArrayList<>();
+        infos.add(DhtApp.NODE.getSelf());//将自己添加到发送给别人的节点
+        infos.addAll(DhtApp.NODE.routes.closest8Nodes(id));
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        for (NodeInfo info : infos) {
+            try {
+                baos.write(info.compactNodeInfo());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        StringNode nodes = new StringNode(baos.toByteArray());
+        DictionaryNode arg = Message.makeArg();
+        arg.addNode("nodes", nodes);//TODO values
+        resp.addNode("r", arg);
     }
 
     /**
      * 响应announce_peer请求
      *
-     * @param address
-     * @param port
-     * @param data
+     * @param src
+     * @param t   请求的t参数，响应的时候需要返回
+     * @param id  请求携带的资源种子id
      */
     @Override
-    public void onAnnouncePeer(InetAddress address, int port, String data) {
-        if (!DhtApp.NODE.isBlackItem(address, port)) {
-            fetcher.execute(new MetadataWorker(address, port, data));
+    public void onAnnouncePeer(NodeInfo src, Node t, Node id) {
+        DictionaryNode resp = Message.makeResponse(t);
+        DictionaryNode arg = Message.makeArg();
+        resp.addNode("r", arg);
+        send(resp, src);
+        //TODO check token
+        if (!DhtApp.NODE.isBlackItem(src.getAddress(), src.getPort())) {
+            fetcher.execute(new MetadataWorker(src.getAddress(), src.getPort(), id.decode()));
         } else {
             logger.info("this is a black item");
         }

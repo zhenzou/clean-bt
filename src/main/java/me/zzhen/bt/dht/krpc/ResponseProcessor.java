@@ -1,7 +1,9 @@
 package me.zzhen.bt.dht.krpc;
 
 
-import me.zzhen.bt.bencode.*;
+import me.zzhen.bt.bencode.DictionaryNode;
+import me.zzhen.bt.bencode.ListNode;
+import me.zzhen.bt.bencode.StringNode;
 import me.zzhen.bt.dht.DhtApp;
 import me.zzhen.bt.dht.base.*;
 import me.zzhen.bt.utils.Utils;
@@ -64,10 +66,10 @@ class ResponseProcessor implements Runnable {
     private Krpc krpc;
 
     /**
-     * @param resp     响应的内容
+     * @param resp    响应的内容
      * @param address
      * @param port
-     * @param krpc 处理完响应的回调
+     * @param krpc    处理完响应的回调
      */
     public ResponseProcessor(DictionaryNode resp, InetAddress address, int port, Krpc krpc) {
         this.address = address;
@@ -88,7 +90,7 @@ class ResponseProcessor implements Runnable {
             method = token.method;
             switch (method) {
                 case METHOD_PING:
-                    krpc.onPing(address, port, resp);
+                    processPing();
                     break;
                 case METHOD_GET_PEERS:
                     processGetPeers();
@@ -107,6 +109,13 @@ class ResponseProcessor implements Runnable {
     }
 
     /**
+     * 处理ping方法的响应
+     */
+    private void processPing() {
+//        DhtApp.NODE.routes.addNode(target);
+    }
+
+    /**
      * 处理get_peers的响应
      */
     private void processGetPeers() {
@@ -118,7 +127,7 @@ class ResponseProcessor implements Runnable {
             logger.info("length :" + decode.length);
             for (int i = 0; i < decode.length; i += 26) {
                 NodeInfo nodeInfo = NodeInfo.fromBytes(decode, i);
-                krpc.request(resp, nodeInfo, method);
+                krpc.send(resp, nodeInfo);
             }
         } else {
             logger.info("nodes :" + values.getValue().size());
@@ -143,7 +152,7 @@ class ResponseProcessor implements Runnable {
             if (nodeInfo.getKey().equals(key)) {
                 logger.info("found node :" + nodeInfo.getAddress().getHostAddress() + ":" + nodeInfo.getPort());
             }
-            krpc.request(this.resp, nodeInfo, method);
+            krpc.send(this.resp, nodeInfo);
         }
     }
 
