@@ -118,7 +118,6 @@ public class Krpc implements RequestCallback {
      * @param method
      * @return
      */
-    @Override
     public void request(DictionaryNode request, NodeInfo target, String method) {
         if (!DhtApp.NODE.isBlackItem(target)) {
             sender.execute(new RequestWorker(socket, request, target, method));
@@ -126,29 +125,6 @@ public class Krpc implements RequestCallback {
         }
     }
 
-    @Override
-    public void onAnnouncePeer(InetAddress address, int port, String data) {
-        if (!DhtApp.NODE.isBlackItem(address, port)) {
-            fetcher.execute(new MetadataWorker(address, port, data));
-        } else {
-            logger.info("this is a black item");
-        }
-    }
-
-    @Override
-    public void onPing(InetAddress address, int port, DictionaryNode data) {
-
-    }
-
-    @Override
-    public void onGetPeer(InetAddress address, int port, DictionaryNode data) {
-
-    }
-
-    @Override
-    public void onFindNode(InetAddress address, int port, DictionaryNode data) {
-
-    }
 
     /**
      * 处理响应的方法,包括
@@ -157,13 +133,65 @@ public class Krpc implements RequestCallback {
      * @param port
      * @param node
      */
-    @Override
     public void response(InetAddress address, int port, DictionaryNode node) {
-        DhtApp.NODE.removeBlackItem(address,port);
+        DhtApp.NODE.removeBlackItem(address, port);
         if (Message.isResponse(node)) {
             receiver.execute(new ResponseProcessor(node, address, port, this));
         } else if (Message.isRequest(node)) {
             receiver.execute(new ResponseWorker(socket, address, port, node, this));
+        }
+    }
+
+
+    /**
+     * 响应ping请求
+     *
+     * @param address
+     * @param port
+     * @param data
+     */
+    @Override
+    public void onPing(InetAddress address, int port, DictionaryNode data) {
+
+    }
+
+    /**
+     * 响应get_peer请求
+     *
+     * @param address
+     * @param port
+     * @param target
+     */
+    @Override
+    public void onGetPeer(InetAddress address, int port, NodeKey target) {
+
+    }
+
+    /**
+     * 响应find_node请求
+     *
+     * @param address
+     * @param port
+     * @param target
+     */
+    @Override
+    public void onFindNode(InetAddress address, int port, NodeKey target) {
+
+    }
+
+    /**
+     * 响应announce_peer请求
+     *
+     * @param address
+     * @param port
+     * @param data
+     */
+    @Override
+    public void onAnnouncePeer(InetAddress address, int port, String data) {
+        if (!DhtApp.NODE.isBlackItem(address, port)) {
+            fetcher.execute(new MetadataWorker(address, port, data));
+        } else {
+            logger.info("this is a black item");
         }
     }
 }

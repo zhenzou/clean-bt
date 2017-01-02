@@ -4,7 +4,6 @@ package me.zzhen.bt.dht.krpc;
 import me.zzhen.bt.bencode.*;
 import me.zzhen.bt.dht.DhtApp;
 import me.zzhen.bt.dht.base.*;
-import me.zzhen.bt.utils.IO;
 import me.zzhen.bt.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,19 +61,19 @@ class ResponseProcessor implements Runnable {
     /**
      * 回调
      */
-    private RequestCallback callback;
+    private Krpc krpc;
 
     /**
      * @param resp     响应的内容
      * @param address
      * @param port
-     * @param callback 处理完响应的回调
+     * @param krpc 处理完响应的回调
      */
-    public ResponseProcessor(DictionaryNode resp, InetAddress address, int port, RequestCallback callback) {
+    public ResponseProcessor(DictionaryNode resp, InetAddress address, int port, Krpc krpc) {
         this.address = address;
         this.port = port;
         this.resp = resp;
-        this.callback = callback;
+        this.krpc = krpc;
     }
 
 
@@ -89,7 +88,7 @@ class ResponseProcessor implements Runnable {
             method = token.method;
             switch (method) {
                 case METHOD_PING:
-                    processPing();
+                    krpc.onPing(address, port, resp);
                     break;
                 case METHOD_GET_PEERS:
                     processGetPeers();
@@ -107,14 +106,6 @@ class ResponseProcessor implements Runnable {
 
     }
 
-
-    /**
-     * 处理ping方法的响应
-     */
-    private void processPing() {
-//        DhtApp.NODE.routes.addNode(target);
-    }
-
     /**
      * 处理get_peers的响应
      */
@@ -127,13 +118,13 @@ class ResponseProcessor implements Runnable {
             logger.info("length :" + decode.length);
             for (int i = 0; i < decode.length; i += 26) {
                 NodeInfo nodeInfo = NodeInfo.fromBytes(decode, i);
-                callback.request(resp, nodeInfo, method);
+                krpc.request(resp, nodeInfo, method);
             }
         } else {
             logger.info("nodes :" + values.getValue().size());
             List<InetSocketAddress> peers = values.getValue().stream().map(node -> {
                 byte[] bytes = node.decode();
-                return new InetSocketAddress(IO.getAddrFromBytes(bytes, 0), Utils.bytesToInt(bytes, 4, 2));
+                return new InetSocketAddress(Utils.getAddrFromBytes(bytes, 0), Utils.bytesToInt(bytes, 4, 2));
             }).collect(Collectors.toList());
             PeerManager.PM.addAllPeer(key, peers);
         }
@@ -152,7 +143,7 @@ class ResponseProcessor implements Runnable {
             if (nodeInfo.getKey().equals(key)) {
                 logger.info("found node :" + nodeInfo.getAddress().getHostAddress() + ":" + nodeInfo.getPort());
             }
-            callback.request(this.resp, nodeInfo, method);
+            krpc.request(this.resp, nodeInfo, method);
         }
     }
 

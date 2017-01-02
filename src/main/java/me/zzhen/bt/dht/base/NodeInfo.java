@@ -1,6 +1,5 @@
 package me.zzhen.bt.dht.base;
 
-import me.zzhen.bt.utils.IO;
 import me.zzhen.bt.utils.Utils;
 
 import java.io.ByteArrayOutputStream;
@@ -55,7 +54,7 @@ public class NodeInfo {
     public static NodeInfo fromBytes(byte[] bytes) {
         byte[] keydata = new byte[20];
         System.arraycopy(bytes, 0, keydata, 0, 20);
-        InetAddress address = IO.getAddrFromBytes(bytes, 20);
+        InetAddress address = Utils.getAddrFromBytes(bytes, 20);
         NodeKey key = new NodeKey(keydata);
         int port = Utils.bytesToInt(bytes, 24, 2);
         return new NodeInfo(address, port, key);

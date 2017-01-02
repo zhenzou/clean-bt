@@ -5,10 +5,8 @@ import me.zzhen.bt.utils.Utils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Objects;
 
-import static me.zzhen.bt.utils.Utils.bitAt;
 import static me.zzhen.bt.utils.Utils.bytesToInt;
 import static me.zzhen.bt.utils.Utils.intToBytes;
 

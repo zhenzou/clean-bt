@@ -21,16 +21,13 @@ public class DictionaryNode implements Node {
 
 
     public static DictionaryNode decode(InputStream input) throws IOException {
-        int pos = 0;
         PushbackInputStream push = new PushbackInputStream(input);
         int c = push.read();
         if (c == -1 || c != DIC_START) throw new DecoderException("dic should start with " + DIC_START);
         String key = "";
         DictionaryNode dic = new DictionaryNode();
         boolean inKey = true;
-        pos++;
         while ((c = push.read()) != -1 && (char) c != DictionaryNode.DIC_END) {
-            pos++;
             Node node = null;
             char cur = (char) c;
             if (inKey) {
@@ -42,7 +39,7 @@ public class DictionaryNode implements Node {
                     throw new DecoderException("key of dic must be string,found digital");
                 }
             } else {
-                node = decodeNext(push, cur, pos);
+                node = decodeNext(push, cur);
                 dic.addNode(key, node);
                 inKey = true;
             }
@@ -58,7 +55,7 @@ public class DictionaryNode implements Node {
      * @return 当前节点的Node结构
      * @throws IOException
      */
-    public static Node decodeNext(PushbackInputStream input, char c, int pos) throws IOException {
+    public static Node decodeNext(PushbackInputStream input, char c) throws IOException {
         Node node = null;
         input.unread(c);
         switch (c) {
@@ -75,7 +72,7 @@ public class DictionaryNode implements Node {
                 if (Character.isDigit(c)) {
                     node = StringNode.decode(input);
                 } else {
-                    throw new DecoderException("not a legal char in " + pos + " byte");
+                    throw new DecoderException("not a legal char in ");
                 }
                 break;
         }
@@ -149,12 +146,25 @@ public class DictionaryNode implements Node {
     }
 
     /**
-     * 都没有检查null
-     *
      * @return
      */
     @Override
     public String toString() {
         return value.toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        DictionaryNode node = (DictionaryNode) o;
+
+        return value.equals(node.value);
+    }
+
+    @Override
+    public int hashCode() {
+        return value.hashCode();
     }
 }

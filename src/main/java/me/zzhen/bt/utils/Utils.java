@@ -1,6 +1,8 @@
 package me.zzhen.bt.utils;
 
 import java.io.ByteArrayOutputStream;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
@@ -9,6 +11,7 @@ import java.util.UUID;
  * Project:CleanBT
  * Create Time: 2016/10/25.
  * Description:
+ * 应用层工具类，很多都没有检测参数的合法性；如果调用这些方法出现错误，只能说明应用的设计出现问题
  *
  * @author zzhen zzzhen1994@gmail.com
  */
@@ -85,13 +88,11 @@ public interface Utils {
      */
     static byte[] intToBytes(int num) {
         byte[] bytes = new byte[4];
-        int mask = 0xFF;
         for (int i = 0; i < 4; i++) {
             bytes[3 - i] = (byte) (num >>> 8 * i);
         }
         return bytes;
     }
-
 
     /**
      * @param bytes Big Endian
@@ -266,9 +267,29 @@ public interface Utils {
      * @return
      */
     static byte[] getSomeByte(byte[] input, int offset, int length) {
-        if ((offset + length) > input.length) throw new ArrayIndexOutOfBoundsException("illegal lengths for input");
         byte[] bytes = new byte[length];
         System.arraycopy(input, offset, bytes, 0, length);
         return bytes;
+    }
+
+    static InetAddress getAddrFromBytes(byte[] bytes) {
+        try {
+            return InetAddress.getByAddress(bytes);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    /**
+     * 从byte[]的特定位置开始得到IPV4地址
+     *
+     * @param bytes
+     * @param offset
+     * @return IPV4 地址
+     */
+    static InetAddress getAddrFromBytes(byte[] bytes, int offset) {
+        byte[] addr = getSomeByte(bytes, offset, 4);
+        return getAddrFromBytes(addr);
     }
 }

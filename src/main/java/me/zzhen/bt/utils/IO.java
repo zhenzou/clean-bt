@@ -14,6 +14,12 @@ import java.net.UnknownHostException;
 public interface IO {
 
 
+    /**
+     * 用BufferedReader读取所有行，并且在行尾添加换行符
+     *
+     * @param input
+     * @return
+     */
     static String readAllLine(InputStream input) {
         String line = null;
         StringBuilder sb = new StringBuilder();
@@ -27,6 +33,13 @@ public interface IO {
         return sb.toString();
     }
 
+    /**
+     * 读取输入中的前k个字节数组
+     *
+     * @param input 输入流
+     * @param k     第几个数据
+     * @return
+     */
     static byte[] readKBytes(InputStream input, int k) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream(k);
         int c = -1;
@@ -42,6 +55,12 @@ public interface IO {
         return baos.toByteArray();
     }
 
+    /**
+     * 用Buffered读取全部数据
+     *
+     * @param input
+     * @return
+     */
     static byte[] readAllBytes(InputStream input) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         int c = -1;
@@ -54,27 +73,6 @@ public interface IO {
             e.printStackTrace();
         }
         return baos.toByteArray();
-    }
-
-    static InetAddress getAddrFromBytes(byte[] bytes) {
-        try {
-            return InetAddress.getByAddress(bytes);
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e.getMessage());
-        }
-    }
-
-    /**
-     * 暂时只用IPV4地址
-     *
-     * @param bytes
-     * @param offset
-     * @return IPV4 地址
-     */
-    static InetAddress getAddrFromBytes(byte[] bytes, int offset) {
-        byte[] addr = Utils.getSomeByte(bytes, offset, 4);
-        return getAddrFromBytes(addr);
     }
 
 

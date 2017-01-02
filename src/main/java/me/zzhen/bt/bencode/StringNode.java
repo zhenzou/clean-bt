@@ -21,22 +21,19 @@ public class StringNode implements Node {
         int c;
         if ((c = input.read()) != -1 && !Character.isDigit(c))
             throw new IllegalArgumentException("ListNode must start with digital");
-        int pos = 1;
         StringBuilder len = new StringBuilder();
         len.append((char) c);
         while ((c = input.read()) != -1 && (char) c != StringNode.STRING_VALUE_START) {
-            pos++;
             if (Character.isDigit(c)) {
                 len.append((char) c);
             } else {
-                throw new DecoderException("expect a digital in " + pos + " but found " + (char) c);
+                throw new DecoderException("expect a digital in  but found " + (char) c);
             }
         }
         long length = Long.parseLong(len.toString().trim());
         long i = 0;
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         while (i < length && (c = input.read()) != -1) {
-            pos++;
             baos.write(c & 0xFF);
             i++;
         }

@@ -37,10 +37,6 @@ public class DhtConfig {
     public static final int ROUTETABLE_SIZE = 5 * 1000;
 
     /**
-     * 获取metadata时的block大小
-     */
-    public static final int BLOCK_SIZE = 16 * 1024;
-    /**
      * bucket 刷新间隔，单位为秒
      */
     public static final int BUCKET_FRESH = 5;

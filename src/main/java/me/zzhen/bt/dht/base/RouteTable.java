@@ -17,7 +17,8 @@ import java.util.stream.Collectors;
 /**
  * Project:CleanBT
  * Create Time: 2016/10/29.
- * Description： 每次重启都会重新开始
+ * Description：
+ * TODO 重构,更加可读，性能更好
  *
  * @author zzhen zzzhen1994@gmail.com
  */
@@ -42,9 +43,8 @@ public class RouteTable {
     /**
      * 便于更新,不然会重复请求相同的节点
      */
-//    private List<Bucket> buckets = new ArrayList<>();
+    private List<Bucket> buckets = new ArrayList<>();
 
-    private PriorityQueue<Bucket> buckets = new PriorityQueue<>();
 
     private final ReentrantLock lock = new ReentrantLock();
 
@@ -267,7 +267,7 @@ public class RouteTable {
         /**
          * 将节点的活动时间改为现在
          */
-        public void refresh() {
+        void refresh() {
             lastActive = Instant.now();
         }
 
@@ -276,7 +276,7 @@ public class RouteTable {
          *
          * @return
          */
-        public boolean isActive() {
+        boolean isActive() {
             return lastActive.plusSeconds(DhtConfig.NODE_FRESH).isAfter(Instant.now());
         }
 
@@ -285,12 +285,12 @@ public class RouteTable {
          *
          * @return
          */
-        public boolean isDead() {
+        boolean isDead() {
             return lastActive.plusSeconds(3 * DhtConfig.NODE_FRESH).isBefore(Instant.now());
         }
 
         /**
-         * 就比较最后活跃时间
+         * 只比较最后活跃时间
          *
          * @param o
          * @return
@@ -300,6 +300,12 @@ public class RouteTable {
             return lastActive.compareTo(o.lastActive);
         }
 
+        /**
+         * 只比较 node
+         *
+         * @param o
+         * @return
+         */
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
@@ -317,7 +323,7 @@ public class RouteTable {
     /**
      * 节点的最直接的容器
      */
-    private class Bucket implements Comparable<Bucket> {
+    private class Bucket  {
 
         private Instant lastActive = Instant.now();
 
@@ -349,6 +355,11 @@ public class RouteTable {
             prefix.set(prefix.size - 1, val);
         }
 
+        private void reassignNode(NodeInfo node, Bucket left, Bucket right) {
+            if (left.checkRange(node.getKey())) left.addNode(node);
+            if (right.checkRange(node.getKey())) right.addNode(node);
+        }
+
         /**
          * 将当前Bucket分裂成两个
          * 左侧的是高位，右侧是低位
@@ -358,13 +369,9 @@ public class RouteTable {
         Tuple<Bucket, Bucket> split() {
             if (prefix.size == 160) return null;
             Bucket rightBucket = new Bucket(prefix, false);
-            for (NodeInfoWrapper node : nodes) {
-                if (rightBucket.checkRange(node.node.getKey())) rightBucket.addNode(node.node);
-            }
             Bucket leftBucket = new Bucket(prefix, true);
-            for (NodeInfoWrapper node : nodes) {
-                if (leftBucket.checkRange(node.node.getKey())) leftBucket.addNode(node.node);
-            }
+            nodes.stream().map(wrapper -> wrapper.node).forEach(node -> reassignNode(node, leftBucket, rightBucket));
+            candidates.forEach(node -> reassignNode(node, leftBucket, rightBucket));
             return new Tuple<>(leftBucket, rightBucket);
         }
 
@@ -384,6 +391,8 @@ public class RouteTable {
         }
 
         /**
+         * 检查key是否在当前Bucket的范围内
+         *
          * @param key
          * @return
          */
@@ -519,11 +528,6 @@ public class RouteTable {
         @Override
         public int hashCode() {
             return prefix.hashCode();
-        }
-
-        @Override
-        public int compareTo(Bucket o) {
-            return lastActive.compareTo(o.lastActive);
         }
     }
 }

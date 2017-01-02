@@ -275,8 +275,7 @@ public class TorrentFile {
     }
 
     public String getInfoHash() {
-        byte[] encode = new byte[0];
-        encode = getInfo().encode();
+        byte[] encode = getInfo().encode();
         return Utils.toHex(Utils.SHA_1(encode));
     }
 
@@ -429,7 +428,7 @@ public class TorrentFile {
 
     public static void main(String[] args) {
         try {
-            TorrentFile torrentFile = TorrentFile.fromFile(new File("D:/The.Big.Bang.Theory.torrent"));
+            TorrentFile torrentFile = TorrentFile.fromFile(new File("/media/Software/The.Big.Bang.Theory.torrent"));
             System.out.println(torrentFile.getMagnet());
         } catch (IOException e) {
             e.printStackTrace();

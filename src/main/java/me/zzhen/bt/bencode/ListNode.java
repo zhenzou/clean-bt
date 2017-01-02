@@ -26,7 +26,7 @@ public class ListNode implements Node {
         while ((c = input.read()) != -1 && (char) c != ListNode.LIST_END) {
             char cc = (char) c;
             pos++;
-            Node node = DictionaryNode.decodeNext(new PushbackInputStream(input), cc, pos);
+            Node node = DictionaryNode.decodeNext(new PushbackInputStream(input), cc);
             list.addNode(node);
         }
         return list;
@@ -99,4 +99,18 @@ public class ListNode implements Node {
         return baos.toByteArray();
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        ListNode listNode = (ListNode) o;
+
+        return value.equals(listNode.value);
+    }
+
+    @Override
+    public int hashCode() {
+        return value.hashCode();
+    }
 }
