@@ -1,7 +1,6 @@
 package me.zzhen.bt.dht.krpc;
 
 import me.zzhen.bt.bencode.DictionaryNode;
-import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.bencode.StringNode;
 import me.zzhen.bt.dht.DhtApp;
 import me.zzhen.bt.dht.base.MetadataWorker;
@@ -10,17 +9,15 @@ import me.zzhen.bt.dht.base.NodeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.net.*;
-import java.util.HashSet;
-import java.util.Set;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
  * Project:CleanBT
  * Create Time: 2016/10/29.
- * Description: 全局只有个Krpc
+ * Description: 全局只有一个Krpc
  *
  * @author zzhen zzzhen1994@gmail.com
  */

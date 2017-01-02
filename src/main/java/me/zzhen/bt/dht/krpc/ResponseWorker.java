@@ -210,7 +210,6 @@ public class ResponseWorker extends Thread {
         try {
             DatagramPacket packet = new DatagramPacket(data, 0, data.length, address, port);
             socket.send(packet);
-//            logger.info("send response" + ":" + address.getHostAddress() + ":" + port + ":" + arg.toString());
         } catch (SocketTimeoutException e) {
             logger.error(e.getMessage());
             e.printStackTrace();
