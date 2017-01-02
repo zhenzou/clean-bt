@@ -42,12 +42,12 @@ public class Krpc implements RequestCallback {
     /**
      * 主要的线程发送线程池
      */
-    private ExecutorService sender = Executors.newFixedThreadPool(2 * Runtime.getRuntime().availableProcessors() + 2);
+    private ExecutorService sender = Executors.newFixedThreadPool(2 * Runtime.getRuntime().availableProcessors() + 1);
 
     /**
      * 请求处理线程池
      */
-    private ExecutorService receiver = Executors.newFixedThreadPool(2);
+    private ExecutorService receiver = Executors.newFixedThreadPool(3);
 
     /**
      * 获取MetaData的线程池
@@ -98,9 +98,8 @@ public class Krpc implements RequestCallback {
      */
     public void getPeers(NodeInfo target, NodeKey peer) {
         DictionaryNode msg = Message.makeRequest(peer, METHOD_GET_PEERS);
-        DictionaryNode arg = new DictionaryNode();
+        DictionaryNode arg = Message.makeArg();
         arg.addNode("info_hash", new StringNode(peer.getValue()));
-        arg.addNode("id", new StringNode(self.getValue()));
         msg.addNode("a", arg);
         send(msg, target);
     }
@@ -132,7 +131,6 @@ public class Krpc implements RequestCallback {
     public void send(DictionaryNode request, NodeInfo target) {
         if (!DhtApp.NODE.isBlackItem(target)) {
             sender.execute(new DataSendWorker(socket, request, target));
-            DhtApp.NODE.addNode(target);
         }
     }
 
@@ -151,7 +149,6 @@ public class Krpc implements RequestCallback {
             receiver.execute(new ResponseWorker(socket, address, port, node, this));
         }
     }
-
 
     /**
      * 响应ping请求
@@ -192,7 +189,9 @@ public class Krpc implements RequestCallback {
         } else {
             List<NodeInfo> infos = new ArrayList<>();
             infos.add(DhtApp.NODE.getSelf());
-            infos.addAll(DhtApp.NODE.routes.closest8Nodes(new NodeKey(id.decode())));
+            List<NodeInfo> close = DhtApp.NODE.routes.closest8Nodes(new NodeKey(id.decode()));
+            if (close.size() == 8) infos.addAll(close.subList(0, 7));
+            else infos.addAll(close);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             for (NodeInfo info : infos) {
                 try {
@@ -209,7 +208,6 @@ public class Krpc implements RequestCallback {
         resp.addNode("r", arg);
         send(resp, src);
     }
-
 
     /**
      * 响应find_node请求
@@ -253,6 +251,7 @@ public class Krpc implements RequestCallback {
         send(resp, src);
         //TODO check token
         if (!DhtApp.NODE.isBlackItem(src.getAddress(), src.getPort())) {
+
             fetcher.execute(new MetadataWorker(src.getAddress(), src.getPort(), id.decode()));
         } else {
             logger.info("this is a black item");

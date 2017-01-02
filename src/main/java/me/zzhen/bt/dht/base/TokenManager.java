@@ -1,10 +1,8 @@
 package me.zzhen.bt.dht.base;
 
-import me.zzhen.bt.dht.DhtConfig;
-
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -21,8 +19,7 @@ public class TokenManager {
      * token自增ID
      */
     private static volatile AtomicLong autoIncId = new AtomicLong();
-    private static final ConcurrentHashMap<Long, Token> tokens = new ConcurrentHashMap<>();
-
+    private static final Map<Long, Token> tokens = new HashMap<>();
 
     /**
      * 删除过期的token
@@ -50,6 +47,6 @@ public class TokenManager {
      * @return
      */
     public static Optional<Token> getToken(long id) {
-        return Optional.of(tokens.remove(id));
+        return Optional.ofNullable(tokens.remove(id));
     }
 }

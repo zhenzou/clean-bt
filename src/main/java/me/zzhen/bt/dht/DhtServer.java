@@ -1,9 +1,12 @@
 package me.zzhen.bt.dht;
 
+import me.zzhen.bt.bencode.Decoder;
 import me.zzhen.bt.bencode.DictionaryNode;
+import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.dht.base.NodeInfo;
 import me.zzhen.bt.dht.base.TokenManager;
 import me.zzhen.bt.dht.krpc.Krpc;
+import me.zzhen.bt.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,16 +52,16 @@ public class DhtServer {
                     socket.receive(packet);
                     int length = packet.getLength();
                     try {
-//                        Node node = Decoder.decode(bytes, 0, length).get(0);
-                        DictionaryNode node = DictionaryNode.decode(new ByteArrayInputStream(bytes, 0, length));
+                        Node node = Decoder.decode(bytes, 0, length).get(0);
+//                        DictionaryNode node = DictionaryNode.decode(new ByteArrayInputStream(bytes, 0, length));
                         InetAddress address = packet.getAddress();
                         int port = packet.getPort();
                         DhtApp.NODE.removeBlackItem(address, port);
-                        krpc.response(address, port, node);
+                        krpc.response(address, port, (DictionaryNode) node);
                     } catch (RuntimeException e) {
-                        logger.error("error :" + packet.getAddress().getHostAddress());
-                        logger.error("error :" + packet.getPort());
-                        logger.error("error :" + packet.getLength());
+//                        logger.error("error :" + packet.getAddress().getHostAddress());
+//                        logger.error("error :" + packet.getPort());
+//                        logger.error("error :" + packet.getLength());
                         logger.error(e.getMessage());
                     }
                 }
@@ -66,7 +69,6 @@ public class DhtServer {
                 logger.error(e.getMessage());
                 e.printStackTrace();
             } finally {
-                logger.info("socket close");
                 socket.close();
             }
         }).start();
@@ -81,7 +83,6 @@ public class DhtServer {
         //定时清理过期Token
         autoFindNode.scheduleAtFixedRate(TokenManager::clearTokens, DhtConfig.TOKEN_TIMEOUT, DhtConfig.TOKEN_TIMEOUT, TimeUnit.MINUTES);
     }
-
 
     public void init() {
         listen();

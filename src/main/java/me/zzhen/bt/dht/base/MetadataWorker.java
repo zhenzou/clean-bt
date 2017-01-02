@@ -1,7 +1,8 @@
 package me.zzhen.bt.dht.base;
 
 import com.sun.xml.internal.org.jvnet.mimepull.DecodingException;
-import me.zzhen.bt.bencode.*;
+import me.zzhen.bt.bencode.DictionaryNode;
+import me.zzhen.bt.bencode.IntNode;
 import me.zzhen.bt.dht.DhtApp;
 import me.zzhen.bt.dht.DhtConfig;
 import me.zzhen.bt.utils.IO;
@@ -10,7 +11,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.net.*;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
 
 /**
  * Project:CleanBT
@@ -128,6 +132,12 @@ public class MetadataWorker implements Runnable {
         }
     }
 
+    /**
+     * 判断是否握手成功
+     *
+     * @param in
+     * @return
+     */
     private boolean onHandShake(InputStream in) {
         byte[] bytes = IO.readKBytes(in, 68);
         if (bytes.length < 68) return false;
@@ -242,7 +252,6 @@ public class MetadataWorker implements Runnable {
                 byte[] head = IO.readKBytes(in, 6);
                 int length = Utils.bytesToInt(head, 0, 4);
                 logger.info("length:" + length);
-                logger.info("head:" + Utils.bytesToBin(head));
                 if (length == 0) return;
                 int msgId = head[4];
                 int extendId = head[5];
@@ -283,7 +292,7 @@ public class MetadataWorker implements Runnable {
                         } else {
                             logger.info("ut::::" + String.valueOf(pieces));
                             DictionaryNode decode = DictionaryNode.decode(new ByteArrayInputStream(pieces.toByteArray()));
-                            logger.info("UT_METADATA:" + decode.toString());
+                            logger.info("UT_METADATA:" + decode.getNode("files"));
                             return;
                         }
                     }

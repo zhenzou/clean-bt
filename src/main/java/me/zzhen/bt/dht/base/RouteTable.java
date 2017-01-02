@@ -25,15 +25,16 @@ import java.util.stream.Collectors;
 public class RouteTable {
 
     private static final Logger logger = LoggerFactory.getLogger(RouteTable.class.getName());
+
     /**
      * 路由表的节点数
      */
     private int size;
 
     /**
-     * 前缀树，根节点
+     * 前缀树，根节点,父节点为null
      */
-    private TreeNode root = new TreeNode((byte) 0);
+    private TreeNode root = new TreeNode((byte) 0, null);
 
     /**
      * 本地DHT节点的信息
@@ -50,7 +51,6 @@ public class RouteTable {
 
     public RouteTable(NodeInfo self) {
         this.self = self;
-        root = new TreeNode((byte) 0);
         Bucket init = new Bucket(0);
         buckets.add(init);
         root.value = init;
@@ -106,9 +106,9 @@ public class RouteTable {
             }
             Tuple<Bucket, Bucket> spit = bucket.split();
             if (spit == null) return false;
-            TreeNode left = new TreeNode((byte) 1);
+            TreeNode left = new TreeNode((byte) 1, item);
             left.value = spit._1;
-            TreeNode right = new TreeNode((byte) 0);
+            TreeNode right = new TreeNode((byte) 0, item);
             right.value = spit._2;
             item.left = left;
             item.right = right;
@@ -146,20 +146,40 @@ public class RouteTable {
     }
 
     public List<NodeInfo> closest8Nodes(NodeKey key) {
-        List<NodeInfo> nodes = closestNodes(key);
-        return nodes.size() == 8 ? nodes.subList(0, 7) : nodes;
+//        return closestKNodes(key, 8);
+        TreeNode treeNode = findTreeNode(key);
+        return treeNode.value.nodes.stream().map(wrapper -> wrapper.node).collect(Collectors.toList());
     }
 
-    /**
-     * 在添加节点的过程中已经保证分裂后的节点的Bucket是空的
-     *
-     * @param key
-     * @return 离key最近的K个节点
-     */
-    public List<NodeInfo> closestNodes(NodeKey key) {
-        TreeNode node = findTreeNode(key);
-        return node.value.nodes.stream().map(wrapper -> wrapper.node).collect(Collectors.toList());
-    }
+//    /**
+//     * 在添加节点的过程中已经保证分裂后的节点的Bucket是空的
+//     *
+//     * @param key
+//     * @return 离key最近的K个节点
+//     */
+//    public List<NodeInfo> closestKNodes(NodeKey key, int k) {
+//        TreeNode node = findTreeNode(key);
+//        List<NodeInfo> infos = node.value.nodes.stream().map(wrapper -> wrapper.node).collect(Collectors.toList());
+//        if (infos.size() == k) return infos;
+//        if (node == node.parent.left) return closestKNodes(node.parent.right, infos, k);
+//        else return closestKNodes(node.parent.left, infos, k);
+//    }
+//
+//    private List<NodeInfo> closestKNodes(TreeNode node, List<NodeInfo> infos, int k) {
+//        if (node.value == null || infos.size() == k) return infos;
+//        if (node == node.parent.left) return closestKNodes(node.parent.right, infos, k);
+//        if (node == node.parent.right) return closestKNodes(node.parent.left, infos, k);
+//        if (node.value != null) addClosestNode(node.value, infos, k);
+//    }
+//
+//    private void addClosestNode(Bucket value, List<NodeInfo> infos, int k) {
+//        int size = infos.size();
+//        for (NodeInfoWrapper node : value.nodes) {
+//            if (size >= k) break;
+//            infos.add(node.node);
+//        }
+//    }
+
 
     /**
      * 保存在刷新过程中访问的节点，将要删除或者调整，再次刷新的时候总是访问相同的节点
@@ -238,9 +258,11 @@ public class RouteTable {
          * 现在没什么用，以后扩展的时候有用
          */
         public final byte key;
+        public final TreeNode parent;
 
-        public TreeNode(byte key) {
+        public TreeNode(byte key, TreeNode parent) {
             this.key = key;
+            this.parent = parent;
         }
 
         Bucket value;
@@ -323,7 +345,7 @@ public class RouteTable {
     /**
      * 节点的最直接的容器
      */
-    private class Bucket  {
+    private class Bucket {
 
         private Instant lastActive = Instant.now();
 
@@ -368,10 +390,11 @@ public class RouteTable {
          */
         Tuple<Bucket, Bucket> split() {
             if (prefix.size == 160) return null;
-            Bucket rightBucket = new Bucket(prefix, false);
             Bucket leftBucket = new Bucket(prefix, true);
+            Bucket rightBucket = new Bucket(prefix, false);
             nodes.stream().map(wrapper -> wrapper.node).forEach(node -> reassignNode(node, leftBucket, rightBucket));
             candidates.forEach(node -> reassignNode(node, leftBucket, rightBucket));
+            logger.info("nodes:" + nodes.size() + ":candidate:" + candidates.size() + ":left:" + leftBucket.nodes.size() + ":right" + rightBucket.nodes.size());
             return new Tuple<>(leftBucket, rightBucket);
         }
 
@@ -489,7 +512,7 @@ public class RouteTable {
          * @return
          */
         public boolean isActive() {
-            return lastActive.plus(DhtConfig.BUCKET_FRESH, ChronoUnit.SECONDS).isAfter(Instant.now());
+            return lastActive.plusSeconds(DhtConfig.BUCKET_FRESH).isAfter(Instant.now());
         }
 
         /**

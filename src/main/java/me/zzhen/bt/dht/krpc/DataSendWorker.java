@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
 
 /**
  * Project:CleanBT
@@ -50,8 +49,7 @@ public class DataSendWorker implements Runnable {
         if (target == null) return;
         byte[] data = request.encode();
         try {
-            InetAddress address = target.getAddress();
-            DatagramPacket packet = new DatagramPacket(data, 0, data.length, address, target.getPort());
+            DatagramPacket packet = new DatagramPacket(data, 0, data.length, target.getAddress(), target.getPort());
             socket.send(packet);
         } catch (IOException e) {
             logger.error(e.getMessage());

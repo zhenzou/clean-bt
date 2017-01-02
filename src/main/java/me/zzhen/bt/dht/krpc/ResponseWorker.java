@@ -53,7 +53,6 @@ public class ResponseWorker extends Thread {
         this.address = address;
         this.port = port;
         this.callback = callback;
-
     }
 
     @Override

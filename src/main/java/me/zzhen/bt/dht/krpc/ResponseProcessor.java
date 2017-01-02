@@ -152,7 +152,7 @@ class ResponseProcessor implements Runnable {
             if (nodeInfo.getKey().equals(key)) {
                 logger.info("found node :" + nodeInfo.getAddress().getHostAddress() + ":" + nodeInfo.getPort());
             }
-            krpc.send(this.resp, nodeInfo);
+            krpc.send(resp, nodeInfo);
         }
     }
 

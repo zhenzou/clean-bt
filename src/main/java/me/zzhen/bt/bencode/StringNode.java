@@ -27,7 +27,7 @@ public class StringNode implements Node {
             if (Character.isDigit(c)) {
                 len.append((char) c);
             } else {
-                throw new DecoderException("expect a digital in  but found " + (char) c);
+                throw new DecoderException("expect a digital  but found " + (char) c);
             }
         }
         long length = Long.parseLong(len.toString().trim());

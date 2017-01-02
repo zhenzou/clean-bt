@@ -72,7 +72,7 @@ public class DictionaryNode implements Node {
                 if (Character.isDigit(c)) {
                     node = StringNode.decode(input);
                 } else {
-                    throw new DecoderException("not a legal char in ");
+                    throw new DecoderException("not a legal char");
                 }
                 break;
         }
