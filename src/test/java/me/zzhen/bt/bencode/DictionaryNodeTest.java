@@ -21,7 +21,9 @@ public class DictionaryNodeTest {
     public void decode() throws Exception {
         InputStream input = new FileInputStream("/media/Software/The.Big.Bang.Theory.torrent");
         DictionaryNode decode = DictionaryNode.decode(input);
-        System.out.println(decode.toString());
+        DictionaryNode info = (DictionaryNode) decode.getNode("info");
+        System.out.println(info.getNode("files"));
+//        System.out.println(decode.toString());
 
 //        String s = "228feb442808e84f6d370008004500010498cf4000e506807c23a54bc92bf1e0481fb49396d883211a29268b0e801800e535e500000101080a0033b85b00717993000000c514006431323a636f6d706c6574655f61676f69313465313a6d6431313a6c745f646f6e746861766569376531303a73686172655f6d6f646569386531313a75706c6f61645f6f6e6c7969336531323a75745f686f6c6570756e636869346531313a75745f6d65746164617461693265363a75745f7065786931656531333a6d657461646174615f73697a6569313833353265343a726571716935303065313a7631393a636c69656e745f746573742f312e302e362e30363a796f75726970343a2bf1e0486500000003091fb4";
 //        String s1 = "piece=0, total_size=18835, msg_type=1";
