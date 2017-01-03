@@ -168,6 +168,7 @@ public class EditorApp extends Application {
         for (TreeItem<FileTreeItemModel> child : children) {
             randomNameAll(child);
         }
+        fileTree.refresh();
     }
 
 

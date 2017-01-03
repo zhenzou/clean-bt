@@ -42,7 +42,7 @@ public class MetadataWorker implements Runnable {
      * BitTorrent 协议标识符，BEP03 规定
      */
     private static final String PSTR = "BitTorrent protocol";
-    private static final byte[] RESERVED = {0, 0, 0, 0, 0, 0, 0, 1};
+    private static final byte[] RESERVED = {0, 0, 0, 0, 16, 0, 0, 1};
 
     public static final byte PEER_MSG_CHOKE = 0;
     public static final byte PEER_MSG_UNCHOKE = 1;
@@ -121,11 +121,12 @@ public class MetadataWorker implements Runnable {
         ByteArrayOutputStream baos = new ByteArrayOutputStream(49 + 19);
         try {
             baos.write(PSTR.length());
-            RESERVED[5] |= 0x10;
             baos.write(PSTR.getBytes());
+            baos.write(RESERVED);
             baos.write(hash);
             baos.write(NodeKey.genRandomKey().getValue());
             out.write(baos.toByteArray());
+            out.flush();
         } catch (IOException e) {
             logger.error(e.getMessage());
             e.printStackTrace();
@@ -179,6 +180,7 @@ public class MetadataWorker implements Runnable {
             baos.write(data);
             logger.info("send:" + new String(baos.toByteArray()));
             out.write(baos.toByteArray());
+            out.flush();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -257,7 +259,7 @@ public class MetadataWorker implements Runnable {
                 int extendId = head[5];
                 logger.info("type:" + msgId);
                 logger.info("extend:" + extendId);
-                byte[] data = IO.readAllBytes(in);
+                byte[] data = IO.readKBytes(in, length - 2);
                 logger.info("data length:" + data.length);
 //                可能有bit field，所以可能会超过length,length也包括了msgId，extendId两个字节，所以要减2
                 if (data.length < length - 2) return;

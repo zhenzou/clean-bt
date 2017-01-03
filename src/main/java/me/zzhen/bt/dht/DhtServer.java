@@ -48,17 +48,16 @@ public class DhtServer {
             try {
                 while (true) {
                     byte[] bytes = new byte[1024];
-                    DatagramPacket packet = new DatagramPacket(bytes, 1024);
+                    DatagramPacket packet = new DatagramPacket(bytes, bytes.length);
                     socket.receive(packet);
                     int length = packet.getLength();
                     try {
-                        Node node = Decoder.decode(bytes, 0, length).get(0);
-//                        DictionaryNode node = DictionaryNode.decode(new ByteArrayInputStream(bytes, 0, length));
+                        DictionaryNode node = DictionaryNode.decode(new ByteArrayInputStream(bytes, 0, length));
                         InetAddress address = packet.getAddress();
                         int port = packet.getPort();
-                        DhtApp.NODE.removeBlackItem(address, port);
-                        krpc.response(address, port, (DictionaryNode) node);
+                        krpc.response(address, port, node);
                     } catch (RuntimeException e) {
+                        logger.error("data:" + packet.getLength() + Utils.toHex(bytes, 0, length));
 //                        logger.error("error :" + packet.getAddress().getHostAddress());
 //                        logger.error("error :" + packet.getPort());
 //                        logger.error("error :" + packet.getLength());

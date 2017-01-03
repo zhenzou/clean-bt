@@ -39,11 +39,11 @@ public class DhtConfig {
     /**
      * bucket 刷新间隔，单位为秒
      */
-    public static final int BUCKET_FRESH = 5;
+    public static final int BUCKET_FRESH = 0;
     /**
      * 每个节点的有效时间，单位为秒
      */
-    public static final int NODE_FRESH = 5;
+    public static final int NODE_FRESH = 0;
     /**
      * 自动查找间隔,时间为秒
      */

@@ -147,38 +147,59 @@ public class RouteTable {
 
     public List<NodeInfo> closest8Nodes(NodeKey key) {
 //        return closestKNodes(key, 8);
-        TreeNode treeNode = findTreeNode(key);
-        return treeNode.value.nodes.stream().map(wrapper -> wrapper.node).collect(Collectors.toList());
+//        TreeNode treeNode = findTreeNode(key);
+//        return treeNode.value.nodes.stream().map(wrapper -> wrapper.node).collect(Collectors.toList());
+        return closestKNodes(key, 8);
     }
 
-//    /**
-//     * 在添加节点的过程中已经保证分裂后的节点的Bucket是空的
-//     *
-//     * @param key
-//     * @return 离key最近的K个节点
-//     */
-//    public List<NodeInfo> closestKNodes(NodeKey key, int k) {
-//        TreeNode node = findTreeNode(key);
-//        List<NodeInfo> infos = node.value.nodes.stream().map(wrapper -> wrapper.node).collect(Collectors.toList());
-//        if (infos.size() == k) return infos;
-//        if (node == node.parent.left) return closestKNodes(node.parent.right, infos, k);
-//        else return closestKNodes(node.parent.left, infos, k);
-//    }
-//
-//    private List<NodeInfo> closestKNodes(TreeNode node, List<NodeInfo> infos, int k) {
-//        if (node.value == null || infos.size() == k) return infos;
-//        if (node == node.parent.left) return closestKNodes(node.parent.right, infos, k);
-//        if (node == node.parent.right) return closestKNodes(node.parent.left, infos, k);
-//        if (node.value != null) addClosestNode(node.value, infos, k);
-//    }
-//
-//    private void addClosestNode(Bucket value, List<NodeInfo> infos, int k) {
-//        int size = infos.size();
-//        for (NodeInfoWrapper node : value.nodes) {
-//            if (size >= k) break;
-//            infos.add(node.node);
-//        }
-//    }
+    /**
+     * 在添加节点的过程中已经保证分裂后的节点的Bucket是空的
+     *
+     * @param key
+     * @return 离key最近的K个节点
+     */
+    public List<NodeInfo> closestKNodes(NodeKey key, int k) {
+        TreeNode node = findTreeNode(key);
+        List<NodeInfo> infos = new ArrayList<>(8);
+        closestKNodes(node, infos, k);
+        return infos;
+    }
+
+    /**
+     * 递归向上查找节点，直到找到的节点数为k，注意根节点的parent节点为null
+     *
+     * @param node
+     * @param infos
+     * @param k
+     */
+    private void closestKNodes(TreeNode node, List<NodeInfo> infos, int k) {
+        if (infos.size() >= k) return;
+        addClosestNode(node, infos, k);
+        if (node.parent == null || infos.size() >= k) return;
+        if (node == node.parent.left) closestKNodes(node.parent.right, infos, k);
+        if (node == node.parent.right) closestKNodes(node.parent.left, infos, k);
+    }
+
+
+    /**
+     * 将节点node或者node的字节点的Dht节点添加到返回的列表中
+     *
+     * @param node
+     * @param infos
+     * @param k
+     */
+    private void addClosestNode(TreeNode node, List<NodeInfo> infos, int k) {
+        if (node == null || infos.size() >= k) return;
+        if (node.value == null) {
+            addClosestNode(node.left, infos, k);
+            addClosestNode(node.right, infos, k);
+        } else {
+            for (NodeInfoWrapper wrapper : node.value.nodes) {
+                if (infos.size() >= k) break;
+                infos.add(wrapper.node);
+            }
+        }
+    }
 
 
     /**
@@ -394,7 +415,6 @@ public class RouteTable {
             Bucket rightBucket = new Bucket(prefix, false);
             nodes.stream().map(wrapper -> wrapper.node).forEach(node -> reassignNode(node, leftBucket, rightBucket));
             candidates.forEach(node -> reassignNode(node, leftBucket, rightBucket));
-            logger.info("nodes:" + nodes.size() + ":candidate:" + candidates.size() + ":left:" + leftBucket.nodes.size() + ":right" + rightBucket.nodes.size());
             return new Tuple<>(leftBucket, rightBucket);
         }
 

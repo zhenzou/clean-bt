@@ -42,12 +42,12 @@ public class Krpc implements RequestCallback {
     /**
      * 主要的线程发送线程池
      */
-    private ExecutorService sender = Executors.newFixedThreadPool(2 * Runtime.getRuntime().availableProcessors() + 1);
+    private ExecutorService sender = Executors.newFixedThreadPool(2 * Runtime.getRuntime().availableProcessors() + 2);
 
     /**
      * 请求处理线程池
      */
-    private ExecutorService receiver = Executors.newFixedThreadPool(3);
+    private ExecutorService receiver = Executors.newSingleThreadExecutor();
 
     /**
      * 获取MetaData的线程池
@@ -251,7 +251,6 @@ public class Krpc implements RequestCallback {
         send(resp, src);
         //TODO check token
         if (!DhtApp.NODE.isBlackItem(src.getAddress(), src.getPort())) {
-
             fetcher.execute(new MetadataWorker(src.getAddress(), src.getPort(), id.decode()));
         } else {
             logger.info("this is a black item");
