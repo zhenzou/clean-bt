@@ -17,7 +17,7 @@ public class IntNode implements Node {
 
     public static IntNode decode(InputStream input) throws IOException {
         int c = -1;
-        if ((c = input.read()) != -1 && c != INT_START) throw new IllegalArgumentException("IntNode must start with i");
+        if ((c = input.read()) == -1 || c != INT_START) throw new IllegalArgumentException("IntNode must start with i");
         StringBuilder sb = new StringBuilder();
         while ((c = input.read()) != -1 && c != IntNode.INT_END) {
             char cc = (char) c;

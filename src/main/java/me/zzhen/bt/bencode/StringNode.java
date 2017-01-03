@@ -19,8 +19,8 @@ public class StringNode implements Node {
 
     public static StringNode decode(InputStream input) throws IOException {
         int c;
-        if ((c = input.read()) != -1 && !Character.isDigit(c))
-            throw new IllegalArgumentException("ListNode must start with digital");
+        if ((c = input.read()) == -1 || !Character.isDigit(c))
+            throw new IllegalArgumentException("StringNode must start with digital");
         StringBuilder len = new StringBuilder();
         len.append((char) c);
         while ((c = input.read()) != -1 && (char) c != StringNode.STRING_VALUE_START) {

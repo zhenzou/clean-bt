@@ -19,7 +19,6 @@ import java.util.Map;
  */
 public class DictionaryNode implements Node {
 
-
     public static DictionaryNode decode(InputStream input) throws IOException {
         PushbackInputStream push = new PushbackInputStream(input);
         int c = push.read();
@@ -31,7 +30,7 @@ public class DictionaryNode implements Node {
             Node node = null;
             char cur = (char) c;
             if (inKey) {
-                if (Character.isDigit(c)) {
+                if (Character.isDigit(cur)) {
                     push.unread(c);
                     key = StringNode.decode(push).toString();
                     inKey = false;

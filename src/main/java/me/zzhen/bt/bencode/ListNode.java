@@ -19,13 +19,11 @@ public class ListNode implements Node {
 
     public static ListNode decode(InputStream input) throws IOException {
         int c;
-        if ((c = input.read()) != -1 && c != LIST_START)
+        if ((c = input.read()) == -1 || c != LIST_START)
             throw new IllegalArgumentException("ListNode must start with " + LIST_START);
-        int pos = 1;
         ListNode list = new ListNode();
         while ((c = input.read()) != -1 && (char) c != ListNode.LIST_END) {
             char cc = (char) c;
-            pos++;
             Node node = DictionaryNode.decodeNext(new PushbackInputStream(input), cc);
             list.addNode(node);
         }

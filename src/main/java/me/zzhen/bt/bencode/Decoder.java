@@ -162,7 +162,7 @@ public class Decoder {
             Node node = null;
             char cur = (char) c;
             if (inKey) {
-                if (Character.isDigit(c)) {
+                if (Character.isDigit(cur)) {
                     key = decodeString(c).toString();
                     inKey = false;
                 } else {
