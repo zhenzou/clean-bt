@@ -1,11 +1,14 @@
 package me.zzhen.bt.dht.base;
 
+import me.zzhen.bt.bencode.Node;
+import me.zzhen.bt.common.Bitmap;
 import me.zzhen.bt.dht.krpc.Krpc;
 import org.junit.Test;
 
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
@@ -49,19 +52,42 @@ public class RouteTableTest {
     @Test
     public void addNode() throws Exception {
         NodeKey local = NodeKey.genRandomKey();
+        System.out.println("local:" + local);
         RouteTable table = new RouteTable(new NodeInfo(InetAddress.getLocalHost(), 100, local));
         for (int i = 0; i < 1000000; i++) {
             NodeKey key = NodeKey.genRandomKey();
+//            Bitmap bits = key.getBits();
+//            for (int i1 = 0; i1 < 15; i1++) {
+//                bits.set(i1, local.prefix(i1));
+//            }
             NodeInfo info = new NodeInfo(InetAddress.getLocalHost(), 200, key);
             table.addNode(info);
-//            table.remove(key);
         }
-        table.refresh(new Krpc(local, new DatagramSocket()));
         System.out.println(table.size());
-
-//        table.preOrderPrint(table.getRoot(), "");
-//        System.out.println(table.ttSize);
+        for (int i = 0; i < 1000; i++) {
+            NodeKey randomKey = NodeKey.genRandomKey();
+//            System.out.println(randomKey);
+            List<NodeInfo> infos = table.closest8Nodes(randomKey);
+            System.out.println(infos.size());
+//            for (NodeInfo info : infos) {
+//                System.out.println(info);
+//            }
+        }
         assertEquals(table.size(table.getRoot()), table.size());
+
+        table = new RouteTable(new NodeInfo(InetAddress.getLocalHost(), 100, local));
+        for (int i = 0; i < 6; i++) {
+            NodeKey key = NodeKey.genRandomKey();
+            NodeInfo info = new NodeInfo(InetAddress.getLocalHost(), 200, key);
+            table.addNode(info);
+        }
+        List<NodeInfo> infos = table.closest8Nodes(local);
+        System.out.println(infos.size());
+        for (NodeInfo info : infos) {
+            System.out.println(info);
+        }
+        assertEquals(table.size(table.getRoot()), table.size());
+
     }
 
     @Test

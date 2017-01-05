@@ -6,6 +6,7 @@ import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.bencode.StringNode;
 import me.zzhen.bt.dht.DhtApp;
 import me.zzhen.bt.dht.base.*;
+import me.zzhen.bt.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +36,6 @@ public class Krpc implements RequestCallback {
     public static final String METHOD_GET_PEERS = "get_peers";
     public static final String METHOD_FIND_NODE = "find_node";
 
-    private final NodeKey self;
 
     private DatagramSocket socket;
 
@@ -54,8 +54,7 @@ public class Krpc implements RequestCallback {
      */
     private ExecutorService fetcher = Executors.newSingleThreadExecutor();
 
-    public Krpc(NodeKey self, DatagramSocket socket) {
-        this.self = self;
+    public Krpc(DatagramSocket socket) {
         this.socket = socket;
     }
 
@@ -68,8 +67,7 @@ public class Krpc implements RequestCallback {
      */
     public void ping(NodeInfo node) {
         DictionaryNode request = Message.makeRequest(node.getKey(), METHOD_PING);
-        DictionaryNode arg = new DictionaryNode();
-        arg.addNode("id", new StringNode(self.getValue()));
+        DictionaryNode arg = Message.makeArg();
         request.addNode("a", arg);
         send(request, node);
     }
@@ -83,23 +81,20 @@ public class Krpc implements RequestCallback {
      */
     public void findNode(NodeInfo target, NodeKey id) {
         DictionaryNode msg = Message.makeRequest(id, METHOD_FIND_NODE);
-        DictionaryNode arg = new DictionaryNode();
+        DictionaryNode arg = Message.makeArg();
         arg.addNode("target", new StringNode(id.getValue()));
-        arg.addNode("id", new StringNode(self.getValue()));
         msg.addNode("a", arg);
         send(msg, target);
     }
 
     /**
-     * 每次请求都会有Token，看看能不能通过获取吧
-     *
      * @param target
-     * @param peer
+     * @param id
      */
-    public void getPeers(NodeInfo target, NodeKey peer) {
-        DictionaryNode msg = Message.makeRequest(peer, METHOD_GET_PEERS);
+    public void getPeers(NodeInfo target, NodeKey id) {
+        DictionaryNode msg = Message.makeRequest(id, METHOD_GET_PEERS);
         DictionaryNode arg = Message.makeArg();
-        arg.addNode("info_hash", new StringNode(peer.getValue()));
+        arg.addNode("info_hash", new StringNode(id.getValue()));
         msg.addNode("a", arg);
         send(msg, target);
     }
@@ -124,18 +119,18 @@ public class Krpc implements RequestCallback {
     /**
      * 使用连接池将数据发送出去
      *
-     * @param request
+     * @param data
      * @param target
      * @return
      */
-    public void send(DictionaryNode request, NodeInfo target) {
+    public void send(DictionaryNode data, NodeInfo target) {
         if (!DhtApp.NODE.isBlackItem(target)) {
-            sender.execute(new DataSendWorker(socket, request, target));
+            sender.execute(new DataSendWorker(socket, data, target));
         }
     }
 
     /**
-     * 处理响应的方法,包括
+     * 处理响应的方法,包括请求的响应和请求
      *
      * @param address
      * @param port
@@ -177,31 +172,32 @@ public class Krpc implements RequestCallback {
     @Override
     public void onGetPeer(NodeInfo src, Node t, Node id) {
         DictionaryNode resp = Message.makeResponse(t);
-        List<InetSocketAddress> peers = PeerManager.PM.getPeers(new NodeKey(id.decode()));
         DictionaryNode arg = Message.makeArg();
-        if (peers != null) {
-            ListNode values = new ListNode();
-            for (InetSocketAddress peer : peers) {
-                StringNode node = new StringNode(PeerManager.compact(peer));
-                values.addNode(node);
-            }
-            arg.addNode("values", values);
+        if (DhtApp.NODE.isCrawlMode()) {
+            arg.addNode("id", new StringNode(DhtApp.NODE.id(id.decode()).getValue()));
+            arg.addNode("nodes", new StringNode(""));
         } else {
-            List<NodeInfo> infos = new ArrayList<>();
-            infos.add(DhtApp.NODE.getSelf());
-            List<NodeInfo> close = DhtApp.NODE.routes.closest8Nodes(new NodeKey(id.decode()));
-            if (close.size() == 8) infos.addAll(close.subList(0, 7));
-            else infos.addAll(close);
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            for (NodeInfo info : infos) {
-                try {
-                    baos.write(info.compactNodeInfo());
-                } catch (IOException e) {
-                    e.printStackTrace();
+            List<InetSocketAddress> peers = PeerManager.PM.getPeers(new NodeKey(id.decode()));
+            if (peers != null) {
+                ListNode values = new ListNode();
+                for (InetSocketAddress peer : peers) {
+                    StringNode node = new StringNode(PeerManager.compact(peer));
+                    values.addNode(node);
                 }
+                arg.addNode("values", values);
+            } else {
+                List<NodeInfo> infos = DhtApp.NODE.routes.closest8Nodes(new NodeKey(id.decode()));
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                for (NodeInfo info : infos) {
+                    try {
+                        baos.write(info.compactNodeInfo());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                StringNode nodes = new StringNode(baos.toByteArray());
+                arg.addNode("nodes", nodes);
             }
-            StringNode nodes = new StringNode(baos.toByteArray());
-            arg.addNode("nodes", nodes);
         }
         Token token = TokenManager.newToken(new NodeKey(id.decode()), Krpc.METHOD_GET_PEERS);
         arg.addNode("token", new StringNode(token.id + ""));
@@ -217,11 +213,13 @@ public class Krpc implements RequestCallback {
      * @param id
      */
     @Override
-    public void onFindNode(NodeInfo src, Node t, NodeKey id) {
+    public void onFindNode(NodeInfo src, Node t, Node id) {
         DictionaryNode resp = Message.makeResponse(t);
         List<NodeInfo> infos = new ArrayList<>();
-        infos.add(DhtApp.NODE.getSelf());//将自己添加到发送给别人的节点
-        infos.addAll(DhtApp.NODE.routes.closest8Nodes(id));
+        infos.add(DhtApp.NODE.getSelf());
+        List<NodeInfo> close = DhtApp.NODE.routes.closest8Nodes(new NodeKey(id.decode()));
+        if (close.size() == 8) infos.addAll(close.subList(0, 7));
+        else infos.addAll(close);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         for (NodeInfo info : infos) {
             try {
@@ -232,8 +230,9 @@ public class Krpc implements RequestCallback {
         }
         StringNode nodes = new StringNode(baos.toByteArray());
         DictionaryNode arg = Message.makeArg();
-        arg.addNode("nodes", nodes);//TODO values
+        arg.addNode("nodes", nodes);
         resp.addNode("r", arg);
+        send(resp, src);
     }
 
     /**
@@ -251,7 +250,7 @@ public class Krpc implements RequestCallback {
         send(resp, src);
         //TODO check token
         if (!DhtApp.NODE.isBlackItem(src.getAddress(), src.getPort())) {
-            fetcher.execute(new MetadataWorker(src.getAddress(), src.getPort(), id.decode()));
+            fetcher.execute(new MetadataWorker(src.getAddress(), src.getPort(), Utils.toHex(id.decode()).toLowerCase()));
         } else {
             logger.info("this is a black item");
         }

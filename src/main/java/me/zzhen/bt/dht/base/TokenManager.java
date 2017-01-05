@@ -1,8 +1,7 @@
 package me.zzhen.bt.dht.base;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -19,25 +18,44 @@ public class TokenManager {
      * token自增ID
      */
     private static volatile AtomicLong autoIncId = new AtomicLong();
-    private static final Map<Long, Token> tokens = new HashMap<>();
-
     /**
-     * 删除过期的token
+     * 保存ID与Token 的键值对
      */
-    public static void clearTokens() {
-        tokens.entrySet().removeIf(entry -> !entry.getValue().isLive());
-    }
+    private static final ConcurrentHashMap<Long, Token> tokens = new ConcurrentHashMap<>();
 
     /**
+     * 新建一个请求中的t参数类型的Token实例
+     *
      * @param key    请求的目标ID
      * @param method 请求的方法
      * @return id is a long
      */
     public static Token newToken(NodeKey key, String method) {
         long id = autoIncId.addAndGet(1);
-        Token token = new Token(key, id, method);
+        Token token = new Token(key, id, method, false);
         tokens.put(id, token);
         return token;
+    }
+
+    /**
+     * 新建一个get_peers响应中的token参数类型的Token实例
+     *
+     * @param key    请求的目标ID
+     * @param method 请求的方法
+     * @return id is a long
+     */
+    public static Token newTokenToken(NodeKey key, String method) {
+        long id = autoIncId.addAndGet(1);
+        Token token = new Token(key, id, method, true);
+        tokens.put(id, token);
+        return token;
+    }
+
+    /**
+     * 删除过期的token
+     */
+    public static void clearTokens() {
+        tokens.entrySet().removeIf(entry -> !entry.getValue().isLive());
     }
 
     /**
@@ -48,5 +66,9 @@ public class TokenManager {
      */
     public static Optional<Token> getToken(long id) {
         return Optional.ofNullable(tokens.remove(id));
+    }
+
+    public static int size() {
+        return tokens.size();
     }
 }

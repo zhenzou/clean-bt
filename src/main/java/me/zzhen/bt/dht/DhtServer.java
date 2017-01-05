@@ -46,10 +46,11 @@ public class DhtServer {
     private void listen() {
         new Thread(() -> {
             try {
+                byte[] bytes = new byte[1024];
                 while (true) {
-                    byte[] bytes = new byte[1024];
                     DatagramPacket packet = new DatagramPacket(bytes, bytes.length);
                     socket.receive(packet);
+                    if (DhtApp.NODE.isBlackItem(packet.getAddress(), packet.getPort())) continue;
                     int length = packet.getLength();
                     try {
                         DictionaryNode node = DictionaryNode.decode(new ByteArrayInputStream(bytes, 0, length));
@@ -57,11 +58,8 @@ public class DhtServer {
                         int port = packet.getPort();
                         krpc.response(address, port, node);
                     } catch (RuntimeException e) {
-                        logger.error("data:" + packet.getLength() + Utils.toHex(bytes, 0, length));
-//                        logger.error("error :" + packet.getAddress().getHostAddress());
-//                        logger.error("error :" + packet.getPort());
-//                        logger.error("error :" + packet.getLength());
-                        logger.error(e.getMessage());
+//                        logger.error("data:" + packet.getLength() + Utils.toHex(bytes, 0, length));
+//                        logger.error(e.getMessage());
                     }
                 }
             } catch (IOException e) {

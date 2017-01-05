@@ -81,31 +81,36 @@ class ResponseProcessor implements Runnable {
 
     @Override
     public void run() {
-        long id = Long.parseLong(resp.getNode("t").toString());
-        Optional<Token> optional = TokenManager.getToken(id);
-        optional.ifPresent(token -> {
-            key = token.target;
-            resp = (DictionaryNode) resp.getNode("r");
-            DhtApp.NODE.addNode(new NodeInfo(address, port, new NodeKey(resp.getNode("id").decode())));
-            method = token.method;
-            switch (method) {
-                case METHOD_PING:
-                    processPing();
-                    break;
-                case METHOD_GET_PEERS:
-                    processGetPeers();
-                    break;
-                case METHOD_FIND_NODE:
-                    processFindNode();
-                    break;
-                case METHOD_ANNOUNCE_PEER:
-                    processAnnouncePeer(resp);
-                    break;
-                default:
-                    break;
-            }
-        });
-
+        try {
+            long id = Long.parseLong(resp.getNode("t").toString());
+            Optional<Token> optional = TokenManager.getToken(id);
+            optional.ifPresent(token -> {
+                key = token.target;
+                resp = (DictionaryNode) resp.getNode("r");
+                byte[] ids = resp.getNode("id").decode();
+                if (ids.length != 20) return;
+                DhtApp.NODE.addNode(new NodeInfo(address, port, new NodeKey(ids)));
+                method = token.method;
+                switch (method) {
+                    case METHOD_PING:
+                        processPing();
+                        break;
+                    case METHOD_GET_PEERS:
+                        processGetPeers();
+                        break;
+                    case METHOD_FIND_NODE:
+                        processFindNode();
+                        break;
+                    case METHOD_ANNOUNCE_PEER:
+                        processAnnouncePeer(resp);
+                        break;
+                    default:
+                        break;
+                }
+            });
+        } catch (NumberFormatException e) {
+            logger.error(e.getMessage());
+        }
     }
 
     /**
@@ -119,12 +124,10 @@ class ResponseProcessor implements Runnable {
      * 处理get_peers的响应
      */
     private void processGetPeers() {
-        //TODO 真正的实现Token管理
         ListNode values = (ListNode) resp.getNode("values");
         if (values == null) {
             StringNode nodes = (StringNode) resp.getNode("nodes");
             byte[] decode = nodes.decode();
-            logger.info("length :" + decode.length);
             for (int i = 0; i < decode.length; i += 26) {
                 NodeInfo nodeInfo = NodeInfo.fromBytes(decode, i);
                 krpc.send(resp, nodeInfo);
@@ -144,15 +147,27 @@ class ResponseProcessor implements Runnable {
      */
     private void processFindNode() {
         StringNode nodes = (StringNode) resp.getNode("nodes");
+        if (nodes == null) return;
         byte[] decode = nodes.decode();
         int len = decode.length;
-//        logger.info("length :" + decode.length);
+        if (len % 26 != 0) {
+            logger.error("find node resp is not correct");
+            return;
+        }
+        boolean found = false;
         for (int i = 0; i < len; i += 26) {
-            NodeInfo nodeInfo = NodeInfo.fromBytes(decode, i);
-            if (nodeInfo.getKey().equals(key)) {
-                logger.info("found node :" + nodeInfo.getAddress().getHostAddress() + ":" + nodeInfo.getPort());
+            NodeInfo node = NodeInfo.fromBytes(decode, i);
+            if (node.getKey().equals(key)) {
+                found = true;
+                logger.info("found node :" + node.getAddress().getHostAddress() + ":" + node.getPort());
             }
-            krpc.send(resp, nodeInfo);
+            DhtApp.NODE.addNode(node);
+        }
+        if (!found) {
+            List<NodeInfo> infos = DhtApp.NODE.routes.closest8Nodes(key);
+            for (NodeInfo info : infos) {
+                krpc.findNode(info, key);
+            }
         }
     }
 

@@ -2,17 +2,18 @@ package me.zzhen.bt.dht.base;
 
 import me.zzhen.bt.common.Bitmap;
 import me.zzhen.bt.common.Tuple;
+import me.zzhen.bt.dht.DhtApp;
 import me.zzhen.bt.dht.DhtConfig;
 import me.zzhen.bt.dht.krpc.Krpc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Collectors;
 
 /**
  * Project:CleanBT
@@ -42,17 +43,23 @@ public class RouteTable {
     private final NodeInfo self;
 
     /**
-     * 便于更新,不然会重复请求相同的节点
+     * 便于操作
      */
-    private List<Bucket> buckets = new ArrayList<>();
+    private Map<Bitmap, Bucket> buckets = new HashMap<>();
+    /**
+     * 保存全部的DHT节点信息，便于操作
+     */
+    private Map<InetSocketAddress, NodeInfo> nodes = new HashMap<>();
 
-
+    /**
+     * 在添加节点以及刷新的时候需要加锁
+     */
     private final ReentrantLock lock = new ReentrantLock();
 
     public RouteTable(NodeInfo self) {
         this.self = self;
         Bucket init = new Bucket(0);
-        buckets.add(init);
+        buckets.put(init.prefix, init);
         root.value = init;
     }
 
@@ -70,7 +77,13 @@ public class RouteTable {
         if (key == null) return;
         try {
             lock.lock();
-            if (size > DhtConfig.ROUTETABLE_SIZE) return;
+            Optional<NodeInfo> optional = getByAddr(node.getAddress(), node.getPort());
+            if (optional.isPresent() && !optional.get().equals(node)) {
+                DhtApp.NODE.addBlackItem(node.getAddress(), node.getPort());
+                removeByAddr(new InetSocketAddress(node.getAddress(), node.getPort()));
+                return;
+            }
+            if (size >= DhtConfig.ROUTETABLE_SIZE) return;
             TreeNode item = findTreeNode(key);
             if (item.value == null) return;
             if (addNodeToBucket(node, item)) {
@@ -96,14 +109,13 @@ public class RouteTable {
         NodeKey key = node.getKey();
         if (bucket.contains(node)) {
             repeat++;
-            bucket.refresh(node);
+            bucket.update(node);
             return false;
-        }
-        if (bucket.size() == 8) {
-            if (!bucket.checkRange(self.getKey())) {
-                bucket.addCandidate(node);
-                return false;
-            }
+        } else if (bucket.size() < 8) {
+            nodes.put(new InetSocketAddress(node.getAddress(), node.getPort()), node);
+            bucket.addNode(node);
+            return true;
+        } else if (bucket.checkRange(node.getKey())) {
             Tuple<Bucket, Bucket> spit = bucket.split();
             if (spit == null) return false;
             TreeNode left = new TreeNode((byte) 1, item);
@@ -112,20 +124,23 @@ public class RouteTable {
             right.value = spit._2;
             item.left = left;
             item.right = right;
-            buckets.remove(item.value);
+            buckets.remove(item.value.prefix);
             item.value = null;
-            buckets.add(spit._1);
-            buckets.add(spit._2);
-            if (left.value.checkRange(key)) addNodeToBucket(node, left);
-            else addNodeToBucket(node, right);
-        } else {
-            bucket.addNode(node);
+            buckets.put(spit._1.prefix, spit._1);
+            buckets.put(spit._2.prefix, spit._2);
+            if (left.value.checkRange(key)) return addNodeToBucket(node, left);
+            else return addNodeToBucket(node, right);
         }
-        return true;
+        return false;
     }
 
-    //Test
-    public int size(RouteTable.TreeNode root) {
+    /**
+     * 得到以Root节点为根节点的子树的总节点个数
+     *
+     * @param root
+     * @return
+     */
+    public int size(TreeNode root) {
         int size = 0;
         if (root == null) return 0;
         if (root.value != null) {
@@ -134,6 +149,40 @@ public class RouteTable {
         size += size(root.left);
         size += size(root.right);
         return size;
+    }
+
+    /**
+     * 通过Socket地址得到相应的DHT节点信息
+     *
+     * @param address
+     * @return
+     */
+    public Optional<NodeInfo> getByAddr(InetSocketAddress address) {
+        return Optional.ofNullable(nodes.get(address));
+    }
+
+    public Optional<NodeInfo> getByAddr(InetAddress address, int port) {
+        return getByAddr(new InetSocketAddress(address, port));
+    }
+
+    /**
+     * 根据地址删除对应的DHT节点
+     *
+     * @param address
+     */
+    public void removeByAddr(InetSocketAddress address) {
+        Optional<NodeInfo> optional = Optional.ofNullable(nodes.get(address));
+        optional.ifPresent(node -> removeById(node.getKey()));
+    }
+
+    /**
+     * 根据ID删除对应的节点
+     *
+     * @param key
+     */
+    private void removeById(NodeKey key) {
+        TreeNode treeNode = findTreeNode(key);
+        treeNode.value.remove(key);
     }
 
     /**
@@ -146,9 +195,6 @@ public class RouteTable {
     }
 
     public List<NodeInfo> closest8Nodes(NodeKey key) {
-//        return closestKNodes(key, 8);
-//        TreeNode treeNode = findTreeNode(key);
-//        return treeNode.value.nodes.stream().map(wrapper -> wrapper.node).collect(Collectors.toList());
         return closestKNodes(key, 8);
     }
 
@@ -173,23 +219,20 @@ public class RouteTable {
      * @param k
      */
     private void closestKNodes(TreeNode node, List<NodeInfo> infos, int k) {
-        if (infos.size() >= k) return;
+        while (size(node) < k && node.parent != null) node = node.parent;
         addClosestNode(node, infos, k);
-        if (node.parent == null || infos.size() >= k) return;
-        if (node == node.parent.left) closestKNodes(node.parent.right, infos, k);
-        if (node == node.parent.right) closestKNodes(node.parent.left, infos, k);
     }
 
-
     /**
-     * 将节点node或者node的字节点的Dht节点添加到返回的列表中
+     * 将节点node或者node的子节点的Dht节点添加到返回的列表中
      *
      * @param node
      * @param infos
      * @param k
      */
     private void addClosestNode(TreeNode node, List<NodeInfo> infos, int k) {
-        if (node == null || infos.size() >= k) return;
+
+        if (node == null || infos.size() == k) return;
         if (node.value == null) {
             addClosestNode(node.left, infos, k);
             addClosestNode(node.right, infos, k);
@@ -207,6 +250,7 @@ public class RouteTable {
      */
     private List<NodeKey> keys = new ArrayList<>(DhtConfig.AUTO_FIND_SIZE);
 
+
     /**
      * 刷新路由表的不获取的节点
      *
@@ -215,15 +259,16 @@ public class RouteTable {
     public void refresh(Krpc krpc) {
         try {
             if (lock.tryLock(10, TimeUnit.SECONDS)) {
-                buckets.stream().filter(bucket -> !bucket.isActive() && !(bucket.size() == 0))
+                buckets.entrySet().stream().map(Map.Entry::getValue).filter(bucket -> !bucket.isActive() && !(bucket.size() == 0))
                         .flatMap(bucket -> bucket.nodes.stream())
+                        .sorted()
                         .limit(DhtConfig.AUTO_FIND_SIZE)
                         .forEach(wrapper -> {
                             krpc.findNode(wrapper.node, wrapper.bucket.randomChildKey());
                             keys.add(wrapper.node.getKey());
                         });
-                buckets.forEach(bucket -> bucket.refresh(krpc));
-                keys.forEach(key -> remove(key, krpc));
+                buckets.forEach((prefix, bucket) -> bucket.refresh(krpc));
+                keys.forEach(this::remove);
                 keys.clear();
                 lock.unlock();
             }
@@ -235,7 +280,7 @@ public class RouteTable {
 
 
     /**
-     * 找到key在当前对应的节点
+     * 找到key当前对应的节点
      *
      * @param key
      * @return
@@ -261,12 +306,12 @@ public class RouteTable {
      *
      * @param key
      */
-    public void remove(NodeKey key, Krpc krpc) {
+    public void remove(NodeKey key) {
         TreeNode item = findTreeNode(key);
         Bucket bucket = item.value;
-        buckets.remove(bucket);
-        bucket.replace(key, krpc);
-        buckets.add(bucket);
+        buckets.remove(bucket.prefix);
+        bucket.remove(key);
+        buckets.put(bucket.prefix, bucket);
     }
 
     /**
@@ -370,10 +415,10 @@ public class RouteTable {
 
         private Instant lastActive = Instant.now();
 
+        /**
+         * 这个Bucket的范围
+         */
         private final Bitmap prefix;
-
-        private Deque<NodeInfo> candidates = new ArrayDeque<>(8);
-
 
         public Bucket(int size) {
             prefix = new Bitmap(size);
@@ -398,9 +443,16 @@ public class RouteTable {
             prefix.set(prefix.size - 1, val);
         }
 
-        private void reassignNode(NodeInfo node, Bucket left, Bucket right) {
-            if (left.checkRange(node.getKey())) left.addNode(node);
-            if (right.checkRange(node.getKey())) right.addNode(node);
+        private boolean reassignNode(NodeInfo node, Bucket left, Bucket right) {
+            if (left.checkRange(node.getKey())) {
+                left.addNode(node);
+                return true;
+            }
+            if (right.checkRange(node.getKey())) {
+                right.addNode(node);
+                return true;
+            }
+            return false;
         }
 
         /**
@@ -413,8 +465,7 @@ public class RouteTable {
             if (prefix.size == 160) return null;
             Bucket leftBucket = new Bucket(prefix, true);
             Bucket rightBucket = new Bucket(prefix, false);
-            nodes.stream().map(wrapper -> wrapper.node).forEach(node -> reassignNode(node, leftBucket, rightBucket));
-            candidates.forEach(node -> reassignNode(node, leftBucket, rightBucket));
+            nodes.forEach(wrapper -> reassignNode(wrapper.node, leftBucket, rightBucket));
             return new Tuple<>(leftBucket, rightBucket);
         }
 
@@ -448,35 +499,6 @@ public class RouteTable {
         }
 
         /**
-         * 将info节点删除，用候选节点替换
-         *
-         * @param key
-         * @param krpc
-         */
-        public void replace(NodeKey key, Krpc krpc) {
-            NodeInfoWrapper node = remove(key);
-            boolean isInserted = false;
-            if (node != null) {
-                if (!candidates.isEmpty()) {
-                    NodeInfoWrapper wrapper = new NodeInfoWrapper(candidates.getFirst(), this);
-                    int len = nodes.size();
-                    for (int i = 0; i < len; i++) {
-                        NodeInfoWrapper info = nodes.get(i);
-                        if (info.compareTo(wrapper) < 0) {
-                            nodes.add(i, wrapper);
-                            isInserted = true;
-                            candidates.poll();
-                            break;
-                        }
-                        krpc.findNode(info.node, randomChildKey());
-                    }
-                    lastActive = Instant.now();
-                }
-                if (!isInserted) addNode(node.node);
-            }
-        }
-
-        /**
          * 在前面已经处理已经存在的情况，在这里不需要再次处理
          * 保持有2个候选节点
          *
@@ -487,12 +509,6 @@ public class RouteTable {
             lastActive = Instant.now();
         }
 
-        public void addCandidate(NodeInfo info) {
-            if (candidates.size() == 8) candidates.poll();
-            candidates.add(info);
-        }
-
-
         public int size() {
             return nodes.size();
         }
@@ -502,7 +518,7 @@ public class RouteTable {
         }
 
         /**
-         * 可到key对应的DHT节点信息
+         * 找到key对应的DHT节点信息
          *
          * @param key
          * @return
@@ -518,12 +534,19 @@ public class RouteTable {
          *
          * @param key
          */
-        public NodeInfoWrapper remove(NodeKey key) {
-            int size = nodes.size();
-            for (int i = 0; i < size; i++) {
-                if (nodes.get(i).node.getKey().equals(key)) return nodes.remove(i);
+        public void remove(NodeKey key) {
+            boolean b = nodes.removeIf(wrapper -> wrapper.node.getKey().equals(key));
+            if (b) {
+                size--;
             }
-            return null;
+//            int len = nodes.size();
+//            for (int i = 0; i < len; i++) {
+//                if (nodes.get(i).node.getKey().equals(key)) {
+//
+//                    return Optional.of(nodes.remove(i).node);
+//                }
+//            }
+//            return Optional.empty();
         }
 
         /**
@@ -540,8 +563,15 @@ public class RouteTable {
          * locked
          */
         public void refresh(Krpc krpc) {
-            nodes.stream().filter(wrapper -> !wrapper.isActive()).forEach(wrapper -> krpc.ping(wrapper.node));
-            lastActive = Instant.now();
+            nodes.forEach(wrapper -> krpc.ping(wrapper.node));
+//            List<NodeInfoWrapper> remove = new ArrayList<>();
+//            for (NodeInfoWrapper node : nodes) {
+//                if (node.isDead()) remove.add(node);
+//                else if (!node.isActive()) krpc.ping(node.node);
+//            }
+//            nodes.removeAll(remove);
+//            size -= remove.size();
+//            lastActive = Instant.now();
         }
 
         /**
@@ -549,7 +579,7 @@ public class RouteTable {
          *
          * @param node
          */
-        public void refresh(NodeInfo node) {
+        public void update(NodeInfo node) {
             nodes.stream().filter(wrapper -> wrapper.node.equals(node)).findFirst().ifPresent(NodeInfoWrapper::refresh);
             lastActive = Instant.now();
         }

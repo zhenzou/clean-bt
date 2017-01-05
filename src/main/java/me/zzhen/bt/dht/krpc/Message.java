@@ -2,7 +2,6 @@ package me.zzhen.bt.dht.krpc;
 
 import me.zzhen.bt.bencode.*;
 import me.zzhen.bt.dht.DhtApp;
-import me.zzhen.bt.dht.base.NodeInfo;
 import me.zzhen.bt.dht.base.NodeKey;
 import me.zzhen.bt.dht.base.Token;
 import me.zzhen.bt.dht.base.TokenManager;

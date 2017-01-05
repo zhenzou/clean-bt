@@ -19,6 +19,17 @@ public class DhtConfig {
     public static final int SERVER_PORT = 6881;
 
     public static final int RETRY_TIME = 2;
+
+    /**
+     * 标准DHT节点模式
+     */
+    public static final int STANDARD_MODE = 1111;
+
+    /**
+     * DHT爬虫模式
+     */
+    public static final int CRAWL_MODE = 2222;
+
     /**
      * 请求过时间隔，请求失败，将加入黑名单
      */
@@ -27,6 +38,12 @@ public class DhtConfig {
      * Token失效间隔 单位为分钟
      */
     public static final int TOKEN_TIMEOUT = 15;
+
+    /**
+     * t 失效时间，单位为分钟
+     */
+    public static final int T_TIMEOUT = 1;
+
     /**
      * 黑名单大小，超出将自动移除前面的
      */

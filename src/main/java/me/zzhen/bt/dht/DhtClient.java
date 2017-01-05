@@ -24,7 +24,7 @@ public class DhtClient {
 
 
     public DhtClient() {
-        krpc = new Krpc(self.getKey(), null);
+        krpc = new Krpc( null);
     }
 
 

@@ -1,5 +1,6 @@
 package me.zzhen.bt.dht;
 
+import me.zzhen.bt.common.Bitmap;
 import me.zzhen.bt.dht.base.NodeInfo;
 import me.zzhen.bt.dht.base.NodeKey;
 import me.zzhen.bt.dht.base.PeerManager;
@@ -30,6 +31,8 @@ public class DhtApp {
      * 全局节点单例
      */
     public static DhtApp NODE;
+
+    private int mode;
 
     /**
      * 全局路由表
@@ -80,13 +83,14 @@ public class DhtApp {
      */
     private void initDefaultConfig() {
         try {
+            mode = DhtConfig.CRAWL_MODE;
             InetAddress address = InetAddress.getByName(DhtConfig.SERVER_IP);
             selfKey = NodeKey.genRandomKey();
             self = new NodeInfo(address, DhtConfig.SERVER_PORT, selfKey);
             blacklist = new HashSet<>(DhtConfig.BLACKLIST_SIZE);
             routes = new RouteTable(self);
             socket = new DatagramSocket(DhtConfig.SERVER_PORT);
-            krpc = new Krpc(selfKey, socket);
+            krpc = new Krpc(socket);
             PeerManager.init();
         } catch (UnknownHostException | SocketException e) {
             logger.error(e.getMessage());
@@ -107,9 +111,28 @@ public class DhtApp {
         self.setKey(selfKey);
     }
 
+    public boolean isCrawlMode() {
+        return mode == DhtConfig.CRAWL_MODE;
+    }
+
+    /**
+     * {@code }
+     * 为了爬虫模式优化
+     *
+     * @param id
+     * @return
+     */
+    public NodeKey id(byte[] id) {
+        Bitmap bit = new Bitmap(id);
+        for (int i = 0; i < 15; i++) {
+            bit.set(i, selfKey.prefix(i));
+        }
+        return new NodeKey(bit);
+    }
+
     public void addNode(NodeInfo node) {
-        if (!node.equals(self))
-            routes.addNode(node);
+        if (node.equals(self) || isBlackItem(node.getAddress(), node.getPort())) return;
+        routes.addNode(node);
     }
 
     public boolean isBlackItem(InetAddress ip, int port) {

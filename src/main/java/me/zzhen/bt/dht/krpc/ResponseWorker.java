@@ -63,7 +63,7 @@ public class ResponseWorker extends Thread {
 
     public void response(InetAddress address, int port, DictionaryNode request) {
         Node method = request.getNode("q");
-        logger.info(method + "  request from :" + address.getHostAddress() + ":" + port);
+//        logger.info(method + "  request from :" + address.getHostAddress() + ":" + port);
         Node t = request.getNode("t");
         DictionaryNode arg = (DictionaryNode) request.getNode("a");
         Node id = arg.getNode("id");
@@ -78,7 +78,7 @@ public class ResponseWorker extends Thread {
                 callback.onGetPeer(info, t, arg.getNode("info_hash"));
                 break;
             case METHOD_FIND_NODE:
-                callback.onGetPeer(info, t, arg.getNode("target"));
+                callback.onFindNode(info, t, arg.getNode("target"));
                 break;
             case METHOD_ANNOUNCE_PEER:
                 doResponseAnnouncePeer(address, port, key, t, arg);

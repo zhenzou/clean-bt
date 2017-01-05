@@ -3,6 +3,7 @@ package me.zzhen.bt.dht.base;
 import me.zzhen.bt.dht.DhtConfig;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 /**
  * Project:CleanBT
@@ -33,17 +34,25 @@ public class Token {
      */
     public final String method;
 
-    Token(NodeKey target, long id, String method) {
+    /**
+     * 是否是响应get_peers请求的token参数
+     */
+    public final boolean isToken;
+
+    Token(NodeKey target, long id, String method, boolean isToken) {
         this.target = target;
         this.id = id;
         this.method = method;
+        this.isToken = isToken;
     }
 
     /**
      * @return 当前token是否有效
      */
     public boolean isLive() {
-        return time.plusSeconds(DhtConfig.TOKEN_TIMEOUT).isAfter(Instant.now());
+        final Instant now = Instant.now();
+        if (isToken) return time.plus(DhtConfig.TOKEN_TIMEOUT, ChronoUnit.MINUTES).isAfter(now);
+        return time.plus(DhtConfig.T_TIMEOUT, ChronoUnit.MINUTES).isAfter(now);
     }
 
     @Override

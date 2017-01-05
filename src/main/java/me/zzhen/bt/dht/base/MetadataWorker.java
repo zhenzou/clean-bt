@@ -1,8 +1,7 @@
 package me.zzhen.bt.dht.base;
 
 import com.sun.xml.internal.org.jvnet.mimepull.DecodingException;
-import me.zzhen.bt.bencode.DictionaryNode;
-import me.zzhen.bt.bencode.IntNode;
+import me.zzhen.bt.bencode.*;
 import me.zzhen.bt.dht.DhtApp;
 import me.zzhen.bt.dht.DhtConfig;
 import me.zzhen.bt.utils.IO;
@@ -11,10 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketTimeoutException;
+import java.net.*;
 
 /**
  * Project:CleanBT
@@ -41,8 +37,10 @@ public class MetadataWorker implements Runnable {
     /**
      * BitTorrent 协议标识符，BEP03 规定
      */
-    private static final String PSTR = "BitTorrent protocol";
-    private static final byte[] RESERVED = {0, 0, 0, 0, 16, 0, 0, 1};
+    public static final String PSTR = "BitTorrent protocol";
+    public static final byte[] RESERVED = {0, 0, 0, 0, 0, 16, 0, 1};
+//    public static final byte[] RESERVED = {19, 66, 105, 116, 84, 111, 114, 114, 101, 110, 116, 32, 112, 114,
+//            111, 116, 111, 99, 111, 108, 0, 0, 0, 0, 0, 16, 0, 1};
 
     public static final byte PEER_MSG_CHOKE = 0;
     public static final byte PEER_MSG_UNCHOKE = 1;
@@ -54,27 +52,29 @@ public class MetadataWorker implements Runnable {
     public static final byte PEER_MSG_PIECE = 7;
     public static final byte PEER_MSG_CANCEL = 8;
 
-    private static final int EXTENDED = 20;
+    public static final int EXTENDED = 20;
 
     /**
      * 请求的资源的info_hash
      */
-    private byte[] hash;
+    private String hash;
 
     /**
      * 请求的来源地址
      */
     private InetSocketAddress address;
-
     /**
      * 资源下载的端口
      */
     private int port;
 
+
+    private static String peerId = "-UT-";
+
     public static final int BLOCK_SIZE = 16 * 1024;
 
 
-    public MetadataWorker(InetAddress address, int port, byte[] hash) {
+    public MetadataWorker(InetAddress address, int port, String hash) {
         this.address = new InetSocketAddress(address, port);
         this.port = port;
         this.hash = hash;
@@ -84,7 +84,6 @@ public class MetadataWorker implements Runnable {
     public void run() {
         if (!DhtApp.NODE.isBlackItem(address)) fetchMetadata();
     }
-
 
     /**
      * 构建握手消息
@@ -105,7 +104,7 @@ public class MetadataWorker implements Runnable {
      * @param piece piece数
      * @return
      */
-    private DictionaryNode makeRequest(int piece) {
+    private DictionaryNode makeRequestMsg(int piece) {
         DictionaryNode msg = new DictionaryNode();
         msg.addNode(MSG_TYPE, new IntNode(MSG_REQUEST));
         msg.addNode(MSG_PIECE, new IntNode(piece));
@@ -117,20 +116,15 @@ public class MetadataWorker implements Runnable {
      *
      * @param out
      */
-    private void sendHandShake(OutputStream out) {
+    public void sendHandleShake(OutputStream out) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream(49 + 19);
-        try {
-            baos.write(PSTR.length());
-            baos.write(PSTR.getBytes());
-            baos.write(RESERVED);
-            baos.write(hash);
-            baos.write(NodeKey.genRandomKey().getValue());
-            out.write(baos.toByteArray());
-            out.flush();
-        } catch (IOException e) {
-            logger.error(e.getMessage());
-            e.printStackTrace();
-        }
+        baos.write(PSTR.length() & 0xFF);
+        baos.write(PSTR.getBytes());
+        baos.write(RESERVED);
+        baos.write(Utils.hex2Bytes(hash));
+        baos.write(NodeKey.genRandomKey().getValue());
+        out.write(baos.toByteArray());
+
     }
 
     /**
@@ -139,7 +133,7 @@ public class MetadataWorker implements Runnable {
      * @param in
      * @return
      */
-    private boolean onHandShake(InputStream in) {
+    public boolean onHandShake(InputStream in) {
         byte[] bytes = IO.readKBytes(in, 68);
         if (bytes.length < 68) return false;
         if ((bytes[25] & 0x10) == 0) return false;
@@ -164,7 +158,6 @@ public class MetadataWorker implements Runnable {
         }
     }
 
-
     /**
      * 使用out发送BT扩展协议的消息，主要是添加length头部
      *
@@ -178,9 +171,8 @@ public class MetadataWorker implements Runnable {
         try {
             baos.write(lens);
             baos.write(data);
-            logger.info("send:" + new String(baos.toByteArray()));
             out.write(baos.toByteArray());
-            out.flush();
+            logger.info("send:" + new String(baos.toByteArray()));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -188,16 +180,16 @@ public class MetadataWorker implements Runnable {
 
 
     /**
-     * @param out   发送的socket的输出流
+     * @param out
      * @param piece 当前的piece数
-     * @param ut    接收到的Ut_metadata字段值，需要发给其他节点
+     * @param ut
      */
-    private void requestPiece(OutputStream out, int piece, int ut) {
+    private void fetchPieces(OutputStream out, int piece, int ut) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         baos.write(EXTENDED);
         baos.write(ut);
         try {
-            baos.write(makeRequest(piece).encode());
+            baos.write(makeRequestMsg(piece).encode());
             sendMessage(out, baos.toByteArray());
         } catch (IOException e) {
             logger.error(e.getMessage());
@@ -206,11 +198,7 @@ public class MetadataWorker implements Runnable {
     }
 
     /**
-     * 从接受到的Data中读取相应的piece信息
-     *
-     * @param pieces 保存的metadata
-     * @param data   接收到的数据
-     * @return 接收到的第几块piece
+     * @param data
      */
     private int readPiece(ByteArrayOutputStream pieces, byte[] data) {
         DictionaryNode node = null;
@@ -229,18 +217,14 @@ public class MetadataWorker implements Runnable {
     }
 
 
-    /**
-     * 获取Torrent的Metadata,BEP09
-     */
     private void fetchMetadata() {
         try (Socket socket = new Socket()) {
-            logger.info("init");
             socket.setSoTimeout(DhtConfig.CONN_TIMEOUT);
             socket.connect(address);
             logger.info("over");
             OutputStream out = socket.getOutputStream();
             InputStream in = socket.getInputStream();
-            sendHandShake(out);
+            sendHandleShake(out);
             logger.info("handshake over");
             if (!onHandShake(in)) return;
             logger.info("handshake success");
@@ -259,14 +243,15 @@ public class MetadataWorker implements Runnable {
                 int extendId = head[5];
                 logger.info("type:" + msgId);
                 logger.info("extend:" + extendId);
-                byte[] data = IO.readKBytes(in, length - 2);
+                byte[] data = IO.readAllBytes(in);
                 logger.info("data length:" + data.length);
-//                可能有bit field，所以可能会超过length,length也包括了msgId，extendId两个字节，所以要减2
+                logger.info("data:" + new String(data));
+                //可能有bit field，所以可能会超过length
                 if (data.length < length - 2) return;
                 if (msgId == EXTENDED) {
                     if (extendId == 0) {
                         logger.info("收到最后的握手信息");
-                        if (pieces != null) pieces = null;
+                        if (pieces != null) return;
                         logger.info("解析握手信息");
                         DictionaryNode meta = DictionaryNode.decode(new ByteArrayInputStream(data, 0, length - 3));
                         DictionaryNode m = (DictionaryNode) meta.getNode("m");
@@ -278,21 +263,22 @@ public class MetadataWorker implements Runnable {
                         if (size % BLOCK_SIZE != 0) totalPiece++;
                         logger.info("piece num :" + totalPiece);
                         pieces = new ByteArrayOutputStream(size);
-                        requestPiece(out, curPiece, ut);
+                        fetchPieces(out, curPiece, ut);
                     } else {
                         if (pieces == null) continue;
                         logger.info("已经握手完毕，准备接收数据");
                         int piece = readPiece(pieces, data);
+                        logger.info("pieces:" + String.valueOf(pieces));
                         if (piece < totalPiece) {
                             logger.info("piece 小于 total piece ");
                             if (piece != curPiece) {
-                                requestPiece(out, curPiece, ut);//收到的错误的piece，再次请求相同的piece
+                                logger.info("piece 不等于 total piece ");
+                                fetchPieces(out, curPiece, ut);
                                 continue;
                             }
                             curPiece++;
-                            requestPiece(out, curPiece, ut);//请求下一个piece
+                            fetchPieces(out, curPiece, ut);
                         } else {
-                            logger.info("ut::::" + String.valueOf(pieces));
                             DictionaryNode decode = DictionaryNode.decode(new ByteArrayInputStream(pieces.toByteArray()));
                             logger.info("UT_METADATA:" + decode.getNode("files"));
                             return;
