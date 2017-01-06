@@ -20,4 +20,6 @@ public interface RequestCallback {
     void onPing(NodeInfo src, Node t);
 
     void onGetPeer(NodeInfo src, Node t, Node id);
+
+    void error(NodeInfo src, Node t, Node id, int errno, String msg);
 }

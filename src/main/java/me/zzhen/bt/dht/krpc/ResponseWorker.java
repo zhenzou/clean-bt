@@ -11,6 +11,8 @@ import org.slf4j.LoggerFactory;
 
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.util.Optional;
 
 import static me.zzhen.bt.dht.krpc.Krpc.*;
 
@@ -67,8 +69,22 @@ public class ResponseWorker extends Thread {
         Node t = request.getNode("t");
         DictionaryNode arg = (DictionaryNode) request.getNode("a");
         Node id = arg.getNode("id");
+
         NodeKey key = new NodeKey(id.decode());
         NodeInfo info = new NodeInfo(address, port, key);
+        if (id.decode().length != 20) {
+            callback.error(info, t, id, Message.ERRNO_PROTOCOL, "invalid id");
+            return;
+        }
+        Optional<NodeInfo> optional = DhtApp.NODE.routes.getByAddr(address, port);
+        if (optional.isPresent()) {
+            if (!optional.get().getKey().equals(key)) {
+                callback.error(info, t, id, Message.ERRNO_PROTOCOL, "invalid id");
+                DhtApp.NODE.addBlackItem(address, port);
+                DhtApp.NODE.routes.removeByAddr(new InetSocketAddress(address, port));
+                return;
+            }
+        }
         DhtApp.NODE.addNode(info);
         switch (method.toString()) {
             case METHOD_PING:
@@ -84,6 +100,7 @@ public class ResponseWorker extends Thread {
                 doResponseAnnouncePeer(address, port, key, t, arg);
                 break;
             default:
+                callback.error(info, t, id, Message.ERRNO_UNKNOWN, "unknown method");
                 break;
         }
     }
@@ -98,9 +115,11 @@ public class ResponseWorker extends Thread {
     private void doResponseAnnouncePeer(InetAddress address, int port, NodeKey key, Node t, DictionaryNode req) {
         Node impliedPort = req.getNode("implied_port");
         if (impliedPort == null || "0".equals(String.valueOf(impliedPort))) {
+//            logger.info("implied_port:" + port);
             port = Integer.parseInt(req.getNode("port").toString());
         }
         logger.info("info_hash:" + Utils.toHex(req.getNode("info_hash").decode()));
+//        logger.info("port:" + port);
         callback.onAnnouncePeer(new NodeInfo(address, port, key), t, req.getNode("info_hash"));
     }
 }

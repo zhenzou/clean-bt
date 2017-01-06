@@ -1,6 +1,5 @@
 package me.zzhen.bt.dht;
 
-import me.zzhen.bt.common.Bitmap;
 import me.zzhen.bt.dht.base.NodeInfo;
 import me.zzhen.bt.dht.base.NodeKey;
 import me.zzhen.bt.dht.base.PeerManager;
@@ -123,11 +122,11 @@ public class DhtApp {
      * @return
      */
     public NodeKey id(byte[] id) {
-        Bitmap bit = new Bitmap(id);
-        for (int i = 0; i < 15; i++) {
-            bit.set(i, selfKey.prefix(i));
+        byte[] value = selfKey.getValue();
+        for (int i = 0; i < 5; i++) {
+            id[i] = value[i];
         }
-        return new NodeKey(bit);
+        return new NodeKey(id);
     }
 
     public void addNode(NodeInfo node) {

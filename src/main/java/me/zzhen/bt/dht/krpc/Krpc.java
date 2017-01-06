@@ -6,7 +6,6 @@ import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.bencode.StringNode;
 import me.zzhen.bt.dht.DhtApp;
 import me.zzhen.bt.dht.base.*;
-import me.zzhen.bt.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +51,7 @@ public class Krpc implements RequestCallback {
     /**
      * 获取MetaData的线程池
      */
-    private ExecutorService fetcher = Executors.newSingleThreadExecutor();
+    private ExecutorService fetcher = Executors.newFixedThreadPool(3);
 
     public Krpc(DatagramSocket socket) {
         this.socket = socket;
@@ -142,6 +141,8 @@ public class Krpc implements RequestCallback {
             receiver.execute(new ResponseProcessor(node, address, port, this));
         } else if (Message.isRequest(node)) {
             receiver.execute(new ResponseWorker(socket, address, port, node, this));
+        } else if (Message.isError(node)) {
+            //TODO
         }
     }
 
@@ -155,9 +156,7 @@ public class Krpc implements RequestCallback {
     @Override
     public void onPing(NodeInfo src, Node t) {
         DictionaryNode resp = Message.makeResponse(t);
-        DictionaryNode arg = new DictionaryNode();
-        arg.addNode("id", new StringNode(DhtApp.NODE.getSelfKey().getValue()));
-        arg.addNode("r", arg);
+        DictionaryNode arg = Message.makeArg();
         send(resp, src);
     }
 
@@ -171,6 +170,7 @@ public class Krpc implements RequestCallback {
      */
     @Override
     public void onGetPeer(NodeInfo src, Node t, Node id) {
+        if (!checkId(src, t, id)) return;
         DictionaryNode resp = Message.makeResponse(t);
         DictionaryNode arg = Message.makeArg();
         if (DhtApp.NODE.isCrawlMode()) {
@@ -199,7 +199,7 @@ public class Krpc implements RequestCallback {
                 arg.addNode("nodes", nodes);
             }
         }
-        Token token = TokenManager.newToken(new NodeKey(id.decode()), Krpc.METHOD_GET_PEERS);
+        Token token = TokenManager.newTokenToken(new NodeKey(id.decode()), Krpc.METHOD_GET_PEERS);
         arg.addNode("token", new StringNode(token.id + ""));
         resp.addNode("r", arg);
         send(resp, src);
@@ -214,6 +214,8 @@ public class Krpc implements RequestCallback {
      */
     @Override
     public void onFindNode(NodeInfo src, Node t, Node id) {
+        if (DhtApp.NODE.isCrawlMode()) return;
+        if (!checkId(src, t, id)) return;
         DictionaryNode resp = Message.makeResponse(t);
         List<NodeInfo> infos = new ArrayList<>();
         infos.add(DhtApp.NODE.getSelf());
@@ -244,15 +246,48 @@ public class Krpc implements RequestCallback {
      */
     @Override
     public void onAnnouncePeer(NodeInfo src, Node t, Node id) {
-        DictionaryNode resp = Message.makeResponse(t);
-        DictionaryNode arg = Message.makeArg();
-        resp.addNode("r", arg);
-        send(resp, src);
-        //TODO check token
         if (!DhtApp.NODE.isBlackItem(src.getAddress(), src.getPort())) {
-            fetcher.execute(new MetadataWorker(src.getAddress(), src.getPort(), Utils.toHex(id.decode()).toLowerCase()));
+            //TODO check token
+            fetcher.execute(new MetadataWorker(src.getAddress(), src.getPort(), id.decode()));
         } else {
             logger.info("this is a black item");
         }
+        if (!DhtApp.NODE.isCrawlMode()) {
+            DictionaryNode resp = Message.makeResponse(t);
+            DictionaryNode arg = Message.makeArg();
+            resp.addNode("r", arg);
+            send(resp, src);
+        }
+    }
+
+    /**
+     * 请求不合法，响应错误信息
+     *
+     * @param src
+     * @param t
+     * @param id
+     * @param errno
+     * @param msg
+     */
+    @Override
+    public void error(NodeInfo src, Node t, Node id, int errno, String msg) {
+        DictionaryNode errMsg = Message.makeError(t, errno, msg);
+        send(errMsg, src);
+    }
+
+    /**
+     * 检测请求中id值是否合法
+     *
+     * @param src
+     * @param t
+     * @param id
+     * @return
+     */
+    private boolean checkId(NodeInfo src, Node t, Node id) {
+        if (id.decode().length != 20) {
+            error(src, t, id, Message.ERRNO_PROTOCOL, "invalid id");
+            return false;
+        }
+        return true;
     }
 }

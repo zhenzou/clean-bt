@@ -248,7 +248,7 @@ public class RouteTable {
     /**
      * 保存在刷新过程中访问的节点，将要删除或者调整，再次刷新的时候总是访问相同的节点
      */
-    private List<NodeKey> keys = new ArrayList<>(DhtConfig.AUTO_FIND_SIZE);
+    private List<NodeInfo> keys = new ArrayList<>(DhtConfig.AUTO_FIND_SIZE);
 
 
     /**
@@ -265,7 +265,7 @@ public class RouteTable {
                         .limit(DhtConfig.AUTO_FIND_SIZE)
                         .forEach(wrapper -> {
                             krpc.findNode(wrapper.node, wrapper.bucket.randomChildKey());
-                            keys.add(wrapper.node.getKey());
+                            keys.add(wrapper.node);
                         });
                 buckets.forEach((prefix, bucket) -> bucket.refresh(krpc));
                 keys.forEach(this::remove);
@@ -304,13 +304,16 @@ public class RouteTable {
     /**
      * 在整个路由表中删除key对应的DHT节点信息
      *
-     * @param key
+     * @param node
      */
-    public void remove(NodeKey key) {
-        TreeNode item = findTreeNode(key);
+    public void remove(NodeInfo node) {
+        TreeNode item = findTreeNode(node.getKey());
         Bucket bucket = item.value;
         buckets.remove(bucket.prefix);
-        bucket.remove(key);
+        if (bucket.remove(node.getKey())) {
+            removeByAddr(new InetSocketAddress(node.getAddress(), node.getPort()));
+            size--;
+        }
         buckets.put(bucket.prefix, bucket);
     }
 
@@ -534,11 +537,8 @@ public class RouteTable {
          *
          * @param key
          */
-        public void remove(NodeKey key) {
-            boolean b = nodes.removeIf(wrapper -> wrapper.node.getKey().equals(key));
-            if (b) {
-                size--;
-            }
+        public boolean remove(NodeKey key) {
+            return nodes.removeIf(wrapper -> wrapper.node.getKey().equals(key));
 //            int len = nodes.size();
 //            for (int i = 0; i < len; i++) {
 //                if (nodes.get(i).node.getKey().equals(key)) {

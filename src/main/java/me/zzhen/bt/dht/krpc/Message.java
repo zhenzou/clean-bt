@@ -16,6 +16,12 @@ import me.zzhen.bt.dht.base.TokenManager;
 public class Message {
 
 
+    public static final int ERRNO_NORMAL = 201;
+    public static final int ERRNO_SERVICE = 202;
+    public static final int ERRNO_PROTOCOL = 203;
+    public static final int ERRNO_UNKNOWN = 204;
+
+
     public final String method;
     public final DictionaryNode arg;
     public final Token token;
@@ -35,7 +41,7 @@ public class Message {
 
 
     /**
-     * 判断给予的内容时不时Krpc的请求
+     * 判断给予的内容是不是Krpc的响应
      *
      * @param resp
      * @return 如果为空, 则返回false, 不为空, 则判断 y值时不时r
@@ -44,11 +50,22 @@ public class Message {
         return resp != null && "r".equals(resp.getNode("y").toString());
     }
 
-
+    /**
+     * 判断给予的内容是不是Krpc的请求
+     *
+     * @param request
+     * @return 如果为空, 则返回false, 不为空, 则判断 y值时不时r
+     */
     public static boolean isRequest(DictionaryNode request) {
         return request != null && "q".equals(request.getNode("y").toString());
     }
 
+    /**
+     * 判断给予的内容是不是Krpc的错误响应
+     *
+     * @param resp
+     * @return 如果为空, 则返回false, 不为空, 则判断 y值时不时r
+     */
     public static boolean isError(DictionaryNode resp) {
         return resp != null && "e".equals(resp.getNode("y").toString());
     }
@@ -69,9 +86,9 @@ public class Message {
         return node;
     }
 
-    public static DictionaryNode makeError(NodeKey target, int errno, String msg) {
+    public static DictionaryNode makeError(Node t, int errno, String msg) {
         DictionaryNode node = new DictionaryNode();
-        node.addNode("t", new StringNode(TokenManager.newToken(target, msg).id + ""));
+        node.addNode("t", t);
         node.addNode("y", new StringNode("e"));
         ListNode e = new ListNode();
         e.addNode(new IntNode(errno));
