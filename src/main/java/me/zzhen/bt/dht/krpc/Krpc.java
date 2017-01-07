@@ -41,22 +41,21 @@ public class Krpc implements RequestCallback {
     /**
      * 主要的线程发送线程池
      */
-    private ExecutorService sender = Executors.newFixedThreadPool(2 * Runtime.getRuntime().availableProcessors() + 2);
+    private ExecutorService sender = Executors.newFixedThreadPool(2);
 
     /**
      * 请求处理线程池
      */
-    private ExecutorService receiver = Executors.newSingleThreadExecutor();
+    private ExecutorService receiver = Executors.newFixedThreadPool(2);
 
     /**
      * 获取MetaData的线程池
      */
-    private ExecutorService fetcher = Executors.newFixedThreadPool(3);
+    private ExecutorService fetcher = Executors.newSingleThreadExecutor();
 
     public Krpc(DatagramSocket socket) {
         this.socket = socket;
     }
-
 
     /**
      * ping 目标节点

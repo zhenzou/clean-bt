@@ -123,9 +123,7 @@ public class DhtApp {
      */
     public NodeKey id(byte[] id) {
         byte[] value = selfKey.getValue();
-        for (int i = 0; i < 5; i++) {
-            id[i] = value[i];
-        }
+        System.arraycopy(value, 15, id, 15, 5);
         return new NodeKey(id);
     }
 

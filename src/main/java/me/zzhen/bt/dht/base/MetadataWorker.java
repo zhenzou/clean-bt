@@ -247,7 +247,7 @@ public class MetadataWorker implements Runnable {
                 byte[] head = IO.readKBytes(in, 6);
                 int length = Utils.bytesToInt(head, 0, 4);
                 logger.info("length:" + length);
-                if (length == 0) return;
+                if (length == 0) continue;
                 int msgId = head[4];
                 int extendId = head[5];
                 logger.info("type:" + msgId);

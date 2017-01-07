@@ -1,10 +1,9 @@
 package me.zzhen.bt.dht.base;
 
-import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.utils.Utils;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static junit.framework.Assert.assertEquals;
 
 /**
  * Project:CleanBT
@@ -24,6 +23,9 @@ public class NodeKeyTest {
 
     }
 
+    /**
+     * @throws Exception
+     */
     @Test
     public void prefix() throws Exception {
 //        NodeKey key = NodeKey.genRandomKey();

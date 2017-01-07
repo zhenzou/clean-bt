@@ -12,7 +12,7 @@ public class DhtConfig {
      * DHT Server的IP地址
      */
 //    public static final String SERVER_IP = "127.0.0.1";
-    public static final String SERVER_IP = "43.241.224.72";
+    public static final String SERVER_IP = "43.241.226.21";
     /**
      * DHT Server监听端口
      */
