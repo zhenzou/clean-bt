@@ -78,7 +78,7 @@ public class DhtServer {
         //定时,自动向邻居节点发送find_node请求
         autoFindNode.scheduleAtFixedRate(() -> DhtApp.NODE.routes.refresh(krpc), DhtConfig.AUTO_FIND, DhtConfig.AUTO_FIND, TimeUnit.SECONDS);
         //定时清理过期Token
-        autoFindNode.scheduleAtFixedRate(TokenManager::clearTokens, DhtConfig.TOKEN_TIMEOUT, DhtConfig.TOKEN_TIMEOUT, TimeUnit.MINUTES);
+        autoFindNode.scheduleAtFixedRate(TokenManager::clearTokens, DhtConfig.T_TIMEOUT, DhtConfig.T_TIMEOUT, TimeUnit.MINUTES);
     }
 
     public void init() {
