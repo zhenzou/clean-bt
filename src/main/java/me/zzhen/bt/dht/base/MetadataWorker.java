@@ -14,6 +14,7 @@ import java.io.*;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 
 /**
  * Project:CleanBT
@@ -237,7 +238,6 @@ public class MetadataWorker implements Runnable {
             sendHandShake(out);
             if (!onHandShake(in)) return;
             logger.info("handshake success");
-            //握手成功,继续发送支持扩展协议的消息
             sendExtHandShake(out);
             int totalPiece = 0;
             int curPiece = 0;
@@ -247,7 +247,7 @@ public class MetadataWorker implements Runnable {
                 byte[] head = IO.readKBytes(in, 6);
                 int length = Utils.bytesToInt(head, 0, 4);
                 logger.info("length:" + length);
-                if (length == 0) continue;
+                if (length == 0) return;
                 int msgId = head[4];
                 int extendId = head[5];
                 logger.info("type:" + msgId);
@@ -276,7 +276,7 @@ public class MetadataWorker implements Runnable {
                                 continue;
                             }
                             curPiece++;
-                            requestPiece(out, curPiece, ut);//请求下一个piece
+                            requestPiece(out, curPiece, ut);
                         } else {
                             DictionaryNode decode = DictionaryNode.decode(new ByteArrayInputStream(pieces.toByteArray()));
                             logger.info("infohash=" + Utils.toHex(hash) + ",name=" + decode.getNode("name") + ",files=" + decode.getNode("files"));
@@ -285,6 +285,9 @@ public class MetadataWorker implements Runnable {
                     }
                 }
             }
+        } catch (SocketTimeoutException e) {
+            DhtApp.NODE.addBlackItem(address);
+            logger.error(e.getMessage());
         } catch (IOException e) {
             logger.error(e.getMessage());
             e.printStackTrace();

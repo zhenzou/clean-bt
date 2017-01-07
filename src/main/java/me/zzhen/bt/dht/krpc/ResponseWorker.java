@@ -118,8 +118,6 @@ public class ResponseWorker extends Thread {
 //            logger.info("implied_port:" + port);
             port = Integer.parseInt(req.getNode("port").toString());
         }
-        logger.info("info_hash:" + Utils.toHex(req.getNode("info_hash").decode()));
-//        logger.info("port:" + port);
-        callback.onAnnouncePeer(new NodeInfo(address, port, key), t, req.getNode("info_hash"));
+        callback.onAnnouncePeer(new NodeInfo(address, port, key), t, req.getNode("info_hash"), req.getNode("token"));
     }
 }

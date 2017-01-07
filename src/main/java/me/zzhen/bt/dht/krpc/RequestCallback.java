@@ -15,7 +15,7 @@ public interface RequestCallback {
 
     void onFindNode(NodeInfo src, Node t, Node id);
 
-    void onAnnouncePeer(NodeInfo src, Node t, Node id);
+    void onAnnouncePeer(NodeInfo src, Node t, Node id, Node token);
 
     void onPing(NodeInfo src, Node t);
 

@@ -6,6 +6,7 @@ import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.bencode.StringNode;
 import me.zzhen.bt.dht.DhtApp;
 import me.zzhen.bt.dht.base.*;
+import me.zzhen.bt.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,6 +17,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -51,7 +53,7 @@ public class Krpc implements RequestCallback {
     /**
      * 获取MetaData的线程池
      */
-    private ExecutorService fetcher = Executors.newSingleThreadExecutor();
+    private ExecutorService fetcher = Executors.newFixedThreadPool(2);
 
     public Krpc(DatagramSocket socket) {
         this.socket = socket;
@@ -240,14 +242,21 @@ public class Krpc implements RequestCallback {
      * 响应announce_peer请求
      *
      * @param src
-     * @param t   请求的t参数，响应的时候需要返回
-     * @param id  请求携带的资源种子id
+     * @param t     请求的t参数，响应的时候需要返回
+     * @param id    请求携带的资源种子id
+     * @param token
      */
     @Override
-    public void onAnnouncePeer(NodeInfo src, Node t, Node id) {
+    public void onAnnouncePeer(NodeInfo src, Node t, Node id, Node token) {
+        logger.info("info_hash:" + Utils.toHex(id.decode()));
+        logger.info("Address:" + src.getAddress().getHostAddress() + ",port:" + src.getPort());
         if (!DhtApp.NODE.isBlackItem(src.getAddress(), src.getPort())) {
-            //TODO check token
-            fetcher.execute(new MetadataWorker(src.getAddress(), src.getPort(), id.decode()));
+            //检测响应token是否过期
+            TokenManager.getToken(Long.parseLong(token.toString())).ifPresent(tt -> {
+                if (tt.isToken && tt.method.equals(Krpc.METHOD_GET_PEERS)) {
+                    fetcher.execute(new MetadataWorker(src.getAddress(), src.getPort(), id.decode()));
+                }
+            });
         } else {
             logger.info("this is a black item");
         }
