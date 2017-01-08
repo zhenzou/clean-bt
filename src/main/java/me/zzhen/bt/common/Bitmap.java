@@ -31,7 +31,7 @@ public class Bitmap {
     }
 
     public boolean get(int index) {
-        if (index >= size || index < 0) throw new IllegalArgumentException("too long for this bitmap ");
+        if (index >= size || index < 0) throw new IllegalArgumentException("index out of size for this bitmap ");
         return Utils.bitAt(data[index / 8], index % 8) == 1;
     }
 
@@ -80,53 +80,37 @@ public class Bitmap {
 
     /**
      * 按位与，如果长度不一样则按照短的
+     * Java类型的类型系统真的有点坑啊
      *
      * @param other
      */
     public void or(Bitmap other) {
-        op(other, OP_OR);
+        op(other, (lr, rr) -> lr = (byte) (lr.intValue() | rr.intValue()));
     }
 
     public void and(Bitmap other) {
-        op(other, OP_AND);
-
+        op(other, (lr, rr) -> lr = (byte) (lr.intValue() & rr.intValue()));
     }
 
     public void xor(Bitmap other) {
-        op(other, OP_XOR);
+        op(other, (lr, rr) -> lr = (byte) (lr.intValue() ^ rr.intValue()));
     }
 
-    public static final int OP_OR = 11;
-    public static final int OP_AND = 22;
-    public static final int OP_XOR = 33;
+    @FunctionalInterface
+    interface Operation<PT, RT> {
+        RT apply(PT lr, PT rr);
+    }
 
     /**
      * @param other
      * @param op    操作类型 11 or,22,and,33 xor
      */
-    private void op(Bitmap other, int op) {
+    private void op(Bitmap other, Operation<Byte, Byte> op) {
         int min = size > other.size ? other.size : size;
         int len = min / 8;
         if (min % 8 != 0) len++;
-        //optimize
-        switch (op) {
-            case OP_OR:
-                for (int i = 0; i < len; i++) {
-                    data[i] |= other.data[i];
-                }
-                break;
-            case OP_AND:
-                for (int i = 0; i < len; i++) {
-                    data[i] &= other.data[i];
-                }
-                break;
-            case OP_XOR:
-                for (int i = 0; i < len; i++) {
-                    data[i] ^= other.data[i];
-                }
-                break;
-            default:
-                break;
+        for (int i = 0; i < len; i++) {
+            data[i] = op.apply(data[i], other.data[i]);
         }
     }
 

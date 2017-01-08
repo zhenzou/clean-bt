@@ -141,11 +141,9 @@ public class RouteTable {
      * @return
      */
     public int size(TreeNode root) {
-        int size = 0;
         if (root == null) return 0;
-        if (root.value != null) {
-            size += root.value.size();
-        }
+        int size = 0;
+        if (root.value != null) size += root.value.size();
         size += size(root.left);
         size += size(root.right);
         return size;
@@ -219,7 +217,11 @@ public class RouteTable {
      * @param k
      */
     private void closestKNodes(TreeNode node, List<NodeInfo> infos, int k) {
-        while (size(node) < k && node.parent != null) node = node.parent;
+        int size = size(node);
+        while (size < k && node.parent != null) {
+            size = size + size(node.parent.right) + 1;
+            node = node.parent;
+        }
         addClosestNode(node, infos, k);
     }
 
@@ -231,7 +233,6 @@ public class RouteTable {
      * @param k
      */
     private void addClosestNode(TreeNode node, List<NodeInfo> infos, int k) {
-
         if (node == null || infos.size() == k) return;
         if (node.value == null) {
             addClosestNode(node.left, infos, k);
