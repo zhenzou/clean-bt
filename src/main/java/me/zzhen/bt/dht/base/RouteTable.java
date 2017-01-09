@@ -219,7 +219,8 @@ public class RouteTable {
     private void closestKNodes(TreeNode node, List<NodeInfo> infos, int k) {
         int size = size(node);
         while (size < k && node.parent != null) {
-            size = size + size(node.parent.right) + 1;
+            if (node == node.parent.left) size = size + size(node.parent.right) + 1;
+            else size = size + size(node.parent.left) + 1;
             node = node.parent;
         }
         addClosestNode(node, infos, k);
