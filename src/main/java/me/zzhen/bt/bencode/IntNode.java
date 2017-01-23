@@ -48,7 +48,6 @@ public class IntNode implements Node {
     /**
      * 返回UTF-8编码的字节数组，如果异常则返回默认编码数组
      *
-     * @return
      */
     @Override
     public byte[] encode() {

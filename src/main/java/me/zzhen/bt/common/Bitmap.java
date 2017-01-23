@@ -53,7 +53,7 @@ public class Bitmap {
      *
      * @param index
      */
-    public void clear(int index) {
+    public void unset(int index) {
         set(index, false);
     }
 
@@ -97,13 +97,13 @@ public class Bitmap {
     }
 
     @FunctionalInterface
-    interface Operation<PT, RT> {
-        RT apply(PT lr, PT rr);
+    interface Operation<T, R> {
+        R apply(T lr, T rr);
     }
 
     /**
      * @param other
-     * @param op    操作类型 11 or,22,and,33 xor
+     * @param op
      */
     private void op(Bitmap other, Operation<Byte, Byte> op) {
         int min = size > other.size ? other.size : size;

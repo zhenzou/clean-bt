@@ -4,6 +4,11 @@ package me.zzhen.bt.editor;
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon;
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView;
 import javafx.application.Application;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.BooleanBinding;
+import javafx.beans.binding.When;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -12,8 +17,8 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import me.zzhen.bt.common.TorrentFile;
 import me.zzhen.bt.bencode.*;
+import me.zzhen.bt.common.TorrentFile;
 import me.zzhen.bt.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,10 +56,7 @@ public class EditorApp extends Application {
     private TreeItem<FileTreeItemModel> itemRoot = new TreeItem<>();
     private Stage primaryStage;
 
-    private TorrentFile torrent;
-    private MenuItem openFile;
-    private MenuItem saveFile;
-    private MenuItem randomName;
+    private ObjectProperty<TorrentFile> torrentProperty = new SimpleObjectProperty<>(null);
 
     @Override
     public void start(Stage primaryStage) throws Exception {
@@ -87,26 +89,34 @@ public class EditorApp extends Application {
 
     private void initMenu() {
         Menu fileMenu = new Menu(EditorConfig.MENU_FILE);
-        openFile = new MenuItem(EditorConfig.MENU_FILE_OPEN);
+        MenuItem openFile = new MenuItem(EditorConfig.MENU_FILE_OPEN);
         FontAwesomeIconView openView = new FontAwesomeIconView(FontAwesomeIcon.FOLDER_OPEN);
         openFile.setGraphic(openView);
-        saveFile = new MenuItem(EditorConfig.MENU_FILE_SAVE);
+        MenuItem saveFile = new MenuItem(EditorConfig.MENU_FILE_SAVE);
         FontAwesomeIconView saveView = new FontAwesomeIconView(FontAwesomeIcon.SAVE);
         saveFile.setGraphic(saveView);
         fileMenu.getItems().addAll(openFile, saveFile);
-        saveFile.setDisable(true);
+
         Menu toolMenu = new Menu(EditorConfig.MENU_TOOL);
-        randomName = new MenuItem(EditorConfig.MENU_TOOL_RANDOM);
-        randomName.setDisable(true);
+        MenuItem randomName = new MenuItem(EditorConfig.MENU_TOOL_RANDOM);
+
+        BooleanBinding when = new When(Bindings.createBooleanBinding(() -> torrentProperty.getValue() == null, torrentProperty)).then(true).otherwise(false);
+
+        randomName.disableProperty().bind(when);
+        saveFile.disableProperty().bind(when);
+        centerBtn.visibleProperty().bind(when);
+
+        fileTree.visibleProperty().bind(when.not());
+
         toolMenu.getItems().add(randomName);
 
         menuBar.setBackground(new Background(new BackgroundFill(Color.TRANSPARENT, null, null)));
+
         menuBar.getMenus().addAll(fileMenu, toolMenu);
         openFile.setOnAction(event -> openFile());
-        //TODO 异步？
         saveFile.setOnAction((event) -> saveFile());
-
         randomName.setOnAction(event -> randomNameAll(itemRoot));
+
     }
 
     private void saveFile() {
@@ -118,9 +128,9 @@ public class EditorApp extends Application {
                 ListNode path = new ListNode();
                 transformTreeItemNode(infoRoot, item, path);
             });
-            torrent.setInfoFiles(infoRoot);
+            torrentProperty.getValue().setInfoFiles(infoRoot);
             try {
-                torrent.save(file);
+                torrentProperty.getValue().save(file);
                 infoDialog.setContentText("保存文件" + file.getName() + "成功");
                 infoDialog.showAndWait();
             } catch (IOException e) {
@@ -139,7 +149,7 @@ public class EditorApp extends Application {
             return;
         }
         try {
-            torrent = TorrentFile.fromFile(file);
+            torrentProperty.setValue(TorrentFile.fromFile(file));
         } catch (IOException | DecoderException e) {
             errorDialog.setContentText(e.getMessage());
             errorDialog.showAndWait();
@@ -150,12 +160,8 @@ public class EditorApp extends Application {
         if (isFirst) {
             centerArea.getChildren().add(fileTree);
             isFirst = false;
-            randomName.setDisable(false);
-            centerBtn.setVisible(false);
-            saveFile.setDisable(false);
         }
     }
-
 
     /**
      * 重命名所有文件
@@ -222,9 +228,9 @@ public class EditorApp extends Application {
      * @return 文件树的根节点
      */
     private TreeNode<FileTreeItemModel> buildNodeTree() {
-        ListNode infoName = (ListNode) torrent.getInfoFiles();
+        ListNode infoName = (ListNode) torrentProperty.getValue().getInfoFiles();
         List<Node> value = infoName.getValue();
-        TreeNode<FileTreeItemModel> treeRoot = new TreeNode<>(new FileTreeItemModel(torrent.getInfoName().toString(), 0));
+        TreeNode<FileTreeItemModel> treeRoot = new TreeNode<>(new FileTreeItemModel(torrentProperty.getValue().getInfoName().toString(), 0));
         value.stream().map(item -> (DictionaryNode) item).collect(Collectors.toList()).forEach(item -> addNodeToTree(treeRoot, item));
         return treeRoot;
     }
@@ -247,7 +253,6 @@ public class EditorApp extends Application {
     }
 
     /**
-     * TODO 增加 随机文件夹以及全部文件随机命名
      * 文件的UI显示
      */
     private final class FileTreeItemCell extends TreeCell<FileTreeItemModel> {
@@ -374,15 +379,15 @@ public class EditorApp extends Application {
      * 节点编辑的UI，共享
      */
     static class EditorViewHolder extends HBox {
-        static final EditorViewHolder EDITOR_VIEW_HOLDER = new EditorViewHolder();
+        final static EditorViewHolder EDITOR_VIEW_HOLDER = new EditorViewHolder();
         final Button okBtn;
         final Button cancelBtn;
         final Button randomBtn;
         final TextField editor;
 
-        FileTreeItemCell cell;
+        private FileTreeItemCell cell;
 
-        public void setCell(FileTreeItemCell cell) {
+        void setCell(FileTreeItemCell cell) {
             this.cell = cell;
             editor.setText(cell.getItem().getName());
         }

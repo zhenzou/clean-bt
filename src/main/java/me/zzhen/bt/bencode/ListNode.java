@@ -33,7 +33,7 @@ public class ListNode implements Node {
     static final char LIST_START = 'l';
     static final char LIST_END = 'e';
 
-    List<Node> value = new ArrayList<>();
+    private List<Node> value = new ArrayList<>();
 
     public ListNode() {
 
@@ -86,14 +86,14 @@ public class ListNode implements Node {
     @Override
     public byte[] decode() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        for (Node node : value) {
+        value.forEach(node -> {
             try {
                 baos.write(node.decode());
                 baos.write(',');
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        }
+        });
         return baos.toByteArray();
     }
 
