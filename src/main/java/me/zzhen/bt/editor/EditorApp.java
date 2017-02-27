@@ -19,7 +19,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import me.zzhen.bt.bencode.*;
 import me.zzhen.bt.common.TorrentFile;
-import me.zzhen.bt.utils.Utils;
+import me.zzhen.bt.util.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

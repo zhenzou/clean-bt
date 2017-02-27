@@ -6,7 +6,7 @@ import me.zzhen.bt.bencode.ListNode;
 import me.zzhen.bt.bencode.StringNode;
 import me.zzhen.bt.dht.DhtApp;
 import me.zzhen.bt.dht.base.*;
-import me.zzhen.bt.utils.Utils;
+import me.zzhen.bt.util.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -1,8 +1,7 @@
 package me.zzhen.bt;
 
 import me.zzhen.bt.dht.base.NodeKey;
-import me.zzhen.bt.utils.IO;
-import me.zzhen.bt.utils.Utils;
+import me.zzhen.bt.util.Utils;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;

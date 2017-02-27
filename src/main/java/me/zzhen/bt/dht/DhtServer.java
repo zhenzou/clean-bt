@@ -1,12 +1,9 @@
 package me.zzhen.bt.dht;
 
-import me.zzhen.bt.bencode.Decoder;
 import me.zzhen.bt.bencode.DictionaryNode;
-import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.dht.base.NodeInfo;
 import me.zzhen.bt.dht.base.TokenManager;
 import me.zzhen.bt.dht.krpc.Krpc;
-import me.zzhen.bt.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

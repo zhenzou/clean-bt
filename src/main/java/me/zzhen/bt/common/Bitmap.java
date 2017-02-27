@@ -1,6 +1,6 @@
 package me.zzhen.bt.common;
 
-import me.zzhen.bt.utils.Utils;
+import me.zzhen.bt.util.Utils;
 
 import java.util.Arrays;
 

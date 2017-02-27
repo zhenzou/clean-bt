@@ -6,7 +6,7 @@ import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.bencode.StringNode;
 import me.zzhen.bt.dht.DhtApp;
 import me.zzhen.bt.dht.base.*;
-import me.zzhen.bt.utils.Utils;
+import me.zzhen.bt.util.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,7 +17,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 

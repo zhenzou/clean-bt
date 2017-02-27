@@ -5,8 +5,8 @@ import me.zzhen.bt.bencode.DictionaryNode;
 import me.zzhen.bt.bencode.IntNode;
 import me.zzhen.bt.dht.DhtApp;
 import me.zzhen.bt.dht.DhtConfig;
-import me.zzhen.bt.utils.IO;
-import me.zzhen.bt.utils.Utils;
+import me.zzhen.bt.util.IO;
+import me.zzhen.bt.util.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

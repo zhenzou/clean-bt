@@ -1,6 +1,5 @@
 package me.zzhen.bt.dht.base;
 
-import me.zzhen.bt.utils.Utils;
 import org.junit.Test;
 
 import static junit.framework.Assert.assertEquals;

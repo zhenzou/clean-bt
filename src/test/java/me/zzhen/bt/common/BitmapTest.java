@@ -1,6 +1,5 @@
 package me.zzhen.bt.common;
 
-import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.dht.base.NodeKey;
 import org.junit.Test;
 
@@ -36,7 +35,7 @@ public class BitmapTest {
         assertEquals(true, bitmap.get(5));
         assertEquals(false, bitmap.get(4));
         assertEquals(false, bitmap.get(1));
-        bitmap.clear(0);
+        bitmap.unset(0);
         assertEquals(false, bitmap.get(0));
         assertEquals(true, bitmap.get(5));
     }
@@ -44,9 +43,9 @@ public class BitmapTest {
     @Test
     public void clear() throws Exception {
         Bitmap bitmap = new Bitmap(10);
-        bitmap.clear(0);
-        bitmap.clear(3);
-        bitmap.clear(5);
+        bitmap.unset(0);
+        bitmap.unset(3);
+        bitmap.unset(5);
 
     }
 
@@ -58,13 +57,21 @@ public class BitmapTest {
         bitmap.set(5);
         Bitmap bitmap1 = new Bitmap(11);
         bitmap1.or(bitmap);
-        bitmap1.set(10, true);
+        bitmap1.set(10);
         assertEquals(true, bitmap1.get(0));
         assertEquals(true, bitmap1.get(3));
         assertEquals(true, bitmap1.get(5));
         assertEquals(false, bitmap1.get(4));
         assertEquals(false, bitmap1.get(9));
         assertEquals(true, bitmap1.get(10));
+
+        bitmap.or(bitmap1);
+        assertEquals(true, bitmap.get(0));
+        assertEquals(true, bitmap1.get(3));
+        assertEquals(true, bitmap1.get(5));
+        assertEquals(false, bitmap1.get(1));
+        assertEquals(false, bitmap1.get(4));
+
     }
 
     @Test

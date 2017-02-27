@@ -1,14 +1,14 @@
 package me.zzhen.bt.dht.base;
 
 import me.zzhen.bt.common.Bitmap;
-import me.zzhen.bt.utils.Utils;
+import me.zzhen.bt.util.Utils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Objects;
 
-import static me.zzhen.bt.utils.Utils.bytesToInt;
-import static me.zzhen.bt.utils.Utils.intToBytes;
+import static me.zzhen.bt.util.Utils.bytesToInt;
+import static me.zzhen.bt.util.Utils.intToBytes;
 
 /**
  * Project:CleanBT

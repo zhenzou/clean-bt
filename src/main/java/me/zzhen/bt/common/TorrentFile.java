@@ -1,7 +1,7 @@
 package me.zzhen.bt.common;
 
 import me.zzhen.bt.bencode.*;
-import me.zzhen.bt.utils.Utils;
+import me.zzhen.bt.util.Utils;
 
 import java.io.*;
 import java.time.Instant;

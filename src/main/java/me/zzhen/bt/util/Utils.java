@@ -1,4 +1,4 @@
-package me.zzhen.bt.utils;
+package me.zzhen.bt.util;
 
 import java.io.ByteArrayOutputStream;
 import java.net.InetAddress;
@@ -128,9 +128,7 @@ public interface Utils {
         int ret = 0;
         for (int i = offset; i < len && i < length; i++) {
             ret |= (bytes[i] & 0xFF);//暂时
-            if (i < length - 1) {
-                ret <<= 8;
-            }
+            if (i < length - 1) ret <<= 8;
         }
         return ret;
     }

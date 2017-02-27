@@ -1,11 +1,10 @@
 package me.zzhen.bt.bencode;
 
 import me.zzhen.bt.dht.base.NodeInfo;
-import me.zzhen.bt.utils.Utils;
+import me.zzhen.bt.util.Utils;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
-import java.util.Map;
 
 /**
  * Project:CleanBT
