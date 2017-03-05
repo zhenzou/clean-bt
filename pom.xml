@@ -1,68 +1,86 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-<modelVersion>4.0.0</modelVersion>
-<groupId>me.zzhen</groupId>
-<artifactId>CleanBT</artifactId>
-<packaging>jar</packaging>
-<version>0.0.1-SNAPSHOT</version>
-<name>CleanBT</name>
-<url>http://maven.apache.org</url>
-<repositories>
-    <repository>
-        <id>sonatype</id>
-        <name>sonatype repository</name>
-        <url>http://repository.sonatype.org/content/groups/public/</url>
-    </repository>
-</repositories>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>me.zzhen</groupId>
+    <artifactId>clean-bt</artifactId>
+    <packaging>pom</packaging>
+    <version>0.2-SNAPSHOT</version>
+    <modules>
+        <module>clean-bt-editor</module>
+        <module>clean-bt-core</module>
+        <module>clean-bt-dht</module>
+    </modules>
+    <name>CleanBT</name>
+    <url>http://maven.apache.org</url>
+    <repositories>
+        <repository>
+            <id>sonatype</id>
+            <name>sonatype repository</name>
+            <url>http://repository.sonatype.org/content/groups/public/</url>
+        </repository>
+    </repositories>
 
-<dependencies>
-    <!-- 测试框架 -->
-    <dependency>
-        <groupId>junit</groupId>
-        <artifactId>junit</artifactId>
-        <version>4.10</version>
-        <scope>test</scope>
-    </dependency>
+    <properties>
+        <project-version>0.2-SNAPSHOT</project-version>
+        <fax-version>8.9</fax-version>
+        <!--font awesome fx-->
+        <jdk-version>1.8</jdk-version>
+        <junit-version>4.12</junit-version>
+        <slf4j-version>1.7.21</slf4j-version>
+    </properties>
 
-    <dependency>
-        <groupId>de.jensd</groupId>
-        <artifactId>fontawesomefx</artifactId>
-        <version>8.9</version>
-    </dependency>
-    <!--log-->
-    <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-api</artifactId>
-        <version>1.7.19</version>
-        <scope>compile</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-jdk14</artifactId>
-        <version>1.7.21</version>
-        <scope>compile</scope>
-    </dependency>
-</dependencies>
+    <dependencyManagement>
+        <dependencies>
+            <!-- test -->
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>${junit-version}</version>
+                <scope>test</scope>
+            </dependency>
 
-<build>
-    <finalName>cleanbt</finalName>
-    <plugins>
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <configuration>
-                <source>1.8</source>
-                <target>1.8</target>
-            </configuration>
-        </plugin>
-    </plugins>
-    <resources>
-        <resource>
-            <directory>src/main/java</directory>
-            <includes>
-                <include>**/*.xml</include>
-            </includes>
-        </resource>
-    </resources>
-</build>
+            <dependency>
+                <groupId>de.jensd</groupId>
+                <artifactId>fontawesomefx</artifactId>
+                <version>${fax-version}</version>
+            </dependency>
+            <!--/test-->
+            <!--log-->
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j-version}</version>
+                <scope>compile</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-jdk14</artifactId>
+                <version>${slf4j-version}</version>
+                <scope>compile</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+
+    <build>
+        <finalName>cleanbt</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>${jdk-version}</source>
+                    <target>${jdk-version}</target>
+                </configuration>
+            </plugin>
+        </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/java</directory>
+                <includes>
+                    <include>**/*.xml</include>
+                </includes>
+            </resource>
+        </resources>
+    </build>
 </project>
