@@ -50,7 +50,7 @@
 //    }
 //
 //    @org.junit.Test
-//    public void bytesToInt() throws Exception {
+//    public void bytes2Int() throws Exception {
 //        assertArrayEquals(Utils.intToBytes(1), new byte[]{0, 0, 0, 1});
 //        InetAddress addr = InetAddress.getByName("82.221.103.244");
 //        byte[] address = addr.getAddress();
@@ -65,7 +65,7 @@
 ////        System.out.println(bytes.length);
 ////        InetAddress addr = IO.getAddrFromBytes(bytes, 0);
 ////        System.out.println(addr.getHostAddress());
-////        System.out.println(Utils.bytesToInt(bytes, 4, 2));
+////        System.out.println(Utils.bytes2Int(bytes, 4, 2));
 //        byte[] bytes = Utils.hex2Bytes("64313a65693165343a6970763434");
 //        System.out.println(new String(bytes));
 //    }
@@ -91,9 +91,9 @@
 //    }
 //
 //    @Test
-//    public void bytesToBin() {
+//    public void bytes2Bin() {
 //        byte[] value = NodeKey.genRandomKey().getValue();
-//        String s = Utils.bytesToBin(value);
+//        String s = Utils.bytes2Bin(value);
 //        System.out.println(s);
 //        System.out.println(s.length());
 //    }

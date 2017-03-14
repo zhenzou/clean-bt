@@ -134,7 +134,7 @@ class ResponseProcessor implements Runnable {
             logger.info("nodes :" + values.getValue().size());
             List<InetSocketAddress> peers = values.getValue().stream().map(node -> {
                 byte[] bytes = node.decode();
-                return new InetSocketAddress(Utils.getAddrFromBytes(bytes, 0), Utils.bytesToInt(bytes, 4, 2));
+                return new InetSocketAddress(Utils.getAddrFromBytes(bytes, 0), Utils.bytes2Int(bytes, 4, 2));
             }).collect(Collectors.toList());
             PeerManager.PM.addAllPeer(key, peers);
         }

@@ -86,7 +86,7 @@ public class PeerManager {
 
         try {
             baos.write(address.getAddress().getAddress());
-            baos.write(Utils.getSomeByte(Utils.intToBytes(address.getPort()), 2, 2));
+            baos.write(Utils.getSomeByte(Utils.int2Bytes(address.getPort()), 2, 2));
         } catch (IOException e) {
             e.printStackTrace();
         }

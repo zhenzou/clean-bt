@@ -56,7 +56,7 @@ public class NodeInfo {
         System.arraycopy(bytes, 0, keydata, 0, 20);
         InetAddress address = Utils.getAddrFromBytes(bytes, 20);
         NodeKey key = new NodeKey(keydata);
-        int port = Utils.bytesToInt(bytes, 24, 2);
+        int port = Utils.bytes2Int(bytes, 24, 2);
         return new NodeInfo(address, port, key);
     }
 
@@ -128,8 +128,8 @@ public class NodeInfo {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
             baos.write(key.getValue());
-            baos.write(Utils.ipToBytes(address.getHostAddress()));
-            baos.write(Utils.intToBytes(port), 2, 2);
+            baos.write(Utils.ip2bytes(address.getHostAddress()));
+            baos.write(Utils.int2Bytes(port), 2, 2);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -142,8 +142,8 @@ public class NodeInfo {
     public byte[] compactIpPort() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
-            baos.write(Utils.ipToBytes(address.getHostAddress()));
-            baos.write(Utils.intToBytes(port), 2, 2);
+            baos.write(Utils.ip2bytes(address.getHostAddress()));
+            baos.write(Utils.int2Bytes(port), 2, 2);
         } catch (IOException e) {
             e.printStackTrace();
         }

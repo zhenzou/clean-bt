@@ -2,7 +2,7 @@
 A Simple torrent editor powered by JavaFX.
 
 #License
-CleanBTEditor
+CleanBT
 
 Copyright (c) 2016 zzzhen (https://coding.net/u/zzzhen).
 

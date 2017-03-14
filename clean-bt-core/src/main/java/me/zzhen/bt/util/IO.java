@@ -6,6 +6,7 @@ import java.io.*;
  * Project:CleanBT
  * Create Time: 16-12-13.
  * Description:
+ * 一些工具那个方法，都没有检测输入
  *
  * @author zzhen zzzhen1994@gmail.com
  */
@@ -35,7 +36,7 @@ public interface IO {
      * 读取输入中的前k个字节数组
      *
      * @param input 输入流
-     * @param k     第几个数据
+     * @param k     前k个字节
      * @return
      */
     static byte[] readKBytes(InputStream input, int k) {
@@ -54,7 +55,7 @@ public interface IO {
     }
 
     /**
-     * 用Buffered读取全部数据
+     * 用Buffered读取全部数据，不包含换行符
      *
      * @param input
      * @return
@@ -73,5 +74,18 @@ public interface IO {
         return baos.toByteArray();
     }
 
-
+    /**
+     * @param data
+     * @param file
+     * @throws IOException
+     */
+    static void save(byte[] data, File file) throws IOException {
+        try (OutputStream out = new FileOutputStream(file)) {
+            out.write(data);
+            out.flush();
+            out.close();
+        } catch (IOException e) {
+            throw e;
+        }
+    }
 }

@@ -28,17 +28,17 @@ public class NodeKeyTest {
     @Test
     public void prefix() throws Exception {
 //        NodeKey key = NodeKey.genRandomKey();
-//        char[] s = Utils.bytesToBin(key.getValue()).toCharArray();
+//        char[] s = Utils.bytes2Bin(key.getValue()).toCharArray();
 //        for (int i = 0; i < 160; i++) {
 //            assertEquals(true, key.prefix(i) == Integer.parseInt(s[i] + ""));
 //        }
 //        key = NodeKey.genRandomKey();
-//        s = Utils.bytesToBin(key.getValue()).toCharArray();
+//        s = Utils.bytes2Bin(key.getValue()).toCharArray();
 //        for (int i = 0; i < 160; i++) {
 //            assertEquals(true, key.prefix(i) == Integer.parseInt(s[i] + ""));
 //        }
 //        key = NodeKey.genRandomKey();
-//        s = Utils.bytesToBin(key.getValue()).toCharArray();
+//        s = Utils.bytes2Bin(key.getValue()).toCharArray();
 //        for (int i = 0; i < 160; i++) {
 //            assertEquals(true, key.prefix(i) == Integer.parseInt(s[i] + ""));
 //        }

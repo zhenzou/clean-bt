@@ -172,7 +172,7 @@ public class MetadataWorker implements Runnable {
     private void sendMessage(OutputStream out, byte[] data) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream(data.length + 4);
         int len = data.length;
-        byte[] lens = Utils.intToBytes(len);
+        byte[] lens = Utils.int2Bytes(len);
         try {
             baos.write(lens);
             baos.write(data);
@@ -245,7 +245,7 @@ public class MetadataWorker implements Runnable {
             ByteArrayOutputStream pieces = null;
             while (true) {
                 byte[] head = IO.readKBytes(in, 6);
-                int length = Utils.bytesToInt(head, 0, 4);
+                int length = Utils.bytes2Int(head, 0, 4);
                 logger.info("length:" + length);
                 if (length == 0) return;
                 int msgId = head[4];

@@ -86,7 +86,7 @@ public interface Utils {
      * @param num
      * @return
      */
-    static byte[] intToBytes(int num) {
+    static byte[] int2Bytes(int num) {
         byte[] bytes = new byte[4];
         for (int i = 0; i < 4; i++) {
             bytes[3 - i] = (byte) (num >>> 8 * i);
@@ -98,15 +98,15 @@ public interface Utils {
      * @param bytes Big Endian
      * @return
      */
-    static long bytesToLong(byte[] bytes) {
-        return bytesToLong(bytes, 0);
+    static long bytes2Long(byte[] bytes) {
+        return bytes2Long(bytes, 0);
     }
 
     /**
      * @param bytes Big Endian
      * @return
      */
-    static long bytesToLong(byte[] bytes, int offset) {
+    static long bytes2Long(byte[] bytes, int offset) {
         int len = bytes.length - 8 >= offset ? 8 : bytes.length - offset;
         if (len <= 0) throw new IllegalArgumentException("offset is tow big for this byte array");
         byte[] data = new byte[8];
@@ -118,11 +118,11 @@ public interface Utils {
      * @param bytes Big Endian
      * @return
      */
-    static int bytesToInt(byte[] bytes) {
-        return bytesToInt(bytes, 0, bytes.length);
+    static int bytes2Int(byte[] bytes) {
+        return bytes2Int(bytes, 0, bytes.length);
     }
 
-    static int bytesToInt(byte[] bytes, int offset, int length) {
+    static int bytes2Int(byte[] bytes, int offset, int length) {
         int len = bytes.length;
         length = offset + length;
         int ret = 0;
@@ -138,15 +138,15 @@ public interface Utils {
      * @param reverse 标志是否reverse
      * @return
      */
-    static int bytesToInt(byte[] bytes, boolean reverse) {
+    static int bytes2Int(byte[] bytes, boolean reverse) {
         if (reverse) {
             reverseArray(bytes);
         }
-        return bytesToInt(bytes, 0, bytes.length);
+        return bytes2Int(bytes, 0, bytes.length);
     }
 
 
-    static String bytesToBin(byte[] bytes) {
+    static String bytes2Bin(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) {
             for (int i = 0; i < 8; i++) {
@@ -201,7 +201,7 @@ public interface Utils {
         return i;
     }
 
-    static byte[] ipToBytes(String ip) {
+    static byte[] ip2bytes(String ip) {
         String[] addrs = ip.split("\\.");
         if (addrs.length != 4) throw new IllegalArgumentException("ip should be a x.x.x.x");
         byte[] bytes = new byte[4];

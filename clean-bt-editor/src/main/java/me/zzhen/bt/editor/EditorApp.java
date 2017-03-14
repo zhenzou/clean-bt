@@ -33,7 +33,6 @@ import java.util.stream.Collectors;
 /**
  * /**
  * Project:CleanBT
- * TODO 改成属性
  *
  * @author zzhen zzzhen1994@gmail.com
  *         Create Time: 2016/10/17.

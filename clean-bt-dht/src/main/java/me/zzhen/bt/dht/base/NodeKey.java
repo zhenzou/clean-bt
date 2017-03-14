@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.util.Objects;
 
 import static me.zzhen.bt.util.Utils.bytesToInt;
-import static me.zzhen.bt.util.Utils.intToBytes;
+import static me.zzhen.bt.util.Utils.int2Bytes;
 
 /**
  * Project:CleanBT
@@ -23,7 +23,7 @@ public class NodeKey implements Comparable<NodeKey> {
     public static NodeKey genRandomKey() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         for (int i = 0; i < 5; i++) {
-            byte[] bytes = intToBytes((int) (Math.random() * Integer.MAX_VALUE));
+            byte[] bytes = int2Bytes((int) (Math.random() * Integer.MAX_VALUE));
             try {
                 baos.write(bytes);
             } catch (IOException e) {
@@ -119,10 +119,10 @@ public class NodeKey implements Comparable<NodeKey> {
 
     public static void main(String[] args) {
 
-        byte[] bytes = intToBytes(100);
+        byte[] bytes = int2Bytes(100);
         for (byte aByte : bytes) {
             System.out.println(aByte);
         }
-        System.out.println(bytesToInt(bytes));
+        System.out.println(Utils.bytes2Int(bytes));
     }
 }

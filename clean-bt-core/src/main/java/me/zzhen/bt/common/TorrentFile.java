@@ -1,7 +1,9 @@
 package me.zzhen.bt.common;
 
 import me.zzhen.bt.bencode.*;
+import me.zzhen.bt.util.IO;
 import me.zzhen.bt.util.Utils;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
 import java.time.Instant;
@@ -19,7 +21,7 @@ import java.util.stream.Collectors;
  *         Version :
  *         Description:
  */
-public class TorrentFile {
+public final class TorrentFile {
 
     //公共字段
     public static final String ANNOUNCE = "announce";               //必选, tracker 服务器的地址
@@ -45,7 +47,7 @@ public class TorrentFile {
     public static final String FILES = "files";                     //必选, 文件列表，每个文件列表下面是包括每一个文件的信息，文件信息是个字典。
     public static final String PATH = "path";                       //必选， 文件名称，包含文件夹在内
     public static final String PATH_UTF8 = "path.utf8";
-    public static final String FILEHASH = "filehash";               //可选， 文件 hash。
+    public static final String FILE_HASH = "filehash";               //可选， 文件 hash。
     public static final String ED2K = "ed2k";
 
 
@@ -344,20 +346,14 @@ public class TorrentFile {
     }
 
     /**
-     * @param file 没有检查是否为空
+     * @param file not null
      * @throws IOException
      */
-    public void save(File file) throws IOException {
-        try (OutputStream out = new FileOutputStream(file)) {
-            out.write(encode());
-            out.flush();
-            out.close();
-        } catch (IOException e) {
-            throw e;
-        }
+    public void save(@NotNull File file) throws IOException {
+        IO.save(encode(), file);
     }
 
-    public static class TorrentFileHandler implements EventHandler {
+    public static class TorrentFileHandler implements DecodeEventHandler {
 
         private TorrentFile mTorrentFile;
 
@@ -366,7 +362,7 @@ public class TorrentFile {
         }
 
         @Override
-        public Node handleDictionaryNode(String key, Node value) {
+        public void whenDictionary(String key, Node value) {
             switch (key) {
                 case ANNOUNCE:
                     mTorrentFile.setAnnounce((StringNode) value);
@@ -416,12 +412,11 @@ public class TorrentFile {
                     break;
                 case PATH_UTF8:
                     break;
-                case FILEHASH:
+                case FILE_HASH:
                     break;
                 case ED2K:
                     break;
             }
-            return value;
         }
     }
 

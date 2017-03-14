@@ -74,7 +74,7 @@ public class DhtClient {
 //                byte[] decode = value.get(i).decode();
 //                logger.info("target: length:" + decode.length);
 //                InetAddress nodeAddr = IO.getAddrFromBytes(decode, 0);
-//                int port = Utils.bytesToInt(decode, 4, 2);
+//                int port = Utils.bytes2Int(decode, 4, 2);
 //                logger.info(" Peer:IP" + nodeAddr.getHostAddress());
 //                logger.info(" Peer:Port" + port);
 //                if (DhtApp.NODE.isBlackItem(nodeAddr.getHostAddress(), port)) continue;

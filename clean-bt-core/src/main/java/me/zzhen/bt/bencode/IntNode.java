@@ -61,7 +61,7 @@ public class IntNode implements Node {
 
     @Override
     public byte[] decode() {
-        return Utils.intToBytes(Integer.valueOf(value));
+        return Utils.int2Bytes(Integer.valueOf(value));
     }
 
     @Override
