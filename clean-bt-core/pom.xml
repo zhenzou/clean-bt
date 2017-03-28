@@ -9,15 +9,9 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>clean-bt-core</artifactId>
-    <version>0.2-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <description>The core package</description>
     <dependencies>
-        <!-- test -->
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <!--/test-->
         <!--log-->
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -33,6 +27,14 @@
             <artifactId>slf4j-jdk14</artifactId>
             <scope>compile</scope>
         </dependency>
+
+        <!-- test -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!--/test-->
     </dependencies>
     <build>
         <finalName>cleanbt-core</finalName>

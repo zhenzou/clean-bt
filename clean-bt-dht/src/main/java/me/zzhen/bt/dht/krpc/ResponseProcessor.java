@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static me.zzhen.bt.dht.krpc.Krpc.*;
+
 /**
  * Project:CleanBT
  * Create Time: 16-12-20.

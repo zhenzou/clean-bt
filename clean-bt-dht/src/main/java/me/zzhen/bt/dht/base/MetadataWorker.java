@@ -1,6 +1,6 @@
 package me.zzhen.bt.dht.base;
 
-import com.sun.xml.internal.org.jvnet.mimepull.DecodingException;
+import me.zzhen.bt.bencode.DecoderException;
 import me.zzhen.bt.bencode.DictionaryNode;
 import me.zzhen.bt.bencode.IntNode;
 import me.zzhen.bt.dht.DhtApp;
@@ -213,7 +213,7 @@ public class MetadataWorker implements Runnable {
         DictionaryNode node = null;
         try {
             node = DictionaryNode.decode(new ByteArrayInputStream(data));
-        } catch (DecodingException e) {
+        } catch (DecoderException e) {
             logger.error(e.getMessage());
         } catch (IOException e) {
             e.printStackTrace();

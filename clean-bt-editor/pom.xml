@@ -9,31 +9,19 @@
     </parent>
     <description>A torrent editor powered by JavaFX</description>
     <packaging>jar</packaging>
-
     <modelVersion>4.0.0</modelVersion>
-
     <artifactId>clean-bt-editor</artifactId>
-    <version>0.2-SNAPSHOT</version>
+
     <dependencies>
         <!--core util and bencode-->
         <dependency>
             <groupId>me.zzhen</groupId>
             <artifactId>clean-bt-core</artifactId>
-            <version>0.2-SNAPSHOT</version>
+            <version>${project.parent.version}</version>
+            <type>jar</type>
             <scope>compile</scope>
         </dependency>
-        <!-- test -->
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <scope>test</scope>
-        </dependency>
 
-        <dependency>
-            <groupId>de.jensd</groupId>
-            <artifactId>fontawesomefx</artifactId>
-        </dependency>
-        <!--/test-->
         <!--log-->
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -45,6 +33,20 @@
             <artifactId>slf4j-jdk14</artifactId>
             <scope>compile</scope>
         </dependency>
+
+
+        <dependency>
+            <groupId>de.jensd</groupId>
+            <artifactId>fontawesomefx</artifactId>
+        </dependency>
+
+        <!-- test -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!--/test-->
     </dependencies>
     <build>
         <finalName>cleanbt-editor</finalName>
@@ -56,6 +58,37 @@
                     <source>${jdk-version}</source>
                     <target>${jdk-version}</target>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                            <mainClass>me.zzhen.bt.editor.EditorApp</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>
+                                ${project.build.directory}/lib
+                            </outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
         <resources>

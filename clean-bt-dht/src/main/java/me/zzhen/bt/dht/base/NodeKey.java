@@ -7,7 +7,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Objects;
 
-import static me.zzhen.bt.util.Utils.bytesToInt;
 import static me.zzhen.bt.util.Utils.int2Bytes;
 
 /**

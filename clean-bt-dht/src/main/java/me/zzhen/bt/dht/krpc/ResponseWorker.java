@@ -13,6 +13,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Optional;
 
+import static me.zzhen.bt.dht.krpc.Krpc.*;
+
 /**
  * Project:CleanBT
  * Create Time: 16-12-20.
