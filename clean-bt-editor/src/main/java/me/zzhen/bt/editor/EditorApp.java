@@ -176,7 +176,6 @@ public class EditorApp extends Application {
         fileTree.refresh();
     }
 
-
     /**
      * 将UI上的文件树结构恢复成BT文件中的扁平的文件树
      *
@@ -189,7 +188,7 @@ public class EditorApp extends Application {
         path.addNode(new StringNode(item.getValue().getName().getBytes()));
         if (children.size() == 0) {
             int size = path.size();
-            DictionaryNode dic = new DictionaryNode();
+            DictNode dic = new DictNode();
             StringNode[] nodes = new StringNode[size];
             System.arraycopy(path.getValue().toArray(), 0, nodes, 0, size);
             dic.addNode("path", new ListNode(Arrays.asList(nodes)));
@@ -230,7 +229,7 @@ public class EditorApp extends Application {
         ListNode infoName = (ListNode) torrentProperty.getValue().getInfoFiles();
         List<Node> value = infoName.getValue();
         TreeNode<FileTreeItemModel> treeRoot = new TreeNode<>(new FileTreeItemModel(torrentProperty.getValue().getInfoName().toString(), 0));
-        value.stream().map(item -> (DictionaryNode) item).collect(Collectors.toList()).forEach(item -> addNodeToTree(treeRoot, item));
+        value.stream().map(item -> (DictNode) item).collect(Collectors.toList()).forEach(item -> addNodeToTree(treeRoot, item));
         return treeRoot;
     }
 
@@ -240,7 +239,7 @@ public class EditorApp extends Application {
      * @param treeRoot 当前子树的根节点
      * @param file     当前的文件信息
      */
-    private void addNodeToTree(TreeNode<FileTreeItemModel> treeRoot, DictionaryNode file) {
+    private void addNodeToTree(TreeNode<FileTreeItemModel> treeRoot, DictNode file) {
         int index = 0;
         ListNode path = (ListNode) file.getNode("path");
         long length = Long.parseLong(file.getNode("length").toString());

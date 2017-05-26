@@ -17,32 +17,6 @@ import java.util.Arrays;
  */
 public class StringNode implements Node {
 
-    public static StringNode decode(InputStream input) throws IOException {
-        int c;
-        if ((c = input.read()) == -1 || !Character.isDigit(c))
-            throw new IllegalArgumentException("StringNode must start with digital");
-        StringBuilder len = new StringBuilder();
-        len.append((char) c);
-        while ((c = input.read()) != -1 && (char) c != StringNode.STRING_VALUE_START) {
-            if (Character.isDigit(c)) {
-                len.append((char) c);
-            } else {
-                throw new DecoderException("expect a digital  but found " + (char) c);
-            }
-        }
-        long length = Long.parseLong(len.toString().trim());
-        long i = 0;
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        while (i < length && (c = input.read()) != -1) {
-            baos.write(c & 0xFF);
-            i++;
-        }
-        if (i < length) {
-            throw new DecoderException("illegal string node , except " + length + " char but found " + i);
-        }
-        return new StringNode(baos.toByteArray());
-    }
-
     static final char STRING_VALUE_START = ':';
 
     private byte[] value;

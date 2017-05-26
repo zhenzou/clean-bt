@@ -1,4 +1,4 @@
-package me.zzhen.bt.dht.base;
+package me.zzhen.bt.dht;
 
 import me.zzhen.bt.util.Utils;
 

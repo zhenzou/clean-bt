@@ -1,11 +1,10 @@
-package me.zzhen.bt.dht.base;
+package me.zzhen.bt.dht;
 
 import me.zzhen.bt.util.Utils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.Objects;
 
 /**
@@ -21,23 +20,17 @@ public class NodeInfo {
     /**
      * 节点的域名或者点分IP地址
      */
-    private String name;
+    public final String address;
 
     /**
      * 节点的端口
      */
-    private int port;
+    public final int port;
 
     /**
      * 节点的ID
      */
     public NodeKey key;
-
-    /**
-     * 节点的IP地址
-     */
-    private InetAddress address;
-
 
     /**
      * 暂时就是支持完整的NodeInfo
@@ -80,19 +73,14 @@ public class NodeInfo {
     public NodeInfo(InetAddress address, int port, NodeKey key) {
         this.port = port;
         this.key = key;
-        this.address = address;
+        this.address = address.getHostAddress();
     }
 
 
     public NodeInfo(String host, int port, NodeKey key) {
-        this.name = host;
+        this.address = host;
         this.port = port;
         this.key = key;
-        try {
-            address = InetAddress.getByName(name);
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        }
     }
 
 
@@ -100,26 +88,13 @@ public class NodeInfo {
         this.key = key;
     }
 
-    public InetAddress getAddress() {
-        return address;
-    }
-
-    public void setAddress(InetAddress address) {
-        this.address = address;
-    }
-
     public NodeKey getKey() {
         return key;
     }
 
-    public int getPort() {
-        return port;
+    public String getFullAddress() {
+        return address + ":" + port;
     }
-
-    public void setPort(int port) {
-        this.port = port;
-    }
-
 
     /**
      * @return nodeinfo的编码，ID IP/Port 一共26个字节
@@ -128,7 +103,7 @@ public class NodeInfo {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
             baos.write(key.getValue());
-            baos.write(Utils.ip2bytes(address.getHostAddress()));
+            baos.write(Utils.ip2bytes(address));
             baos.write(Utils.int2Bytes(port), 2, 2);
         } catch (IOException e) {
             e.printStackTrace();
@@ -142,7 +117,7 @@ public class NodeInfo {
     public byte[] compactIpPort() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
-            baos.write(Utils.ip2bytes(address.getHostAddress()));
+            baos.write(Utils.ip2bytes(address));
             baos.write(Utils.int2Bytes(port), 2, 2);
         } catch (IOException e) {
             e.printStackTrace();
@@ -158,7 +133,7 @@ public class NodeInfo {
         NodeInfo nodeInfo = (NodeInfo) o;
 
         if (port != nodeInfo.port) return false;
-        if (name != null ? !name.equals(nodeInfo.name) : nodeInfo.name != null) return false;
+        if (address != null ? !address.equals(nodeInfo.address) : nodeInfo.address != null) return false;
         if (!key.equals(nodeInfo.key)) return false;
         return address.equals(nodeInfo.address);
     }
@@ -174,11 +149,11 @@ public class NodeInfo {
     @Override
     public String toString() {
         return "NodeInfo{" +
-                "name='" + name + '\'' +
-                ", port=" + port +
-                ", key=" + String.valueOf(key) +
-                ", address=" + address +
-                '}';
+            "address='" + address + '\'' +
+            ", port=" + port +
+            ", key=" + String.valueOf(key) +
+            ", address=" + address +
+            '}';
     }
 
 }

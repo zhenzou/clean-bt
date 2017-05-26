@@ -1,10 +1,10 @@
 package me.zzhen.bt.dht.krpc;
 
-import me.zzhen.bt.bencode.DictionaryNode;
+import me.zzhen.bt.bencode.DictNode;
 import me.zzhen.bt.bencode.Node;
-import me.zzhen.bt.dht.DhtApp;
-import me.zzhen.bt.dht.base.NodeInfo;
-import me.zzhen.bt.dht.base.NodeKey;
+import me.zzhen.bt.dht.Dht;
+import me.zzhen.bt.dht.NodeInfo;
+import me.zzhen.bt.dht.NodeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +29,7 @@ public class ResponseWorker extends Thread {
     /**
      * 请求的全部内容
      */
-    private DictionaryNode request;
+    private DictNode request;
 
     /**
      * 情趣的来源地址
@@ -41,14 +41,14 @@ public class ResponseWorker extends Thread {
      */
     private int port;
 
-    private RequestCallback callback;
+    private RequestProcessor callback;
 
     /**
      * 全局socket
      */
     private DatagramSocket socket;
 
-    public ResponseWorker(DatagramSocket socket, InetAddress address, int port, DictionaryNode request, RequestCallback callback) {
+    public ResponseWorker(DatagramSocket socket, InetAddress address, int port, DictNode request, RequestProcessor callback) {
         this.socket = socket;
         this.request = request;
         this.address = address;
@@ -58,15 +58,15 @@ public class ResponseWorker extends Thread {
 
     @Override
     public void run() {
-        if (DhtApp.NODE.isBlackItem(address, port)) return;
+        if (Dht.NODE.isBlackItem(address, port)) return;
         response(address, port, request);
     }
 
-    public void response(InetAddress address, int port, DictionaryNode request) {
+    public void response(InetAddress address, int port, DictNode request) {
         Node method = request.getNode("q");
 //        logger.info(method + "  request from :" + address.getHostAddress() + ":" + port);
         Node t = request.getNode("t");
-        DictionaryNode arg = (DictionaryNode) request.getNode("a");
+        DictNode arg = (DictNode) request.getNode("a");
         Node id = arg.getNode("id");
 
         NodeKey key = new NodeKey(id.decode());
@@ -75,16 +75,16 @@ public class ResponseWorker extends Thread {
             callback.error(info, t, id, Message.ERRNO_PROTOCOL, "invalid id");
             return;
         }
-        Optional<NodeInfo> optional = DhtApp.NODE.routes.getByAddr(address, port);
+        Optional<NodeInfo> optional = Dht.NODE.routes.getByAddr(address, port);
         if (optional.isPresent()) {
             if (!optional.get().getKey().equals(key)) {
                 callback.error(info, t, id, Message.ERRNO_PROTOCOL, "invalid id");
-                DhtApp.NODE.addBlackItem(address, port);
-                DhtApp.NODE.routes.removeByAddr(new InetSocketAddress(address, port));
+                Dht.NODE.addBlackItem(address, port);
+                Dht.NODE.routes.removeByAddr(new InetSocketAddress(address, port));
                 return;
             }
         }
-        DhtApp.NODE.addNode(info);
+        Dht.NODE.addNode(info);
         switch (method.toString()) {
             case METHOD_PING:
                 callback.onPing(info, request);
@@ -111,7 +111,7 @@ public class ResponseWorker extends Thread {
      * @param t   token
      * @param req 请求内容
      */
-    private void doResponseAnnouncePeer(InetAddress address, int port, NodeKey key, Node t, DictionaryNode req) {
+    private void doResponseAnnouncePeer(InetAddress address, int port, NodeKey key, Node t, DictNode req) {
         Node impliedPort = req.getNode("implied_port");
         if (impliedPort == null || "0".equals(String.valueOf(impliedPort))) {
 //            logger.info("implied_port:" + port);

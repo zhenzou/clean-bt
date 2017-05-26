@@ -1,10 +1,10 @@
 package me.zzhen.bt.dht.krpc;
 
 import me.zzhen.bt.bencode.*;
-import me.zzhen.bt.dht.DhtApp;
-import me.zzhen.bt.dht.base.NodeKey;
-import me.zzhen.bt.dht.base.Token;
-import me.zzhen.bt.dht.base.TokenManager;
+import me.zzhen.bt.dht.Dht;
+import me.zzhen.bt.dht.NodeKey;
+import me.zzhen.bt.dht.Token;
+import me.zzhen.bt.dht.TokenManager;
 
 /**
  * Project:CleanBT
@@ -23,7 +23,7 @@ public class Message {
 
 
     public final String method;
-    public final DictionaryNode arg;
+    public final DictNode arg;
     public final Token token;
 
     /**
@@ -33,7 +33,7 @@ public class Message {
      * @param arg
      * @param token
      */
-    public Message(String method, DictionaryNode arg, Token token) {
+    public Message(String method, DictNode arg, Token token) {
         this.method = method;
         this.arg = arg;
         this.token = token;
@@ -41,37 +41,41 @@ public class Message {
 
 
     /**
-     * 判断给予的内容是不是Krpc的响应
+     * 判断参数内容是不是Krpc的响应
      *
-     * @param resp
-     * @return 如果为空, 则返回false, 不为空, 则判断 y值时不时r
+     * @param dict
+     * @return 如果为空, 则返回false, 不为空, 则判断y值是不是r
      */
-    public static boolean isResponse(DictionaryNode resp) {
-        return resp != null && "r".equals(resp.getNode("y").toString());
+    public static boolean isResp(DictNode dict) {
+        return dict != null && is(dict, "y", "r");
     }
 
     /**
-     * 判断给予的内容是不是Krpc的请求
+     * 判断参数内容是不是Krpc的请求
      *
-     * @param request
-     * @return 如果为空, 则返回false, 不为空, 则判断 y值时不时r
+     * @param dict
+     * @return 如果为空, 则返回false, 不为空, 则判断 y值是不是q
      */
-    public static boolean isRequest(DictionaryNode request) {
-        return request != null && "q".equals(request.getNode("y").toString());
+    public static boolean isReq(DictNode dict) {
+        return dict != null && is(dict, "y", "q");
     }
 
     /**
      * 判断给予的内容是不是Krpc的错误响应
      *
-     * @param resp
-     * @return 如果为空, 则返回false, 不为空, 则判断 y值时不时r
+     * @param dict
+     * @return 如果为空, 则返回false, 不为空, 则判断 y值是不是e
      */
-    public static boolean isError(DictionaryNode resp) {
-        return resp != null && "e".equals(resp.getNode("y").toString());
+    public static boolean isErr(DictNode dict) {
+        return dict != null && is(dict, "y", "e");
     }
 
-    public static DictionaryNode makeRequest(NodeKey target, String method) {
-        DictionaryNode node = new DictionaryNode();
+    private static boolean is(DictNode dict, String key, String value) {
+        return value.equals(dict.getNode(key).toString());
+    }
+
+    public static DictNode makeReq(NodeKey target, String method) {
+        DictNode node = new DictNode();
         node.addNode("t", new StringNode(TokenManager.newToken(target, method).id + ""));
         node.addNode("y", new StringNode("q"));
         node.addNode("q", new StringNode(method));
@@ -79,15 +83,15 @@ public class Message {
     }
 
 
-    public static DictionaryNode makeResponse(Node t) {
-        DictionaryNode node = new DictionaryNode();
+    public static DictNode makeResp(Node t) {
+        DictNode node = new DictNode();
         node.addNode("t", t);
         node.addNode("y", new StringNode("r"));
         return node;
     }
 
-    public static DictionaryNode makeError(Node t, int errno, String msg) {
-        DictionaryNode node = new DictionaryNode();
+    public static DictNode makeErr(Node t, int errno, String msg) {
+        DictNode node = new DictNode();
         node.addNode("t", t);
         node.addNode("y", new StringNode("e"));
         ListNode e = new ListNode();
@@ -97,9 +101,9 @@ public class Message {
         return node;
     }
 
-    public static DictionaryNode makeArg() {
-        DictionaryNode node = new DictionaryNode();
-        node.addNode("id", new StringNode(DhtApp.NODE.getSelfKey().getValue()));
+    public static DictNode makeArg() {
+        DictNode node = new DictNode();
+        node.addNode("id", new StringNode(Dht.NODE.getSelfKey().getValue()));
         return node;
     }
 }

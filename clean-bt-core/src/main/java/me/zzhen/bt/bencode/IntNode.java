@@ -15,22 +15,6 @@ import java.io.*;
  */
 public class IntNode implements Node {
 
-    public static IntNode decode(InputStream input) throws IOException {
-        int c = -1;
-        if ((c = input.read()) == -1 || c != INT_START) throw new IllegalArgumentException("IntNode must start with i");
-        StringBuilder sb = new StringBuilder();
-        while ((c = input.read()) != -1 && c != IntNode.INT_END) {
-            char cc = (char) c;
-            if (Character.isDigit(cc)) {
-                sb.append(cc);
-            } else {
-                throw new DecoderException("expect a digital  but found " + cc);
-            }
-        }
-        return new IntNode(sb.toString());
-    }
-
-
     public static final char INT_START = 'i';
     public static final char INT_END = 'e';
 

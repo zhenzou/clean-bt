@@ -1,7 +1,7 @@
 package me.zzhen.bt.dht.krpc;
 
 import me.zzhen.bt.bencode.Node;
-import me.zzhen.bt.dht.base.NodeInfo;
+import me.zzhen.bt.dht.NodeInfo;
 
 /**
  * Project:CleanBT
@@ -11,7 +11,7 @@ import me.zzhen.bt.dht.base.NodeInfo;
  *
  * @author zzhen zzzhen1994@gmail.com
  */
-public interface RequestCallback {
+public interface RequestProcessor {
 
     void onFindNode(NodeInfo src, Node t, Node id);
 

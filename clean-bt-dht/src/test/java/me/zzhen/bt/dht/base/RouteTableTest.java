@@ -1,6 +1,8 @@
 package me.zzhen.bt.dht.base;
 
-import me.zzhen.bt.bencode.Node;
+import me.zzhen.bt.dht.NodeInfo;
+import me.zzhen.bt.dht.NodeKey;
+import me.zzhen.bt.dht.RouteTable;
 import org.junit.Test;
 
 import java.net.InetAddress;

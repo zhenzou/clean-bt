@@ -1,6 +1,4 @@
-package me.zzhen.bt.dht.base;
-
-import me.zzhen.bt.dht.DhtConfig;
+package me.zzhen.bt.dht;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;

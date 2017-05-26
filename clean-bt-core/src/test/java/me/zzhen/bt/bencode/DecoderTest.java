@@ -23,12 +23,7 @@ public class DecoderTest {
 
     @Test
     public void decodeString() throws Exception {
-        String s = "10:1234567890";
-//        OutputStreamWriter
-        Decoder decoder = new Decoder(new ByteArrayInputStream(s.getBytes()));
-        String res1 = decoder.decodeString().toString();
 
-        assertEquals("1234567890", res1);
     }
 
     @Test

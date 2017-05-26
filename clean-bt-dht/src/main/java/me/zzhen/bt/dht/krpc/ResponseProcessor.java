@@ -1,11 +1,10 @@
 package me.zzhen.bt.dht.krpc;
 
 
-import me.zzhen.bt.bencode.DictionaryNode;
+import me.zzhen.bt.bencode.DictNode;
 import me.zzhen.bt.bencode.ListNode;
 import me.zzhen.bt.bencode.StringNode;
-import me.zzhen.bt.dht.DhtApp;
-import me.zzhen.bt.dht.base.*;
+import me.zzhen.bt.dht.*;
 import me.zzhen.bt.util.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +32,7 @@ class ResponseProcessor implements Runnable {
     /**
      * 接收到的响应内容
      */
-    private DictionaryNode resp;
+    private DictNode resp;
 
     /**
      * 请求的目标DHT节点的信息
@@ -71,7 +70,7 @@ class ResponseProcessor implements Runnable {
      * @param port
      * @param krpc    处理完响应的回调
      */
-    public ResponseProcessor(DictionaryNode resp, InetAddress address, int port, Krpc krpc) {
+    public ResponseProcessor(DictNode resp, InetAddress address, int port, Krpc krpc) {
         this.address = address;
         this.port = port;
         this.resp = resp;
@@ -86,10 +85,10 @@ class ResponseProcessor implements Runnable {
             Optional<Token> optional = TokenManager.getToken(id);
             optional.ifPresent(token -> {
                 key = token.target;
-                resp = (DictionaryNode) resp.getNode("r");
+                resp = (DictNode) resp.getNode("r");
                 byte[] ids = resp.getNode("id").decode();
                 if (ids.length != 20) return;
-                DhtApp.NODE.addNode(new NodeInfo(address, port, new NodeKey(ids)));
+                Dht.NODE.addNode(new NodeInfo(address, port, new NodeKey(ids)));
                 method = token.method;
                 switch (method) {
                     case METHOD_PING:
@@ -117,7 +116,7 @@ class ResponseProcessor implements Runnable {
      * 处理ping方法的响应
      */
     private void processPing() {
-//        DhtApp.NODE.routes.addNode(target);
+//        Dht.NODE.routes.addNode(target);
     }
 
     /**
@@ -151,7 +150,7 @@ class ResponseProcessor implements Runnable {
         byte[] decode = nodes.decode();
         int len = decode.length;
         if (len % 26 != 0) {
-            logger.error("find node resp is not correct");
+            logger.error("find node makeResp is not correct");
             return;
         }
         boolean found = false;
@@ -159,25 +158,24 @@ class ResponseProcessor implements Runnable {
             NodeInfo node = NodeInfo.fromBytes(decode, i);
             if (node.getKey().equals(key)) {
                 found = true;
-                logger.info("found node :" + node.getAddress().getHostAddress() + ":" + node.getPort());
+                logger.info("found node :" + node.getFullAddress());
             }
-            DhtApp.NODE.addNode(node);
+            Dht.NODE.addNode(node);
         }
         if (!found) {
-            List<NodeInfo> infos = DhtApp.NODE.routes.closest8Nodes(key);
+            List<NodeInfo> infos = Dht.NODE.routes.closest8Nodes(key);
             for (NodeInfo info : infos) {
                 krpc.findNode(info, key);
             }
         }
     }
 
-
     /**
      * TODO 实现
      *
      * @param resp
      */
-    private void processAnnouncePeer(DictionaryNode resp) {
+    private void processAnnouncePeer(DictNode resp) {
 
     }
 }

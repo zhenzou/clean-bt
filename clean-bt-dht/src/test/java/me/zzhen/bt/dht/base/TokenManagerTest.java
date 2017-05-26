@@ -1,5 +1,8 @@
 package me.zzhen.bt.dht.base;
 
+import me.zzhen.bt.dht.NodeKey;
+import me.zzhen.bt.dht.Token;
+import me.zzhen.bt.dht.TokenManager;
 import org.junit.Test;
 
 import java.util.Optional;

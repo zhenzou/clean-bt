@@ -78,7 +78,7 @@ public final class TorrentFile {
     private Node comment;
     private Node createdBy;
     private Node encoding;
-    private DictionaryNode info;
+    private DictNode info;
 
     private TorrentFile() {
 
@@ -187,10 +187,10 @@ public final class TorrentFile {
     }
 
     public void setInfo(Map<String, Node> info) {
-        this.info = new DictionaryNode(info);
+        this.info = new DictNode(info);
     }
 
-    public void setInfo(DictionaryNode info) {
+    public void setInfo(DictNode info) {
         this.info = info;
     }
 
@@ -316,7 +316,7 @@ public final class TorrentFile {
     }
 
     public byte[] encode() {
-        DictionaryNode bt = new DictionaryNode();
+        DictNode bt = new DictNode();
 
         if (announce != null) {
             bt.addNode(ANNOUNCE, announce);
@@ -386,7 +386,7 @@ public final class TorrentFile {
                     mTorrentFile.setEncoidng((StringNode) value);
                     break;
                 case INFO:
-                    mTorrentFile.setInfo(((DictionaryNode) value));
+                    mTorrentFile.setInfo(((DictNode) value));
                     break;
                 case PIECE_LENGTH:
                     break;

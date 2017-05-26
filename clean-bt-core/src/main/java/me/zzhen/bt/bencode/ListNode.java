@@ -17,19 +17,6 @@ import java.util.List;
  */
 public class ListNode implements Node {
 
-    public static ListNode decode(InputStream input) throws IOException {
-        int c;
-        if ((c = input.read()) == -1 || c != LIST_START)
-            throw new IllegalArgumentException("ListNode must start with " + LIST_START);
-        ListNode list = new ListNode();
-        while ((c = input.read()) != -1 && (char) c != ListNode.LIST_END) {
-            char cc = (char) c;
-            Node node = DictionaryNode.decodeNext(new PushbackInputStream(input), cc);
-            list.addNode(node);
-        }
-        return list;
-    }
-
     static final char LIST_START = 'l';
     static final char LIST_END = 'e';
 

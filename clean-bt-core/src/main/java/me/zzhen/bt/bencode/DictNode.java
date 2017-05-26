@@ -17,79 +17,17 @@ import java.util.Map;
  *         Version :
  *         Description:
  */
-public class DictionaryNode implements Node {
-
-    public static DictionaryNode decode(InputStream input) throws IOException {
-        PushbackInputStream push = new PushbackInputStream(input);
-        int c = push.read();
-        if (c == -1 || c != DIC_START) throw new DecoderException("dic should start with " + DIC_START);
-        String key = "";
-        DictionaryNode dic = new DictionaryNode();
-        boolean inKey = true;
-        while ((c = push.read()) != -1 && (char) c != DictionaryNode.DIC_END) {
-            Node node = null;
-            char cur = (char) c;
-            if (inKey) {
-                if (Character.isDigit(cur)) {
-                    push.unread(c);
-                    key = StringNode.decode(push).toString();
-                    inKey = false;
-                } else {
-                    throw new DecoderException("key of dic must be string,found digital");
-                }
-            } else {
-                node = decodeNext(push, cur);
-                dic.addNode(key, node);
-                inKey = true;
-            }
-        }
-        return dic;
-    }
-
-    /**
-     * 解析下一个Node
-     * TODO 增加错误位置
-     *
-     * @param c 当前输入的字符 应该是 i,d,l或者数字
-     * @return 当前节点的Node结构
-     * @throws IOException
-     */
-    public static Node decodeNext(PushbackInputStream input, char c) throws IOException {
-        Node node = null;
-        input.unread(c);
-        switch (c) {
-            case IntNode.INT_START:
-                node = IntNode.decode(input);
-                break;
-            case ListNode.LIST_START:
-                node = ListNode.decode(input);
-                break;
-            case DictionaryNode.DIC_START:
-                node = decode(input);
-                break;
-            default:
-                if (Character.isDigit(c)) {
-                    node = StringNode.decode(input);
-                } else {
-                    throw new DecoderException("not a legal char");
-                }
-                break;
-        }
-        return node;
-    }
-
+public class DictNode implements Node {
 
     static final char DIC_START = 'd';
     static final char DIC_END = 'e';
 
-
     private Map<String, Node> value = new HashMap<>();
 
-
-    public DictionaryNode() {
+    public DictNode() {
     }
 
-    public DictionaryNode(Map<String, Node> value) {
+    public DictNode(Map<String, Node> value) {
         this.value = value;
     }
 
@@ -104,7 +42,6 @@ public class DictionaryNode implements Node {
     public Node removeNode(String key) {
         return value.remove(key);
     }
-
 
     public Node getNode(String key) {
         return value.get(key);
@@ -157,7 +94,7 @@ public class DictionaryNode implements Node {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        DictionaryNode node = (DictionaryNode) o;
+        DictNode node = (DictNode) o;
 
         return value.equals(node.value);
     }

@@ -1,9 +1,7 @@
-package me.zzhen.bt.dht.base;
+package me.zzhen.bt.dht;
 
 import me.zzhen.bt.common.Bitmap;
 import me.zzhen.bt.common.Tuple;
-import me.zzhen.bt.dht.DhtApp;
-import me.zzhen.bt.dht.DhtConfig;
 import me.zzhen.bt.dht.krpc.Krpc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,18 +36,13 @@ public class RouteTable {
     private TreeNode root = new TreeNode((byte) 0, null);
 
     /**
-     * 本地DHT节点的信息
-     */
-    private final NodeInfo self;
-
-    /**
      * 便于操作
      */
     private Map<Bitmap, Bucket> buckets = new HashMap<>();
     /**
      * 保存全部的DHT节点信息，便于操作
      */
-    private Map<InetSocketAddress, NodeInfo> nodes = new HashMap<>();
+    private Map<String, NodeInfo> nodes = new HashMap<>();
 
     /**
      * 在添加节点以及刷新的时候需要加锁
@@ -57,7 +50,6 @@ public class RouteTable {
     private final ReentrantLock lock = new ReentrantLock();
 
     public RouteTable(NodeInfo self) {
-        this.self = self;
         Bucket init = new Bucket(0);
         buckets.put(init.prefix, init);
         root.value = init;
@@ -77,12 +69,13 @@ public class RouteTable {
         if (key == null) return;
         try {
             lock.lock();
-            Optional<NodeInfo> optional = getByAddr(node.getAddress(), node.getPort());
-            if (optional.isPresent() && !optional.get().equals(node)) {
-                DhtApp.NODE.addBlackItem(node.getAddress(), node.getPort());
-                removeByAddr(new InetSocketAddress(node.getAddress(), node.getPort()));
-                return;
-            }
+
+            //TODO
+            nodes.computeIfPresent(node.getFullAddress(), (s, info) -> {
+                Dht.NODE.addBlackItem(info.getFullAddress());
+                removeByAddr(new InetSocketAddress(node.address, node.port));
+                return null;
+            });
             if (size >= DhtConfig.ROUTETABLE_SIZE) return;
             TreeNode item = findTreeNode(key);
             if (item.value == null) return;
@@ -112,7 +105,7 @@ public class RouteTable {
             bucket.update(node);
             return false;
         } else if (bucket.size() < 8) {
-            nodes.put(new InetSocketAddress(node.getAddress(), node.getPort()), node);
+            nodes.put(node.getFullAddress(), node);
             bucket.addNode(node);
             return true;
         } else if (bucket.checkRange(node.getKey())) {
@@ -262,13 +255,13 @@ public class RouteTable {
         try {
             if (lock.tryLock(10, TimeUnit.SECONDS)) {
                 buckets.entrySet().stream().map(Map.Entry::getValue).filter(bucket -> !bucket.isActive() && !(bucket.size() == 0))
-                        .flatMap(bucket -> bucket.nodes.stream())
-                        .sorted()
-                        .limit(DhtConfig.AUTO_FIND_SIZE)
-                        .forEach(wrapper -> {
-                            krpc.findNode(wrapper.node, wrapper.bucket.randomChildKey());
-                            keys.add(wrapper.node);
-                        });
+                    .flatMap(bucket -> bucket.nodes.stream())
+                    .sorted()
+                    .limit(DhtConfig.AUTO_FIND_SIZE)
+                    .forEach(wrapper -> {
+                        krpc.findNode(wrapper.node, wrapper.bucket.randomChildKey());
+                        keys.add(wrapper.node);
+                    });
                 buckets.forEach((prefix, bucket) -> bucket.refresh(krpc));
                 keys.forEach(this::remove);
                 keys.clear();
@@ -313,7 +306,7 @@ public class RouteTable {
         Bucket bucket = item.value;
         buckets.remove(bucket.prefix);
         if (bucket.remove(node.getKey())) {
-            removeByAddr(new InetSocketAddress(node.getAddress(), node.getPort()));
+            removeByAddr(new InetSocketAddress(node.address, node.port));
             size--;
         }
         buckets.put(bucket.prefix, bucket);

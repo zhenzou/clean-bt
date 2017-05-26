@@ -1,17 +1,15 @@
-package me.zzhen.bt.dht.base;
+package me.zzhen.bt.dht;
 
+import me.zzhen.bt.bencode.Bencode;
 import me.zzhen.bt.bencode.DecoderException;
-import me.zzhen.bt.bencode.DictionaryNode;
+import me.zzhen.bt.bencode.DictNode;
 import me.zzhen.bt.bencode.IntNode;
-import me.zzhen.bt.dht.DhtApp;
-import me.zzhen.bt.dht.DhtConfig;
 import me.zzhen.bt.util.IO;
 import me.zzhen.bt.util.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -64,24 +62,24 @@ public class MetadataWorker implements Runnable {
      */
     private byte[] hash;
 
-    /**
-     * 请求的来源地址
-     */
     private InetSocketAddress address;
+
+    private int port;
 
 
     public static final int BLOCK_SIZE = 16 * 1024;
 
 
-    public MetadataWorker(InetAddress address, int port, byte[] hash) {
+    public MetadataWorker(String address, int port, byte[] hash) {
         if (hash.length != 20) return;
         this.address = new InetSocketAddress(address, port);
         this.hash = hash;
+        this.port = port;
     }
 
     @Override
     public void run() {
-        if (!DhtApp.NODE.isBlackItem(address)) fetchMetadata();
+        if (!Dht.NODE.isBlackItem(address)) fetchMetadata();
     }
 
 
@@ -90,9 +88,9 @@ public class MetadataWorker implements Runnable {
      *
      * @return
      */
-    private DictionaryNode makeShake() {
-        DictionaryNode msg = new DictionaryNode();
-        DictionaryNode head = new DictionaryNode();
+    private DictNode makeShake() {
+        DictNode msg = new DictNode();
+        DictNode head = new DictNode();
         head.addNode(MSG_UT_METADATA, new IntNode(1));
         msg.addNode("m", head);
         return msg;
@@ -104,8 +102,8 @@ public class MetadataWorker implements Runnable {
      * @param piece piece数
      * @return
      */
-    private DictionaryNode makeRequest(int piece) {
-        DictionaryNode msg = new DictionaryNode();
+    private DictNode makeRequest(int piece) {
+        DictNode msg = new DictNode();
         msg.addNode(MSG_TYPE, new IntNode(MSG_REQUEST));
         msg.addNode(MSG_PIECE, new IntNode(piece));
         return msg;
@@ -210,9 +208,9 @@ public class MetadataWorker implements Runnable {
      * @return 接收到的第几块piece
      */
     private int readPiece(ByteArrayOutputStream pieces, byte[] data) {
-        DictionaryNode node = null;
+        DictNode node = null;
         try {
-            node = DictionaryNode.decode(new ByteArrayInputStream(data));
+            node = Bencode.decodeDict(new ByteArrayInputStream(data));
         } catch (DecoderException e) {
             logger.error(e.getMessage());
         } catch (IOException e) {
@@ -258,8 +256,8 @@ public class MetadataWorker implements Runnable {
                 if (msgId == EXTENDED) {
                     if (extendId == 0) {
                         logger.info("收到最后的握手信息");
-                        DictionaryNode meta = DictionaryNode.decode(new ByteArrayInputStream(data, 0, length - 3));
-                        DictionaryNode m = (DictionaryNode) meta.getNode("m");
+                        DictNode meta = Bencode.decodeDict(new ByteArrayInputStream(data, 0, length - 3));
+                        DictNode m = (DictNode) meta.getNode("m");
                         ut = Integer.parseInt(m.getNode(MSG_UT_METADATA).toString());
                         int size = Integer.parseInt(meta.getNode(MSG_METADATA_SIZE).toString());
                         totalPiece = size / BLOCK_SIZE;
@@ -278,7 +276,7 @@ public class MetadataWorker implements Runnable {
                             curPiece++;
                             requestPiece(out, curPiece, ut);
                         } else {
-                            DictionaryNode decode = DictionaryNode.decode(new ByteArrayInputStream(pieces.toByteArray()));
+                            DictNode decode = Bencode.decodeDict(new ByteArrayInputStream(pieces.toByteArray()));
                             logger.info("infohash=" + Utils.toHex(hash) + ",name=" + decode.getNode("name") + ",files=" + decode.getNode("files"));
                             return;
                         }
@@ -286,7 +284,7 @@ public class MetadataWorker implements Runnable {
                 }
             }
         } catch (SocketTimeoutException e) {
-            DhtApp.NODE.addBlackItem(address);
+            Dht.NODE.addBlackItem(address.getAddress().getHostAddress() + ":" + port);
             logger.error(e.getMessage());
         } catch (IOException e) {
             logger.error(e.getMessage());

@@ -1,7 +1,5 @@
 package me.zzhen.bt.bencode;
 
-import me.zzhen.bt.util.Utils;
-
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -53,14 +51,7 @@ public final class Decoder {
      * @throws IOException
      */
     public void decode() throws IOException {
-        int c;
-
         while (next()) {
-            Node node = decodeNext();
-            nodes.add(node);
-        }
-        while ((c = input.read()) != -1) {
-            char cur = (char) c;
             Node node = decodeNext();
             nodes.add(node);
         }
@@ -84,16 +75,15 @@ public final class Decoder {
             case ListNode.LIST_START:
                 node = decodeList();
                 break;
-            case DictionaryNode.DIC_START:
+            case DictNode.DIC_START:
                 node = decodeDic();
                 break;
             default:
                 if (Character.isDigit(current)) {
-                    node = decodeString();
+                    node = decodeString(current);
                 } else {
                     throw new DecoderException("not a legal char in " + pos + " byte");
                 }
-                break;
         }
         return node;
     }
@@ -105,9 +95,9 @@ public final class Decoder {
      * @return
      * @throws IOException
      */
-    public StringNode decodeString() throws IOException {
+    public StringNode decodeString(char cur) throws IOException {
         StringBuilder len = new StringBuilder();
-        len.append(current);
+        len.append(cur);
         while (next() && current != StringNode.STRING_VALUE_START) {
             if (Character.isDigit(current)) {
                 len.append(current);
@@ -140,19 +130,18 @@ public final class Decoder {
      * @return
      * @throws IOException
      */
-    public DictionaryNode decodeDic() throws IOException {
+    public DictNode decodeDic() throws IOException {
         String key = "";
-        DictionaryNode dic = new DictionaryNode();
+        DictNode dic = new DictNode();
         boolean inKey = true;
-        while (next() && current != DictionaryNode.DIC_END) {
+        while (next() && current != DictNode.DIC_END) {
             Node node = null;
-            char cur = current;
             if (inKey) {
-                if (Character.isDigit(cur)) {
-                    key = decodeString().toString();
+                if (Character.isDigit(current)) {
+                    key = decodeString(current).toString();
                     inKey = false;
                 } else {
-                    throw new DecoderException("key of dic must be string,found digital");
+                    throw new DecoderException("key of dic must be string,found " + current);
                 }
             } else {
                 node = decodeNext();
@@ -217,22 +206,4 @@ public final class Decoder {
     public void setHandler(DecodeEventHandler handler) {
         this.handler = handler;
     }
-
-
-    public static void main(String[] args) {
-//        String s = "64313a65693165343a69707634343ab7693332343a6970763631363a2002b7693332000000000000b769333231323a636f6d706c6574655f61676f692d3165313a6d6431313a75706c6f61645f6f6e6c7969336531313a6c745f646f6e746861766569376531323a75745f686f6c6570756e636869346531313a75745f6d65746164617461693265363a75745f70657869316531303a75745f636f6d6d656e746936656531333a6d657461646174615f73697a6569313733373265313a7069333037363665343a726571716932353565313a7631353acebc546f7272656e7420332e342e39323a797069353133353665363a796f75726970343a2bf1e04865";
-        String s = "64313a65693165343a69707634343ab7693332343a6970763631363a2002b7693332000000000000b769333231323a636f6d706c6574655f61676f692d3165313a6d6431313a75706c6f61645f6f6e6c7969336531313a6c745f646f6e746861766569376531323a75745f686f6c6570756e636869346531313a75745f6d65746164617461693265363a75745f70657869316531303a75745f636f6d6d656e746936656531333a6d657461646174615f73697a6569313733373265313a7069333037363665343a726571716932353565313a7631353acebc546f7272656e7420332e342e39323a797069353133353665363a796f75726970343a2bf1e04865";
-        byte[] bytes = Utils.hex2Bytes(s);
-
-        try {
-            Decoder decoder = new Decoder(new ByteArrayInputStream(bytes));
-            decoder.decode();
-            List<Node> decode = decoder.getValue();
-            Node node = decode.get(0);
-            System.out.println(node.toString());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
 }
