@@ -11,7 +11,7 @@ import static junit.framework.Assert.assertEquals;
  *
  * @author zzhen zzzhen1994@gmail.com
  */
-public class NodeKeyTest {
+public class NodeIdTest {
     @Test
     public void distance() throws Exception {
 
@@ -27,20 +27,20 @@ public class NodeKeyTest {
      */
     @Test
     public void prefix() throws Exception {
-//        NodeKey key = NodeKey.genRandomKey();
-//        char[] s = Utils.bytes2Bin(key.getValue()).toCharArray();
+//        NodeId id = NodeId.genRandomId();
+//        char[] s = Utils.bytes2Bin(id.getValue()).toCharArray();
 //        for (int i = 0; i < 160; i++) {
-//            assertEquals(true, key.prefix(i) == Integer.parseInt(s[i] + ""));
+//            assertEquals(true, id.prefix(i) == Integer.parseInt(s[i] + ""));
 //        }
-//        key = NodeKey.genRandomKey();
-//        s = Utils.bytes2Bin(key.getValue()).toCharArray();
+//        id = NodeId.genRandomId();
+//        s = Utils.bytes2Bin(id.getValue()).toCharArray();
 //        for (int i = 0; i < 160; i++) {
-//            assertEquals(true, key.prefix(i) == Integer.parseInt(s[i] + ""));
+//            assertEquals(true, id.prefix(i) == Integer.parseInt(s[i] + ""));
 //        }
-//        key = NodeKey.genRandomKey();
-//        s = Utils.bytes2Bin(key.getValue()).toCharArray();
+//        id = NodeId.genRandomId();
+//        s = Utils.bytes2Bin(id.getValue()).toCharArray();
 //        for (int i = 0; i < 160; i++) {
-//            assertEquals(true, key.prefix(i) == Integer.parseInt(s[i] + ""));
+//            assertEquals(true, id.prefix(i) == Integer.parseInt(s[i] + ""));
 //        }
     }
 

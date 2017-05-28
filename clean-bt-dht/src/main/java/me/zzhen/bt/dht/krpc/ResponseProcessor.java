@@ -42,7 +42,7 @@ class ResponseProcessor implements Runnable {
     /**
      * 请求的目标资源或者节点ID
      */
-    private NodeKey key;
+    private NodeId key;
 
     /**
      * 响应的方法,需要通过查找token确定
@@ -88,7 +88,7 @@ class ResponseProcessor implements Runnable {
                 resp = (DictNode) resp.getNode("r");
                 byte[] ids = resp.getNode("id").decode();
                 if (ids.length != 20) return;
-                Dht.NODE.addNode(new NodeInfo(address, port, new NodeKey(ids)));
+                Dht.NODE.addNode(new NodeInfo(address, port, new NodeId(ids)));
                 method = token.method;
                 switch (method) {
                     case METHOD_PING:
@@ -156,7 +156,7 @@ class ResponseProcessor implements Runnable {
         boolean found = false;
         for (int i = 0; i < len; i += 26) {
             NodeInfo node = NodeInfo.fromBytes(decode, i);
-            if (node.getKey().equals(key)) {
+            if (node.getId().equals(key)) {
                 found = true;
                 logger.info("found node :" + node.getFullAddress());
             }

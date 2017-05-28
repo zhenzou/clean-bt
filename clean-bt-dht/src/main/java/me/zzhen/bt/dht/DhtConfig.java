@@ -76,19 +76,33 @@ public class DhtConfig {
     public static final int CRAWL_MODE = 2222;
 
 
-    public DhtConfig(String serverIp, int serverPort) {
+    private DhtConfig(String serverIp, int serverPort) {
         this.serverIp = serverIp;
         this.serverPort = serverPort;
     }
 
-    public static DhtConfig defaultConfig() {
-        DhtConfig config = new DhtConfig("127.0.0.1", 6881);
-        config.timeout = 15 * 1000;
+    public static DhtConfig config(String serverIp, int serverPort) {
+        DhtConfig config = new DhtConfig(serverIp, serverPort);
+        config.autoFind = AUTO_FIND;
+        config.autoFindSize = AUTO_FIND_SIZE;
+        config.blacklistSize = BLACKLIST_SIZE;
+        config.tokenTimeout = TOKEN_TIMEOUT;
+        config.tTimeout = T_TIMEOUT;
+        config.timeout = CONN_TIMEOUT;
+        config.routeTableSize = ROUTER_TABLE_SIZE;
+        config.bucketFresh = BUCKET_FRESH;
+        config.nodeFresh = NODE_FRESH;
         return config;
     }
 
-    //    public static final String SERVER_IP = "127.0.0.1";
-    public static final String SERVER_IP = "43.241.226.21";
+    public static DhtConfig defaultConfig() {
+        return config(SERVER_IP, SERVER_PORT);
+    }
+
+    /**
+     * 本地IP地址
+     */
+    public static final String SERVER_IP = "127.0.0.1";
     /**
      * DHT Server监听端口
      */
@@ -110,7 +124,7 @@ public class DhtConfig {
     /**
      *
      */
-    public static final int ROUTETABLE_SIZE = 5 * 1000;
+    public static final int ROUTER_TABLE_SIZE = 5 * 1000;
 
 
     public static final int BUCKET_FRESH = 0;

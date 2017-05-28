@@ -1,6 +1,6 @@
 package me.zzhen.bt.dht.base;
 
-import me.zzhen.bt.dht.NodeKey;
+import me.zzhen.bt.dht.NodeId;
 import me.zzhen.bt.dht.Token;
 import me.zzhen.bt.dht.TokenManager;
 import org.junit.Test;
@@ -20,7 +20,7 @@ public class TokenManagerTest {
     @Test
     public void newToken() throws Exception {
         for (int i = 0; i < 100; i++) {
-            TokenManager.newToken(NodeKey.genRandomKey(), "test_method");
+            TokenManager.newToken(NodeId.genRandomId(), "test_method");
         }
         Optional<Token> token = TokenManager.getToken(10);
         System.out.println(token);
@@ -29,7 +29,7 @@ public class TokenManagerTest {
     @Test
     public void clearTokens() throws Exception {
         for (int i = 0; i < 1000000; i++) {
-            TokenManager.newToken(NodeKey.genRandomKey(), "test_method");
+            TokenManager.newToken(NodeId.genRandomId(), "test_method");
         }
         Thread.sleep(14 * 1000);
         TokenManager.clearTokens();

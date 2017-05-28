@@ -3,8 +3,8 @@ package me.zzhen.bt.dht.krpc;
 import me.zzhen.bt.bencode.DictNode;
 import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.dht.Dht;
+import me.zzhen.bt.dht.NodeId;
 import me.zzhen.bt.dht.NodeInfo;
-import me.zzhen.bt.dht.NodeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,7 +69,7 @@ public class ResponseWorker extends Thread {
         DictNode arg = (DictNode) request.getNode("a");
         Node id = arg.getNode("id");
 
-        NodeKey key = new NodeKey(id.decode());
+        NodeId key = new NodeId(id.decode());
         NodeInfo info = new NodeInfo(address, port, key);
         if (id.decode().length != 20) {
             callback.error(info, t, id, Message.ERRNO_PROTOCOL, "invalid id");
@@ -77,7 +77,7 @@ public class ResponseWorker extends Thread {
         }
         Optional<NodeInfo> optional = Dht.NODE.routes.getByAddr(address, port);
         if (optional.isPresent()) {
-            if (!optional.get().getKey().equals(key)) {
+            if (!optional.get().getId().equals(key)) {
                 callback.error(info, t, id, Message.ERRNO_PROTOCOL, "invalid id");
                 Dht.NODE.addBlackItem(address, port);
                 Dht.NODE.routes.removeByAddr(new InetSocketAddress(address, port));
@@ -111,7 +111,7 @@ public class ResponseWorker extends Thread {
      * @param t   token
      * @param req 请求内容
      */
-    private void doResponseAnnouncePeer(InetAddress address, int port, NodeKey key, Node t, DictNode req) {
+    private void doResponseAnnouncePeer(InetAddress address, int port, NodeId key, Node t, DictNode req) {
         Node impliedPort = req.getNode("implied_port");
         if (impliedPort == null || "0".equals(String.valueOf(impliedPort))) {
 //            logger.info("implied_port:" + port);

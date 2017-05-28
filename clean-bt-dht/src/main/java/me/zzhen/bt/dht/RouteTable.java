@@ -65,7 +65,7 @@ public class RouteTable {
      * @param node
      */
     public void addNode(NodeInfo node) {
-        NodeKey key = node.getKey();
+        NodeId key = node.getId();
         if (key == null) return;
         try {
             lock.lock();
@@ -76,7 +76,7 @@ public class RouteTable {
                 removeByAddr(new InetSocketAddress(node.address, node.port));
                 return null;
             });
-            if (size >= DhtConfig.ROUTETABLE_SIZE) return;
+            if (size >= DhtConfig.ROUTER_TABLE_SIZE) return;
             TreeNode item = findTreeNode(key);
             if (item.value == null) return;
             if (addNodeToBucket(node, item)) {
@@ -99,7 +99,7 @@ public class RouteTable {
      */
     private boolean addNodeToBucket(NodeInfo node, TreeNode item) {
         Bucket bucket = item.value;
-        NodeKey key = node.getKey();
+        NodeId key = node.getId();
         if (bucket.contains(node)) {
             repeat++;
             bucket.update(node);
@@ -108,7 +108,7 @@ public class RouteTable {
             nodes.put(node.getFullAddress(), node);
             bucket.addNode(node);
             return true;
-        } else if (bucket.checkRange(node.getKey())) {
+        } else if (bucket.checkRange(node.getId())) {
             Tuple<Bucket, Bucket> spit = bucket.split();
             if (spit == null) return false;
             TreeNode left = new TreeNode((byte) 1, item);
@@ -163,7 +163,7 @@ public class RouteTable {
      */
     public void removeByAddr(InetSocketAddress address) {
         Optional<NodeInfo> optional = Optional.ofNullable(nodes.get(address));
-        optional.ifPresent(node -> removeById(node.getKey()));
+        optional.ifPresent(node -> removeById(node.getId()));
     }
 
     /**
@@ -171,7 +171,7 @@ public class RouteTable {
      *
      * @param key
      */
-    private void removeById(NodeKey key) {
+    private void removeById(NodeId key) {
         TreeNode treeNode = findTreeNode(key);
         treeNode.value.remove(key);
     }
@@ -185,7 +185,7 @@ public class RouteTable {
         return root;
     }
 
-    public List<NodeInfo> closest8Nodes(NodeKey key) {
+    public List<NodeInfo> closest8Nodes(NodeId key) {
         return closestKNodes(key, 8);
     }
 
@@ -195,7 +195,7 @@ public class RouteTable {
      * @param key
      * @return 离key最近的K个节点
      */
-    public List<NodeInfo> closestKNodes(NodeKey key, int k) {
+    public List<NodeInfo> closestKNodes(NodeId key, int k) {
         TreeNode node = findTreeNode(key);
         List<NodeInfo> infos = new ArrayList<>(8);
         closestKNodes(node, infos, k);
@@ -281,7 +281,7 @@ public class RouteTable {
      * @return
      */
 
-    private TreeNode findTreeNode(NodeKey key) {
+    private TreeNode findTreeNode(NodeId key) {
         TreeNode item = root;
         int index = 0;
         while (item.value == null && index < 160) {
@@ -302,10 +302,10 @@ public class RouteTable {
      * @param node
      */
     public void remove(NodeInfo node) {
-        TreeNode item = findTreeNode(node.getKey());
+        TreeNode item = findTreeNode(node.getId());
         Bucket bucket = item.value;
         buckets.remove(bucket.prefix);
-        if (bucket.remove(node.getKey())) {
+        if (bucket.remove(node.getId())) {
             removeByAddr(new InetSocketAddress(node.address, node.port));
             size--;
         }
@@ -442,11 +442,11 @@ public class RouteTable {
         }
 
         private boolean reassignNode(NodeInfo node, Bucket left, Bucket right) {
-            if (left.checkRange(node.getKey())) {
+            if (left.checkRange(node.getId())) {
                 left.addNode(node);
                 return true;
             }
-            if (right.checkRange(node.getKey())) {
+            if (right.checkRange(node.getId())) {
                 right.addNode(node);
                 return true;
             }
@@ -472,8 +472,8 @@ public class RouteTable {
          *
          * @return 当前的ID
          */
-        public NodeKey randomChildKey() {
-            NodeKey key = NodeKey.genRandomKey();
+        public NodeId randomChildKey() {
+            NodeId key = NodeId.genRandomId();
             Bitmap bits = key.getBits();
             int size = prefix.size;
             for (int i = 0; i < size; i++) {
@@ -488,7 +488,7 @@ public class RouteTable {
          * @param key
          * @return
          */
-        boolean checkRange(NodeKey key) {
+        boolean checkRange(NodeId key) {
             int len = key.getBits().size;
             for (int i = 0; i < prefix.size && i < len; i++) {
                 if (key.prefix(i) != prefix.get(i)) return false;
@@ -521,8 +521,8 @@ public class RouteTable {
          * @param key
          * @return
          */
-        public NodeInfo getNode(NodeKey key) {
-            Optional<NodeInfoWrapper> first = nodes.stream().filter(node -> node.node.getKey().equals(key)).findFirst();
+        public NodeInfo getNode(NodeId key) {
+            Optional<NodeInfoWrapper> first = nodes.stream().filter(node -> node.node.getId().equals(key)).findFirst();
             return first.map(wrapper -> wrapper.node).orElse(null);
         }
 
@@ -532,11 +532,11 @@ public class RouteTable {
          *
          * @param key
          */
-        public boolean remove(NodeKey key) {
-            return nodes.removeIf(wrapper -> wrapper.node.getKey().equals(key));
+        public boolean remove(NodeId key) {
+            return nodes.removeIf(wrapper -> wrapper.node.getId().equals(key));
 //            int len = nodes.size();
 //            for (int i = 0; i < len; i++) {
-//                if (nodes.get(i).node.getKey().equals(key)) {
+//                if (nodes.get(i).node.getId().equals(id)) {
 //
 //                    return Optional.of(nodes.remove(i).node);
 //                }

@@ -63,7 +63,7 @@ public class Krpc implements RequestProcessor {
      * @return
      */
     public void ping(NodeInfo node) {
-        DictNode request = Message.makeReq(node.getKey(), METHOD_PING);
+        DictNode request = Message.makeReq(node.getId(), METHOD_PING);
         DictNode arg = Message.makeArg();
         request.addNode("a", arg);
         send(request, node);
@@ -76,7 +76,7 @@ public class Krpc implements RequestProcessor {
      * @param id     findNode 的目标节点的id
      * @return
      */
-    public void findNode(NodeInfo target, NodeKey id) {
+    public void findNode(NodeInfo target, NodeId id) {
         DictNode msg = Message.makeReq(id, METHOD_FIND_NODE);
         DictNode arg = Message.makeArg();
         arg.addNode("target", new StringNode(id.getValue()));
@@ -88,7 +88,7 @@ public class Krpc implements RequestProcessor {
      * @param target
      * @param id
      */
-    public void getPeers(NodeInfo target, NodeKey id) {
+    public void getPeers(NodeInfo target, NodeId id) {
         DictNode msg = Message.makeReq(id, METHOD_GET_PEERS);
         DictNode arg = Message.makeArg();
         arg.addNode("info_hash", new StringNode(id.getValue()));
@@ -97,12 +97,12 @@ public class Krpc implements RequestProcessor {
     }
 
     /**
-     * 向整个DHT中加入 key 为 resource，val 为当前节点ID的值
+     * 向整个DHT中加入 id 为 resource，val 为当前节点ID的值
      * TODO
      *
      * @param peer
      */
-    public void announcePeer(NodeKey peer) {
+    public void announcePeer(NodeId peer) {
 //        DictNode req = Message.makeReq(peer, METHOD_ANNOUNCE_PEER);
 //        req.addNode("q", new StringNode(METHOD_ANNOUNCE_PEER));
 //        DictNode makeArg = new DictNode();
@@ -175,7 +175,7 @@ public class Krpc implements RequestProcessor {
             arg.addNode("id", new StringNode(Dht.NODE.id(id.decode()).getValue()));
             arg.addNode("nodes", new StringNode(""));
         } else {
-            List<InetSocketAddress> peers = PeerManager.PM.getPeers(new NodeKey(id.decode()));
+            List<InetSocketAddress> peers = PeerManager.PM.getPeers(new NodeId(id.decode()));
             if (peers != null) {
                 ListNode values = new ListNode();
                 for (InetSocketAddress peer : peers) {
@@ -184,7 +184,7 @@ public class Krpc implements RequestProcessor {
                 }
                 arg.addNode("values", values);
             } else {
-                List<NodeInfo> infos = Dht.NODE.routes.closest8Nodes(new NodeKey(id.decode()));
+                List<NodeInfo> infos = Dht.NODE.routes.closest8Nodes(new NodeId(id.decode()));
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 for (NodeInfo info : infos) {
                     try {
@@ -197,7 +197,7 @@ public class Krpc implements RequestProcessor {
                 arg.addNode("nodes", nodes);
             }
         }
-        Token token = TokenManager.newTokenToken(new NodeKey(id.decode()), Krpc.METHOD_GET_PEERS);
+        Token token = TokenManager.newTokenToken(new NodeId(id.decode()), Krpc.METHOD_GET_PEERS);
         arg.addNode("token", new StringNode(token.id + ""));
         resp.addNode("r", arg);
         send(resp, src);
@@ -217,7 +217,7 @@ public class Krpc implements RequestProcessor {
         DictNode resp = Message.makeResp(t);
         List<NodeInfo> infos = new ArrayList<>();
         infos.add(Dht.NODE.self());
-        List<NodeInfo> close = Dht.NODE.routes.closest8Nodes(new NodeKey(id.decode()));
+        List<NodeInfo> close = Dht.NODE.routes.closest8Nodes(new NodeId(id.decode()));
         if (close.size() == 8) infos.addAll(close.subList(0, 7));
         else infos.addAll(close);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();

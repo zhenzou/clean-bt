@@ -20,7 +20,7 @@ public class Token {
     /**
      * 请求的目标节点ID或者资源hash或者announce_peer对应的额资源hash
      */
-    public final NodeKey target;
+    public final NodeId target;
 
     /**
      * token生成的时间
@@ -37,7 +37,7 @@ public class Token {
      */
     public final boolean isToken;
 
-    Token(NodeKey target, long id, String method, boolean isToken) {
+    Token(NodeId target, long id, String method, boolean isToken) {
         this.target = target;
         this.id = id;
         this.method = method;

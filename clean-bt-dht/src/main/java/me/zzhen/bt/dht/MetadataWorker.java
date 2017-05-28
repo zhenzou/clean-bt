@@ -121,7 +121,7 @@ public class MetadataWorker implements Runnable {
             baos.write(PSTR.getBytes());
             baos.write(RESERVED);
             baos.write(hash);
-            baos.write(NodeKey.genRandomKey().getValue());
+            baos.write(NodeId.genRandomId().getValue());
             out.write(baos.toByteArray());
         } catch (IOException e) {
             logger.error(e.getMessage());

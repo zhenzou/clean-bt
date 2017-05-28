@@ -2,7 +2,7 @@ package me.zzhen.bt.dht.krpc;
 
 import me.zzhen.bt.bencode.*;
 import me.zzhen.bt.dht.Dht;
-import me.zzhen.bt.dht.NodeKey;
+import me.zzhen.bt.dht.NodeId;
 import me.zzhen.bt.dht.Token;
 import me.zzhen.bt.dht.TokenManager;
 
@@ -74,7 +74,7 @@ public class Message {
         return value.equals(dict.getNode(key).toString());
     }
 
-    public static DictNode makeReq(NodeKey target, String method) {
+    public static DictNode makeReq(NodeId target, String method) {
         DictNode node = new DictNode();
         node.addNode("t", new StringNode(TokenManager.newToken(target, method).id + ""));
         node.addNode("y", new StringNode("q"));
@@ -103,7 +103,7 @@ public class Message {
 
     public static DictNode makeArg() {
         DictNode node = new DictNode();
-        node.addNode("id", new StringNode(Dht.NODE.getSelfKey().getValue()));
+        node.addNode("id", new StringNode(Dht.NODE.getSelfId().getValue()));
         return node;
     }
 }

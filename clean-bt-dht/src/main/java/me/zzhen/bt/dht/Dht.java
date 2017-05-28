@@ -3,7 +3,6 @@ package me.zzhen.bt.dht;
 import me.zzhen.bt.bencode.Bencode;
 import me.zzhen.bt.bencode.DictNode;
 import me.zzhen.bt.dht.krpc.Krpc;
-import me.zzhen.bt.util.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,20 +33,22 @@ public class Dht {
      */
     public static Dht NODE;
 
+    /**
+     * 本节点信息
+     */
+    private NodeInfo self;
+
     private final DhtConfig config;
 
     /**
      * 全局路由表
      */
     public RouteTable routes;
+
     /**
      * 全局黑名单 IP:PORT
      */
     private volatile Set<String> blacklist;
-    /**
-     * 本节点信息
-     */
-    private NodeInfo self;
     /**
      * 全局Krpc
      */
@@ -80,7 +81,7 @@ public class Dht {
                 while (true) {
                     DatagramPacket packet = new DatagramPacket(bytes, bytes.length);
                     socket.receive(packet);
-                    if (Dht.NODE.isBlackItem(packet.getAddress(), packet.getPort())) continue;
+                    if (isBlackItem(packet.getAddress(), packet.getPort())) continue;
                     int length = packet.getLength();
                     try {
                         DictNode node = Bencode.decodeDict(new ByteArrayInputStream(bytes, 0, length));
@@ -88,7 +89,6 @@ public class Dht {
                         int port = packet.getPort();
                         krpc.response(address, port, node);
                     } catch (RuntimeException e) {
-                        logger.error("data:" + packet.getLength() + Utils.toHex(bytes, 0, length));
                         logger.error(e.getMessage());
                     }
                 }
@@ -103,18 +103,18 @@ public class Dht {
 
     private void join() {
         for (NodeInfo target : BOOTSTRAP_NODES) {
-            krpc.findNode(target, self.getKey());
+            krpc.findNode(target, self.getId());
         }
         //定时,自动向邻居节点发送find_node请求
-        autoFindNode.scheduleAtFixedRate(() -> routes.refresh(krpc), DhtConfig.AUTO_FIND, DhtConfig.AUTO_FIND, TimeUnit.SECONDS);
+        autoFindNode.scheduleAtFixedRate(() -> routes.refresh(krpc), config.getAutoFind(), config.getAutoFind(), TimeUnit.SECONDS);
         //定时清理过期Token
-        autoFindNode.scheduleAtFixedRate(TokenManager::clearTokens, DhtConfig.T_TIMEOUT, DhtConfig.T_TIMEOUT, TimeUnit.MINUTES);
+        autoFindNode.scheduleAtFixedRate(TokenManager::clearTokens, config.getTTimeout(), config.getTTimeout(), TimeUnit.MINUTES);
     }
 
     public void init() {
         try {
             InetAddress address = InetAddress.getByName(config.serverIp);
-            self = new NodeInfo(address, config.serverPort, NodeKey.genRandomKey());
+            self = new NodeInfo(address, config.serverPort, NodeId.genRandomId());
             blacklist = new HashSet<>(config.getBlacklistSize());
             routes = new RouteTable(self);
             socket = new DatagramSocket(config.serverPort);
@@ -141,12 +141,12 @@ public class Dht {
         return self;
     }
 
-    public NodeKey getSelfKey() {
-        return self.getKey();
+    public NodeId getSelfId() {
+        return self.getId();
     }
 
-    public void setSelfKey(NodeKey selfKey) {
-        self.setKey(selfKey);
+    public void setSelfId(NodeId id) {
+        self.setId(id);
     }
 
     /**
@@ -156,10 +156,10 @@ public class Dht {
      * @param id
      * @return
      */
-    public NodeKey id(byte[] id) {
-        byte[] value = getSelfKey().getValue();
+    public NodeId id(byte[] id) {
+        byte[] value = getSelfId().getValue();
         System.arraycopy(value, 15, id, 15, 5);
-        return new NodeKey(id);
+        return new NodeId(id);
     }
 
     public void addNode(NodeInfo node) {
@@ -202,8 +202,8 @@ public class Dht {
     public static void main(String[] args) throws IOException {
         InputStream in = Dht.class.getClassLoader().getResourceAsStream("logger.properties");
         if (in != null) LogManager.getLogManager().readConfiguration(in);
-        NODE = new Dht(DhtConfig.defaultConfig());
-        NODE.init();
-        NODE.start();
+        Dht dht = new Dht(DhtConfig.defaultConfig());
+        dht.init();
+        dht.start();
     }
 }

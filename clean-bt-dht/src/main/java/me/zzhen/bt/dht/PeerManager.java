@@ -27,9 +27,9 @@ public class PeerManager {
         return PM;
     }
 
-    private Map<NodeKey, List<InetSocketAddress>> peers = new HashMap<>();
+    private Map<NodeId, List<InetSocketAddress>> peers = new HashMap<>();
 
-    public void addPeer(NodeKey info, InetSocketAddress peer) {
+    public void addPeer(NodeId info, InetSocketAddress peer) {
         List<InetSocketAddress> addrs = peers.get(info);
         if (addrs == null) {
             List<InetSocketAddress> a = new ArrayList<>();
@@ -40,7 +40,7 @@ public class PeerManager {
         }
     }
 
-    public void addAllPeer(NodeKey info, List<InetSocketAddress> peers) {
+    public void addAllPeer(NodeId info, List<InetSocketAddress> peers) {
         List<InetSocketAddress> addrs = this.peers.get(info);
         if (addrs == null) {
             this.peers.put(info, peers);
@@ -53,7 +53,7 @@ public class PeerManager {
      * @param key
      * @return 返回null, 表示对应的peers不存在
      */
-    public List<InetSocketAddress> getPeers(NodeKey key) {
+    public List<InetSocketAddress> getPeers(NodeId key) {
         return peers.get(key);
     }
 
@@ -63,11 +63,11 @@ public class PeerManager {
      * @param key
      * @return
      */
-    public boolean contains(NodeKey key) {
+    public boolean contains(NodeId key) {
         return peers.containsKey(key);
     }
 
-    public byte[] compact(NodeKey key) {
+    public byte[] compact(NodeId key) {
         List<InetSocketAddress> nodes = peers.get(key);
         if (nodes == null) return null;
         ByteArrayOutputStream baos = new ByteArrayOutputStream();

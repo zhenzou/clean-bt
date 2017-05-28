@@ -30,7 +30,7 @@ public class TokenManager {
      * @param method 请求的方法
      * @return id is a long
      */
-    public static Token newToken(NodeKey key, String method) {
+    public static Token newToken(NodeId key, String method) {
         long id = autoIncId.addAndGet(1);
         Token token = new Token(key, id, method, false);
         tokens.put(id, token);
@@ -44,7 +44,7 @@ public class TokenManager {
      * @param method 请求的方法
      * @return id is a long
      */
-    public static Token newTokenToken(NodeKey key, String method) {
+    public static Token newTokenToken(NodeId key, String method) {
         long id = autoIncId.addAndGet(1);
         Token token = new Token(key, id, method, true);
         tokens.put(id, token);

@@ -16,7 +16,6 @@ import java.util.Objects;
  */
 public class NodeInfo {
 
-
     /**
      * 节点的域名或者点分IP地址
      */
@@ -30,7 +29,7 @@ public class NodeInfo {
     /**
      * 节点的ID
      */
-    public NodeKey key;
+    public NodeId id;
 
     /**
      * 暂时就是支持完整的NodeInfo
@@ -48,7 +47,7 @@ public class NodeInfo {
         byte[] keydata = new byte[20];
         System.arraycopy(bytes, 0, keydata, 0, 20);
         InetAddress address = Utils.getAddrFromBytes(bytes, 20);
-        NodeKey key = new NodeKey(keydata);
+        NodeId key = new NodeId(keydata);
         int port = Utils.bytes2Int(bytes, 24, 2);
         return new NodeInfo(address, port, key);
     }
@@ -68,28 +67,28 @@ public class NodeInfo {
     /**
      * @param address
      * @param port
-     * @param key
+     * @param id
      */
-    public NodeInfo(InetAddress address, int port, NodeKey key) {
+    public NodeInfo(InetAddress address, int port, NodeId id) {
         this.port = port;
-        this.key = key;
+        this.id = id;
         this.address = address.getHostAddress();
     }
 
 
-    public NodeInfo(String host, int port, NodeKey key) {
+    public NodeInfo(String host, int port, NodeId id) {
         this.address = host;
         this.port = port;
-        this.key = key;
+        this.id = id;
     }
 
 
-    public void setKey(NodeKey key) {
-        this.key = key;
+    public void setId(NodeId id) {
+        this.id = id;
     }
 
-    public NodeKey getKey() {
-        return key;
+    public NodeId getId() {
+        return id;
     }
 
     public String getFullAddress() {
@@ -102,7 +101,7 @@ public class NodeInfo {
     public byte[] compactNodeInfo() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
-            baos.write(key.getValue());
+            baos.write(id.getValue());
             baos.write(Utils.ip2bytes(address));
             baos.write(Utils.int2Bytes(port), 2, 2);
         } catch (IOException e) {
@@ -134,14 +133,14 @@ public class NodeInfo {
 
         if (port != nodeInfo.port) return false;
         if (address != null ? !address.equals(nodeInfo.address) : nodeInfo.address != null) return false;
-        if (!key.equals(nodeInfo.key)) return false;
+        if (!id.equals(nodeInfo.id)) return false;
         return address.equals(nodeInfo.address);
     }
 
     @Override
     public int hashCode() {
         int result = port;
-        result = 31 * result + Objects.hash(key);
+        result = 31 * result + Objects.hash(id);
         result = 31 * result + address.hashCode();
         return result;
     }
@@ -151,7 +150,7 @@ public class NodeInfo {
         return "NodeInfo{" +
             "address='" + address + '\'' +
             ", port=" + port +
-            ", key=" + String.valueOf(key) +
+            ", id=" + String.valueOf(id) +
             ", address=" + address +
             '}';
     }

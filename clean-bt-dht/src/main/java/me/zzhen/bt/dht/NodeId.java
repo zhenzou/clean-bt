@@ -16,10 +16,10 @@ import static me.zzhen.bt.util.Utils.int2Bytes;
  *
  * @author zzhen zzzhen1994@gmail.com
  */
-public class NodeKey implements Comparable<NodeKey> {
+public class NodeId implements Comparable<NodeId> {
 
 
-    public static NodeKey genRandomKey() {
+    public static NodeId genRandomId() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         for (int i = 0; i < 5; i++) {
             byte[] bytes = int2Bytes((int) (Math.random() * Integer.MAX_VALUE));
@@ -29,36 +29,36 @@ public class NodeKey implements Comparable<NodeKey> {
                 e.printStackTrace();
             }
         }
-        return new NodeKey(baos.toByteArray());
+        return new NodeId(baos.toByteArray());
     }
 
-    public static NodeKey distance(NodeKey lhs, NodeKey rhs) {
+    public static NodeId distance(NodeId lhs, NodeId rhs) {
         byte[] val = new byte[20];
         for (int i = 0; i < 20; i++) {
             val[i] = (byte) (lhs.value.getData()[i] ^ rhs.value.getData()[i]);
         }
-        return new NodeKey(val);
+        return new NodeId(val);
     }
 
     private Bitmap value;
 
-    public NodeKey(byte[] val) {
+    public NodeId(byte[] val) {
         if (val.length != 20) {
-            throw new IllegalArgumentException("the key require 20 byte");
+            throw new IllegalArgumentException("the id require 20 byte");
         } else {
             value = new Bitmap(val);
         }
     }
 
-    public NodeKey(Bitmap val) {
+    public NodeId(Bitmap val) {
         if (val.size != 160) {
-            throw new IllegalArgumentException("the key require 20 byte");
+            throw new IllegalArgumentException("the id require 20 byte");
         } else {
             value = val;
         }
     }
 
-    public NodeKey distance(NodeKey other) {
+    public NodeId distance(NodeId other) {
         return distance(this, other);
     }
 
@@ -90,7 +90,7 @@ public class NodeKey implements Comparable<NodeKey> {
     }
 
     @Override
-    public int compareTo(NodeKey o) {
+    public int compareTo(NodeId o) {
         byte[] val1 = value.getData();
         byte[] val2 = o.value.getData();
         for (int i = 0; i < 20; i++) {
@@ -107,8 +107,8 @@ public class NodeKey implements Comparable<NodeKey> {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        NodeKey nodeKey = (NodeKey) o;
-        return Objects.equals(value, nodeKey.value);
+        NodeId nodeId = (NodeId) o;
+        return Objects.equals(value, nodeId.value);
     }
 
     @Override
