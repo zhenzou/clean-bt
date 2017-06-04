@@ -32,27 +32,34 @@ public class Bencode {
     public static DictNode decodeDict(InputStream input) throws IOException {
         if (firstNotSpace(input) != DictNode.DIC_START)
             throw new IllegalArgumentException("first char should be " + DictNode.DIC_START);
-        return new Decoder(input).decodeDic();
+        DictNode dict = new Decoder(input).decodeDic();
+        input.close();
+        return dict;
     }
 
     public static ListNode decodeList(InputStream input) throws IOException {
         if (firstNotSpace(input) != ListNode.LIST_START)
             throw new IllegalArgumentException("first char should be " + ListNode.LIST_START);
-
-        return new Decoder(input).decodeList();
+        ListNode list = new Decoder(input).decodeList();
+        input.close();
+        return list;
     }
 
     public static IntNode decodeInt(InputStream input) throws IOException {
         if (firstNotSpace(input) != IntNode.INT_START)
             throw new IllegalArgumentException("first char should be " + IntNode.INT_START);
-        return new Decoder(input).decodeInt();
+        IntNode node = new Decoder(input).decodeInt();
+        input.close();
+        return node;
     }
 
     public static StringNode decodeString(InputStream input) throws IOException {
         char c = firstNotSpace(input);
         if (!Character.isDigit(c))
             throw new IllegalArgumentException("first char should be digital");
-        return new Decoder(input).decodeString(c);
+        StringNode string = new Decoder(input).decodeString(c);
+        input.close();
+        return string;
     }
 
     private static char firstNotSpace(InputStream input) throws IOException {

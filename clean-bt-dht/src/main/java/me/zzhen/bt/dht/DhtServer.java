@@ -59,7 +59,7 @@ public class Dht {
      */
     private DatagramSocket socket;
 
-    private ScheduledExecutorService autoFindNode = Executors.newScheduledThreadPool(1);
+    private ScheduledExecutorService executors = Executors.newScheduledThreadPool(4);
 
     /**
      * DHT 网络启动节点
@@ -78,7 +78,7 @@ public class Dht {
         new Thread(() -> {
             try {
                 byte[] bytes = new byte[1024];
-                while (true) {
+                do {
                     DatagramPacket packet = new DatagramPacket(bytes, bytes.length);
                     socket.receive(packet);
                     if (isBlackItem(packet.getAddress(), packet.getPort())) continue;
@@ -91,7 +91,7 @@ public class Dht {
                     } catch (RuntimeException e) {
                         logger.error(e.getMessage());
                     }
-                }
+                } while (true);
             } catch (IOException e) {
                 logger.error(e.getMessage());
                 e.printStackTrace();
@@ -106,9 +106,9 @@ public class Dht {
             krpc.findNode(target, self.getId());
         }
         //定时,自动向邻居节点发送find_node请求
-        autoFindNode.scheduleAtFixedRate(() -> routes.refresh(krpc), config.getAutoFind(), config.getAutoFind(), TimeUnit.SECONDS);
+        executors.scheduleAtFixedRate(() -> routes.refresh(krpc), config.getAutoFind(), config.getAutoFind(), TimeUnit.SECONDS);
         //定时清理过期Token
-        autoFindNode.scheduleAtFixedRate(TokenManager::clearTokens, config.getTTimeout(), config.getTTimeout(), TimeUnit.MINUTES);
+        executors.scheduleAtFixedRate(TokenManager::clearTokens, config.getTTimeout(), config.getTTimeout(), TimeUnit.MINUTES);
     }
 
     public void init() {

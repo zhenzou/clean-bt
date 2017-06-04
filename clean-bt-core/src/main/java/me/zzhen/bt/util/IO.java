@@ -28,6 +28,8 @@ public interface IO {
             }
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            close(input);
         }
         return sb.toString();
     }
@@ -70,8 +72,25 @@ public interface IO {
             }
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            close(input);
         }
         return baos.toByteArray();
+    }
+
+    /**
+     * 用Buffered读取全部数据，不包含换行符
+     *
+     * @param input
+     * @return
+     */
+    static void close(Closeable input) {
+        if (input == null) return;
+        try {
+            input.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -83,9 +102,18 @@ public interface IO {
         try (OutputStream out = new FileOutputStream(file)) {
             out.write(data);
             out.flush();
-            out.close();
         } catch (IOException e) {
             throw e;
         }
+    }
+
+    /**
+     * 获取本机的公网IP
+     *
+     * @return
+     * @throws IOException
+     */
+    static String localIp() throws IOException {
+        return new String(Https.get("http://icanhazip.com"));
     }
 }

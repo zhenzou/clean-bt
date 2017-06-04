@@ -1,7 +1,6 @@
 package me.zzhen.bt.bencode;
 
 /**
- * /**
  * Project:CleanBT
  *
  * @author zzhen zzzhen1994@gmail.com
@@ -22,4 +21,8 @@ public interface Node {
      * @return 返回数据内容 还是byte[]类型
      */
     byte[] decode();
+
+//    <T> void mapTo(T obj);
+
+//    <T> T mapTo(Class<T> clazz);
 }
