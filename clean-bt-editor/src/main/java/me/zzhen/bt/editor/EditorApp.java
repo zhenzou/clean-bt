@@ -241,7 +241,12 @@ public class EditorApp extends Application {
      */
     private void addNodeToTree(TreeNode<FileTreeItemModel> treeRoot, DictNode file) {
         int index = 0;
-        ListNode path = (ListNode) file.getNode("path");
+        ListNode path = null;
+        if (file.getNode("path.utf-8") != null) {
+            path = (ListNode) file.getNode("path.utf-8");
+        } else {
+            path = (ListNode) file.getNode("path");
+        }
         long length = Long.parseLong(file.getNode("length").toString());
         int size = path.size();
         while (index < size) {
