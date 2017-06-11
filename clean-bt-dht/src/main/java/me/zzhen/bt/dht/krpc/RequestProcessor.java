@@ -1,5 +1,6 @@
 package me.zzhen.bt.dht.krpc;
 
+import me.zzhen.bt.bencode.DictNode;
 import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.dht.NodeInfo;
 
@@ -13,13 +14,12 @@ import me.zzhen.bt.dht.NodeInfo;
  */
 public interface RequestProcessor {
 
-    void onFindNode(NodeInfo src, Node t, Node id);
+    void onFindNodeReq(NodeInfo src, Node t, Node id);
 
-    void onAnnouncePeer(NodeInfo src, Node t, Node id, Node token);
+    void onAnnouncePeerReq(NodeInfo src, int port, Node t, Node infoHash);
 
-    void onPing(NodeInfo src, Node t);
+    void onPingReq(NodeInfo src, Node t);
 
-    void onGetPeer(NodeInfo src, Node t, Node id);
+    void onGetPeerReq(NodeInfo src, Node t, Node id);
 
-    void error(NodeInfo src, Node t, Node id, int errno, String msg);
 }

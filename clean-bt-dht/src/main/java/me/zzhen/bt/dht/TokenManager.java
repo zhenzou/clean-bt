@@ -55,7 +55,7 @@ public class TokenManager {
      * 删除过期的token
      */
     public static void clearTokens() {
-        tokens.entrySet().removeIf(entry -> !entry.getValue().isLive());
+//        tokens.entrySet().removeIf(entry -> !entry.getValue().isLive());
     }
 
     /**

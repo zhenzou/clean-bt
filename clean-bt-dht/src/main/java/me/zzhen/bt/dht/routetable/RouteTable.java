@@ -1,14 +1,15 @@
-package me.zzhen.bt.dht;
+package me.zzhen.bt.dht.routetable;
 
 import me.zzhen.bt.common.Bitmap;
 import me.zzhen.bt.common.Tuple;
-import me.zzhen.bt.dht.krpc.Krpc;
+import me.zzhen.bt.dht.DhtConfig;
+import me.zzhen.bt.dht.NodeId;
+import me.zzhen.bt.dht.NodeInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
@@ -31,6 +32,11 @@ public class RouteTable {
     private int size;
 
     /**
+     * 容量
+     */
+    private int maxSize;
+
+    /**
      * 前缀树，根节点,父节点为null
      */
     private TreeNode root = new TreeNode((byte) 0, null);
@@ -40,7 +46,7 @@ public class RouteTable {
      */
     private Map<Bitmap, Bucket> buckets = new HashMap<>();
 
-    private Map<String, NodeInfo> nodes = new HashMap<>();
+    private Map<String, NodeInfoWrapper> nodes = new HashMap<>();
 
 
     /**
@@ -48,8 +54,9 @@ public class RouteTable {
      */
     private final ReentrantLock lock = new ReentrantLock();
 
-    public RouteTable(NodeInfo self) {
+    public RouteTable(int size) {
         Bucket init = new Bucket(0);
+        maxSize = size;
         buckets.put(init.prefix, init);
         root.value = init;
     }
@@ -68,13 +75,13 @@ public class RouteTable {
         if (key == null) return;
         try {
             lock.lock();
-
             //TODO
-            nodes.computeIfPresent(node.getFullAddress(), (s, info) -> {
-                removeById(key);
-                return null;
-            });
-            if (size >= DhtConfig.ROUTER_TABLE_SIZE) return;
+            NodeInfoWrapper wra = nodes.get(node.getFullAddress());
+            if (wra != null) {
+                wra.refresh();
+                return;
+            }
+            if (size >= maxSize) return;
             TreeNode item = findTreeNode(key);
             if (item.value == null) return;
             if (addNodeToBucket(node, item)) {
@@ -103,7 +110,8 @@ public class RouteTable {
             bucket.update(node);
             return false;
         } else if (bucket.size() < 8) {
-            nodes.put(node.getFullAddress(), node);
+            NodeInfoWrapper wra = new NodeInfoWrapper(node, bucket);
+            nodes.put(node.getFullAddress(), wra);
             bucket.addNode(node);
             return true;
         } else if (bucket.checkRange(node.getId())) {
@@ -127,9 +135,6 @@ public class RouteTable {
 
     /**
      * 得到以Root节点为根节点的子树的总节点个数
-     *
-     * @param root
-     * @return
      */
     public int size(TreeNode root) {
         if (root == null) return 0;
@@ -141,29 +146,20 @@ public class RouteTable {
     }
 
     /**
-     * 得到以Root节点为根节点的子树的总节点个数
-     *
-     * @param root
-     * @return
+     * 刷新，删除过期的不活越节点
      */
-    public void refresh(TreeNode root) {
-        nodes.entrySet().stream().forEach(entry->{
+    public void refresh() {
+        try {
+            if (lock.tryLock() || lock.tryLock(10, TimeUnit.SECONDS)) {
+                nodes.entrySet().stream().forEach(entry -> {
 //            if(entry.g)
-        });
-    }
-
-    /**
-     * 通过Socket地址得到相应的DHT节点信息
-     *
-     * @param address
-     * @return
-     */
-    public Optional<NodeInfo> getByAddr(InetSocketAddress address) {
-        return Optional.ofNullable(nodes.get(address));
-    }
-
-    public Optional<NodeInfo> getByAddr(InetAddress address, int port) {
-        return getByAddr(new InetSocketAddress(address, port));
+                });
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
@@ -274,309 +270,21 @@ public class RouteTable {
      * @param node
      */
     public void remove(NodeInfo node) {
-        TreeNode item = findTreeNode(node.getId());
-        Bucket bucket = item.value;
-        buckets.remove(bucket.prefix);
-        if (bucket.remove(node.getId())) {
-//            removeByAddr(new InetSocketAddress(node.address, node.port));
-            size--;
-        }
-        buckets.put(bucket.prefix, bucket);
-    }
-
-    /**
-     * 前缀树
-     * 只有叶子节点的value才不为空
-     */
-    private class TreeNode {
-
-        /**
-         * 现在没什么用，以后扩展的时候有用
-         */
-        public final byte key;
-        public final TreeNode parent;
-
-        public TreeNode(byte key, TreeNode parent) {
-            this.key = key;
-            this.parent = parent;
-        }
-
-        Bucket value;
-        TreeNode left;//大
-        TreeNode right;//小
-    }
-
-
-    /**
-     * DHT节点包装，主要增加活动时间记录，便于处理
-     */
-    private class NodeInfoWrapper implements Comparable<NodeInfoWrapper> {
-
-        public final NodeInfo node;
-        public final Bucket bucket;
-
-        private Instant lastActive = Instant.now();
-
-        private NodeInfoWrapper(NodeInfo node, Bucket bucket) {
-            this.node = node;
-            this.bucket = bucket;
-        }
-
-        /**
-         * 将节点的活动时间改为现在
-         */
-        void refresh() {
-            lastActive = Instant.now();
-        }
-
-        /**
-         * 判断节点是否处于活动状态，如果不是则需要ping一下刷新状态
-         *
-         * @return
-         */
-        boolean isActive() {
-            return lastActive.plusSeconds(DhtConfig.NODE_FRESH).isAfter(Instant.now());
-        }
-
-        /**
-         * 当节点在三个刷新间隔后还是没有回应将会删除
-         *
-         * @return
-         */
-        boolean delete() {
-            return bucket.remove(node.getId());
-        }
-
-        /**
-         * 当节点在三个刷新间隔后还是没有回应将会删除
-         *
-         * @return
-         */
-        boolean isDead() {
-            return lastActive.plusSeconds(3 * DhtConfig.NODE_FRESH).isBefore(Instant.now());
-        }
-
-        /**
-         * 只比较最后活跃时间
-         *
-         * @param o
-         * @return
-         */
-        @Override
-        public int compareTo(NodeInfoWrapper o) {
-            return lastActive.compareTo(o.lastActive);
-        }
-
-        /**
-         * 只比较 node
-         *
-         * @param o
-         * @return
-         */
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            NodeInfoWrapper that = (NodeInfoWrapper) o;
-            return node.equals(that.node);
-        }
-
-        @Override
-        public int hashCode() {
-            return node.hashCode();
-        }
-    }
-
-    /**
-     * 节点的最直接的容器
-     */
-    private class Bucket {
-
-        private Instant lastActive = Instant.now();
-
-        /**
-         * 这个Bucket的范围
-         */
-        private final Bitmap prefix;
-
-        public Bucket(int size) {
-            prefix = new Bitmap(size);
-        }
-
-        /**
-         * bucket的节点
-         * 新节点排在后面
-         */
-        private List<NodeInfoWrapper> nodes = new ArrayList<>(8);
-
-        /**
-         * 根据给予的Bitmap和值构造新的Bitmap
-         * 新的Bitmap前面的值与老的一直，最后的值为val
-         *
-         * @param old 原来的bitmap
-         * @param val 新的bitmap最后一位的值
-         */
-        public Bucket(Bitmap old, boolean val) {
-            prefix = new Bitmap(old.size + 1);
-            prefix.or(old);
-            prefix.set(prefix.size - 1, val);
-        }
-
-        private boolean reassignNode(NodeInfo node, Bucket left, Bucket right) {
-            if (left.checkRange(node.getId())) {
-                left.addNode(node);
-                return true;
+        String address = node.getFullAddress();
+        if (nodes.containsKey(address)) {
+            NodeInfoWrapper remove = nodes.remove(address);
+            if (remove.delete()) {
+                size--;
             }
-            if (right.checkRange(node.getId())) {
-                right.addNode(node);
-                return true;
-            }
-            return false;
         }
-
-        /**
-         * 将当前Bucket分裂成两个
-         * 左侧的是高位，右侧是低位
-         *
-         * @return
-         */
-        Tuple<Bucket, Bucket> split() {
-            if (prefix.size == 160) return null;
-            Bucket leftBucket = new Bucket(prefix, true);
-            Bucket rightBucket = new Bucket(prefix, false);
-            nodes.forEach(wrapper -> reassignNode(wrapper.node, leftBucket, rightBucket));
-            return new Tuple<>(leftBucket, rightBucket);
-        }
-
-        /**
-         * 生成一个在当前Bucket的范围内的id
-         *
-         * @return 当前的ID
-         */
-        public NodeId randomChildKey() {
-            NodeId key = NodeId.randomId();
-            Bitmap bits = key.getBits();
-            int size = prefix.size;
-            for (int i = 0; i < size; i++) {
-                bits.set(i, prefix.get(i));
-            }
-            return key;
-        }
-
-        /**
-         * 检查key是否在当前Bucket的范围内
-         *
-         * @param key
-         * @return
-         */
-        boolean checkRange(NodeId key) {
-            int len = key.getBits().size;
-            for (int i = 0; i < prefix.size && i < len; i++) {
-                if (key.prefix(i) != prefix.get(i)) return false;
-            }
-            return true;
-        }
-
-        /**
-         * 在前面已经处理已经存在的情况，在这里不需要再次处理
-         * 保持有2个候选节点
-         *
-         * @param info
-         */
-        public void addNode(NodeInfo info) {
-            nodes.add(new NodeInfoWrapper(info, this));
-            lastActive = Instant.now();
-        }
-
-        public int size() {
-            return nodes.size();
-        }
-
-        boolean contains(NodeInfo info) {
-            return nodes.contains(new NodeInfoWrapper(info, this));
-        }
-
-        /**
-         * 找到key对应的DHT节点信息
-         *
-         * @param key
-         * @return
-         */
-        public NodeInfo getNode(NodeId key) {
-            Optional<NodeInfoWrapper> first = nodes.stream().filter(node -> node.node.getId().equals(key)).findFirst();
-            return first.map(wrapper -> wrapper.node).orElse(null);
-        }
-
-        /**
-         * 删除key对应的DHT节点
-         * 如果没有就不进行任何动作
-         *
-         * @param key
-         */
-        public boolean remove(NodeId key) {
-            return nodes.removeIf(wrapper -> wrapper.node.getId().equals(key));
-//            int len = nodes.size();
-//            for (int i = 0; i < len; i++) {
-//                if (nodes.get(i).node.getId().equals(id)) {
-//
-//                    return Optional.of(nodes.remove(i).node);
-//                }
-//            }
-//            return Optional.empty();
-        }
-
-        /**
-         * 判断当前的bucket在配置时间内是否有刷新
-         *
-         * @return
-         */
-        public boolean isActive() {
-            return lastActive.plusSeconds(DhtConfig.BUCKET_FRESH).isAfter(Instant.now());
-        }
-
-        /**
-         * 处理Bucket定时刷新问题
-         * locked
-         */
-        public void refresh(Krpc krpc) {
-            nodes.forEach(wrapper -> krpc.ping(wrapper.node));
-//            List<NodeInfoWrapper> remove = new ArrayList<>();
-//            for (NodeInfoWrapper node : nodes) {
-//                if (node.isDead()) remove.put(node);
-//                else if (!node.isActive()) krpc.ping(node.node);
-//            }
-//            nodes.removeAll(remove);
-//            size -= remove.size();
-//            lastActive = Instant.now();
-        }
-
-        /**
-         * 刷新指定节点的活动时间,同时也刷新当前bucket的活动时间
-         *
-         * @param node
-         */
-        public void update(NodeInfo node) {
-            nodes.stream().filter(wrapper -> wrapper.node.equals(node)).findFirst().ifPresent(NodeInfoWrapper::refresh);
-            lastActive = Instant.now();
-        }
-
-
-        @Override
-        public String toString() {
-            return prefix.toString();
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            Bucket bucket = (Bucket) o;
-            return prefix.equals(bucket.prefix);
-        }
-
-        @Override
-        public int hashCode() {
-            return prefix.hashCode();
-        }
+//        TreeNode item = findTreeNode(node.getId());
+//        Bucket bucket = item.value;
+////        buckets.remove(bucket.prefix);
+//        if (bucket.remove(node.getId())) {
+////            removeById(node.getId());
+//            nodes.remove(node.getFullAddress());
+//            size--;
+//        }
+//        buckets.put(bucket.prefix, bucket);
     }
 }

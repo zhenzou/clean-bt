@@ -1,7 +1,7 @@
 package me.zzhen.bt.dht.krpc;
 
 import me.zzhen.bt.bencode.*;
-import me.zzhen.bt.dht.Dht;
+import me.zzhen.bt.dht.DhtServer;
 import me.zzhen.bt.dht.NodeId;
 import me.zzhen.bt.dht.Token;
 import me.zzhen.bt.dht.TokenManager;
@@ -98,12 +98,6 @@ public class Message {
         e.addNode(new IntNode(errno));
         e.addNode(new StringNode(msg));
         node.addNode("e", e);
-        return node;
-    }
-
-    public static DictNode makeArg() {
-        DictNode node = new DictNode();
-        node.addNode("id", new StringNode(Dht.NODE.getSelfId().getValue()));
         return node;
     }
 }

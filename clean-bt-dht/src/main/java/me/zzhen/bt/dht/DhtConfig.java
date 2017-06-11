@@ -92,6 +92,7 @@ public class DhtConfig {
         config.routeTableSize = ROUTER_TABLE_SIZE;
         config.bucketFresh = BUCKET_FRESH;
         config.nodeFresh = NODE_FRESH;
+        config.mode = CRAWL_MODE;
         return config;
     }
 
@@ -102,7 +103,8 @@ public class DhtConfig {
     /**
      * 本地IP地址
      */
-    public static final String SERVER_IP = "127.0.0.1";
+//    public static final String SERVER_IP = "127.0.0.1";
+    public static final String SERVER_IP = "119.129.82.197";
     /**
      * DHT Server监听端口
      */

@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -64,22 +65,17 @@ public class MetadataWorker implements Runnable {
 
     private InetSocketAddress address;
 
-    private int port;
-
-
     public static final int BLOCK_SIZE = 16 * 1024;
-
 
     public MetadataWorker(String address, int port, byte[] hash) {
         if (hash.length != 20) return;
         this.address = new InetSocketAddress(address, port);
         this.hash = hash;
-        this.port = port;
     }
 
     @Override
     public void run() {
-        if (!Dht.NODE.isBlackItem(address)) fetchMetadata();
+        fetchMetadata();
     }
 
 
@@ -121,7 +117,7 @@ public class MetadataWorker implements Runnable {
             baos.write(PSTR.getBytes());
             baos.write(RESERVED);
             baos.write(hash);
-            baos.write(NodeId.genRandomId().getValue());
+            baos.write(NodeId.randomId().getValue());
             out.write(baos.toByteArray());
         } catch (IOException e) {
             logger.error(e.getMessage());
@@ -174,7 +170,7 @@ public class MetadataWorker implements Runnable {
         try {
             baos.write(lens);
             baos.write(data);
-            logger.info("send:" + new String(baos.toByteArray()));
+            logger.info("request:" + new String(baos.toByteArray()));
             out.write(baos.toByteArray());
         } catch (IOException e) {
             e.printStackTrace();
@@ -284,7 +280,7 @@ public class MetadataWorker implements Runnable {
                 }
             }
         } catch (SocketTimeoutException e) {
-            Dht.NODE.addBlackItem(address.getAddress().getHostAddress() + ":" + port);
+//            DhtServer.NODE.addBlackItem(address.getAddress().getHostAddress() + ":" + port);
             logger.error(e.getMessage());
         } catch (IOException e) {
             logger.error(e.getMessage());

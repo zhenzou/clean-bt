@@ -16,10 +16,11 @@ import static me.zzhen.bt.util.Utils.int2Bytes;
  *
  * @author zzhen zzzhen1994@gmail.com
  */
+
 public class NodeId implements Comparable<NodeId> {
 
 
-    public static NodeId genRandomId() {
+    public static NodeId randomId() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         for (int i = 0; i < 5; i++) {
             byte[] bytes = int2Bytes((int) (Math.random() * Integer.MAX_VALUE));
@@ -30,6 +31,10 @@ public class NodeId implements Comparable<NodeId> {
             }
         }
         return new NodeId(baos.toByteArray());
+    }
+
+    public static NodeId defaultId() {
+        return new NodeId("ThisIsaDefaultNodeId".getBytes());
     }
 
     public static NodeId distance(NodeId lhs, NodeId rhs) {

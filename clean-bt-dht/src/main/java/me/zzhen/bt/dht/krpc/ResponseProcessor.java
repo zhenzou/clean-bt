@@ -29,15 +29,12 @@ import static me.zzhen.bt.dht.krpc.Krpc.*;
 
 public interface ResponseProcessor {
 
-    DictNode responseFindNode(NodeInfo src, Node t, Node id);
+    void onFindNodeResp(NodeInfo src, NodeId target, DictNode resp);
 
-    DictNode responseAnnouncePeer(NodeInfo src, Node t, Node id, Node token);
+    void onAnnouncePeerResp(NodeInfo src,  DictNode resp);
 
-    DictNode response(NodeInfo src, Node t);
+    void onPingResp(NodeInfo src);
 
-    DictNode response(NodeInfo src, Node t, Node id);
-
-    DictNode error(NodeInfo src, Node t, Node id, int errno, String msg);
-
+    void onGetPeersResp(NodeInfo src, NodeId target, DictNode resp);
 }
 

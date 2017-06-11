@@ -63,7 +63,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>me.zzhen.bt.dht.Dht</mainClass>
+                            <mainClass>me.zzhen.bt.dht.DhtServer</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
