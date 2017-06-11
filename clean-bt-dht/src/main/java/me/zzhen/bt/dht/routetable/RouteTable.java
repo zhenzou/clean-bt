@@ -39,10 +39,9 @@ public class RouteTable {
      * 便于操作
      */
     private Map<Bitmap, Bucket> buckets = new HashMap<>();
-    /**
-     * 保存全部的DHT节点信息，便于操作
-     */
+
     private Map<String, NodeInfo> nodes = new HashMap<>();
+
 
     /**
      * 在添加节点以及刷新的时候需要加锁
@@ -72,8 +71,7 @@ public class RouteTable {
 
             //TODO
             nodes.computeIfPresent(node.getFullAddress(), (s, info) -> {
-                Dht.NODE.addBlackItem(info.getFullAddress());
-                removeByAddr(new InetSocketAddress(node.address, node.port));
+                removeById(key);
                 return null;
             });
             if (size >= DhtConfig.ROUTER_TABLE_SIZE) return;
@@ -143,6 +141,18 @@ public class RouteTable {
     }
 
     /**
+     * 得到以Root节点为根节点的子树的总节点个数
+     *
+     * @param root
+     * @return
+     */
+    public void refresh(TreeNode root) {
+        nodes.entrySet().stream().forEach(entry->{
+//            if(entry.g)
+        });
+    }
+
+    /**
      * 通过Socket地址得到相应的DHT节点信息
      *
      * @param address
@@ -154,16 +164,6 @@ public class RouteTable {
 
     public Optional<NodeInfo> getByAddr(InetAddress address, int port) {
         return getByAddr(new InetSocketAddress(address, port));
-    }
-
-    /**
-     * 根据地址删除对应的DHT节点
-     *
-     * @param address
-     */
-    public void removeByAddr(InetSocketAddress address) {
-        Optional<NodeInfo> optional = Optional.ofNullable(nodes.get(address));
-        optional.ifPresent(node -> removeById(node.getId()));
     }
 
     /**
@@ -247,34 +247,6 @@ public class RouteTable {
 
 
     /**
-     * 刷新路由表的不获取的节点
-     *
-     * @param krpc
-     */
-    public void refresh(Krpc krpc) {
-        try {
-            if (lock.tryLock(10, TimeUnit.SECONDS)) {
-                buckets.entrySet().stream().map(Map.Entry::getValue).filter(bucket -> !bucket.isActive() && !(bucket.size() == 0))
-                    .flatMap(bucket -> bucket.nodes.stream())
-                    .sorted()
-                    .limit(DhtConfig.AUTO_FIND_SIZE)
-                    .forEach(wrapper -> {
-                        krpc.findNode(wrapper.node, wrapper.bucket.randomChildKey());
-                        keys.add(wrapper.node);
-                    });
-                buckets.forEach((prefix, bucket) -> bucket.refresh(krpc));
-                keys.forEach(this::remove);
-                keys.clear();
-                lock.unlock();
-            }
-        } catch (InterruptedException e) {
-            logger.error(e.getMessage());
-        }
-        logger.info("repeat:" + repeat + "routes:" + size);
-    }
-
-
-    /**
      * 找到key当前对应的节点
      *
      * @param key
@@ -306,7 +278,7 @@ public class RouteTable {
         Bucket bucket = item.value;
         buckets.remove(bucket.prefix);
         if (bucket.remove(node.getId())) {
-            removeByAddr(new InetSocketAddress(node.address, node.port));
+//            removeByAddr(new InetSocketAddress(node.address, node.port));
             size--;
         }
         buckets.put(bucket.prefix, bucket);
@@ -364,6 +336,15 @@ public class RouteTable {
          */
         boolean isActive() {
             return lastActive.plusSeconds(DhtConfig.NODE_FRESH).isAfter(Instant.now());
+        }
+
+        /**
+         * 当节点在三个刷新间隔后还是没有回应将会删除
+         *
+         * @return
+         */
+        boolean delete() {
+            return bucket.remove(node.getId());
         }
 
         /**
@@ -473,7 +454,7 @@ public class RouteTable {
          * @return 当前的ID
          */
         public NodeId randomChildKey() {
-            NodeId key = NodeId.genRandomId();
+            NodeId key = NodeId.randomId();
             Bitmap bits = key.getBits();
             int size = prefix.size;
             for (int i = 0; i < size; i++) {
@@ -561,7 +542,7 @@ public class RouteTable {
             nodes.forEach(wrapper -> krpc.ping(wrapper.node));
 //            List<NodeInfoWrapper> remove = new ArrayList<>();
 //            for (NodeInfoWrapper node : nodes) {
-//                if (node.isDead()) remove.add(node);
+//                if (node.isDead()) remove.put(node);
 //                else if (!node.isActive()) krpc.ping(node.node);
 //            }
 //            nodes.removeAll(remove);
