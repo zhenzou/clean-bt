@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.PushbackInputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Project:CleanBT
@@ -72,16 +73,11 @@ public class ListNode implements Node {
 
     @Override
     public byte[] decode() {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        value.forEach(node -> {
-            try {
-                baos.write(node.decode());
-                baos.write(',');
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });
-        return baos.toByteArray();
+        String format = "[%s]";
+        String content = String.join(",",
+                value.stream()
+                        .map((item -> new String(item.decode()))).collect(Collectors.toList()));
+        return String.format(format, content).getBytes();
     }
 
     @Override

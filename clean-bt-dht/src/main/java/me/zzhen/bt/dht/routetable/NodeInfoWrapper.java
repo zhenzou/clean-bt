@@ -25,6 +25,7 @@ public class NodeInfoWrapper implements Comparable<NodeInfoWrapper> {
      */
     void refresh() {
         lastActive = Instant.now().getEpochSecond();
+        bucket.refresh();
     }
 
     /**

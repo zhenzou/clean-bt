@@ -26,8 +26,7 @@ public class NodeId implements Comparable<NodeId> {
             byte[] bytes = int2Bytes((int) (Math.random() * Integer.MAX_VALUE));
             try {
                 baos.write(bytes);
-            } catch (IOException e) {
-                e.printStackTrace();
+            } catch (IOException ignored) {
             }
         }
         return new NodeId(baos.toByteArray());
@@ -77,7 +76,8 @@ public class NodeId implements Comparable<NodeId> {
 
     @Override
     public String toString() {
-        return Utils.toHex(value.getData());
+//        return Utils.toHex(value.getData());
+        return new String(value.getData());
     }
 
     /**

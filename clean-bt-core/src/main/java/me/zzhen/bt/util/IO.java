@@ -114,6 +114,6 @@ public interface IO {
      * @throws IOException
      */
     static String localIp() throws IOException {
-        return new String(Https.get("http://icanhazip.com"));
+        return new String(Https.get("http://icanhazip.com")).trim();
     }
 }

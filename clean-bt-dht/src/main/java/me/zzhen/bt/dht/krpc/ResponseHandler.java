@@ -27,7 +27,7 @@ import static me.zzhen.bt.dht.krpc.Krpc.*;
  * @author zzhen zzzhen1994@gmail.com
  */
 
-public interface ResponseProcessor {
+public interface ResponseHandler {
 
     void onFindNodeResp(NodeInfo src, NodeId target, DictNode resp);
 

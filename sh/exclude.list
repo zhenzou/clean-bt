@@ -1,4 +1,6 @@
-pholcus_pkg
 .git
-*_server
 .idea
+target
+out
+*.iml
+

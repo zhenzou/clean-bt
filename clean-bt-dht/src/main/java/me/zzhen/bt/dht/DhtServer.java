@@ -3,8 +3,8 @@ package me.zzhen.bt.dht;
 import me.zzhen.bt.bencode.*;
 import me.zzhen.bt.dht.krpc.Krpc;
 import me.zzhen.bt.dht.krpc.Message;
-import me.zzhen.bt.dht.krpc.RequestProcessor;
-import me.zzhen.bt.dht.krpc.ResponseProcessor;
+import me.zzhen.bt.dht.krpc.RequestHandler;
+import me.zzhen.bt.dht.krpc.ResponseHandler;
 import me.zzhen.bt.dht.routetable.RouteTable;
 import me.zzhen.bt.util.IO;
 import me.zzhen.bt.util.Utils;
@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
  *
  * @author zzhen zzzhen1994@gmail.com
  */
-public class DhtServer implements RequestProcessor, ResponseProcessor {
+public class DhtServer implements RequestHandler, ResponseHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(DhtServer.class);
 
@@ -84,9 +84,9 @@ public class DhtServer implements RequestProcessor, ResponseProcessor {
      * DHT 网络启动节点
      */
     public static final NodeInfo[] BOOTSTRAP_NODES = {
-        new NodeInfo("router.bittorrent.com", 6881),
-        new NodeInfo("router.utorrent.com", 6881),
-        new NodeInfo("dht.transmissionbt.com", 6881)
+            new NodeInfo("router.bittorrent.com", 6881),
+            new NodeInfo("router.utorrent.com", 6881),
+            new NodeInfo("dht.transmissionbt.com", 6881)
     };
 
     public DhtServer(DhtConfig config) {
@@ -99,16 +99,19 @@ public class DhtServer implements RequestProcessor, ResponseProcessor {
                 byte[] bytes = new byte[4096];
                 do {
                     DatagramPacket packet = new DatagramPacket(bytes, bytes.length);
+                    DictNode dict = null;
                     try {
                         socket.receive(packet);
                         int length = packet.getLength();
-                        DictNode node = Bencode.decodeDict(new ByteArrayInputStream(bytes, 0, length));
-//                        logger.info("length:{}", length);
+                        dict = Bencode.decodeDict(new ByteArrayInputStream(bytes, 0, length));
                         InetAddress address = packet.getAddress();
                         int port = packet.getPort();
-                        krpc.response(address, port, node);
+                        krpc.handler(address, port, dict);
                     } catch (RuntimeException | IOException e) {
-//                        logger.error(e.getMessage());
+                        logger.error(e.getMessage());
+//                        if (dict != null) {
+//                            logger.error("data:{}", dict.toString());
+//                        }
                     }
                 } while (true);
             } finally {
@@ -121,17 +124,17 @@ public class DhtServer implements RequestProcessor, ResponseProcessor {
      * 刷新路由表的不获取的节点
      */
     private void refresh() {
-        if (routes.size() == 0) {
+        if (routes.length() == 0) {
             join();
         }
         if (isCrawlMode()) {
             //定时,自动向邻居节点发送find_node请求
             List<NodeInfo> nodes = routes.closestKNodes(self.getId(), config.getAutoFindSize());
             logger.info("refresh len:{}", nodes.size());
-            logger.info("routes len before:{}", routes.size());
+            logger.info("routes len before:{}", routes.length());
             nodes.forEach(node -> krpc.findNode(node, self.getId()));
             nodes.forEach(node -> routes.remove(node));
-            logger.info("routes len after:{}", routes.size());
+            logger.info("routes len after:{}", routes.length());
         }
     }
 
@@ -148,8 +151,8 @@ public class DhtServer implements RequestProcessor, ResponseProcessor {
             routes = new RouteTable(config.getRouteTableSize());
             socket = new DatagramSocket(config.serverPort);
             krpc = new Krpc(socket, self);
-            krpc.setRequestProcessor(this);
-            krpc.setResponseProcessor(this);
+            krpc.setRequestHandler(this);
+            krpc.setResponseHandler(this);
             PeerManager.init();
             //定时清理无效节点
             executors.scheduleAtFixedRate(this::refresh, config.getAutoFind(), config.getAutoFind(), TimeUnit.SECONDS);
@@ -191,7 +194,6 @@ public class DhtServer implements RequestProcessor, ResponseProcessor {
     }
 
     public void addNode(NodeInfo node) {
-//        logger.info("routes:{}", routes.size());
         routes.addNode(node);
     }
 
@@ -216,11 +218,12 @@ public class DhtServer implements RequestProcessor, ResponseProcessor {
      */
     @Override
     public void onFindNodeReq(NodeInfo src, Node t, Node id) {
-//        if (isCrawlMode()) return;
         DictNode resp = Message.makeResp(t);
         List<NodeInfo> infos = new ArrayList<>();
         infos.add(self());
+        NodeId nodeId = new NodeId(id.decode());
         List<NodeInfo> close = routes.closest8Nodes(new NodeId(id.decode()));
+
         if (close.size() == 8) infos.addAll(close.subList(0, 7));
         else infos.addAll(close);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -230,12 +233,16 @@ public class DhtServer implements RequestProcessor, ResponseProcessor {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            if (isCrawlMode()) {
+                krpc.findNode(info, nodeId);
+            }
         }
         StringNode nodes = new StringNode(baos.toByteArray());
         DictNode arg = krpc.makeArg();
         arg.addNode("nodes", nodes);
         resp.addNode("r", arg);
         krpc.send(resp, src);
+
     }
 
     /**
@@ -343,6 +350,7 @@ public class DhtServer implements RequestProcessor, ResponseProcessor {
             }
             if (!node.getFullAddress().equals(self.getFullAddress())) {
 //                krpc.findNode(node, target);
+                logger.info(node.getFullAddress());
                 addNode(node);
             }
         }
@@ -395,9 +403,9 @@ public class DhtServer implements RequestProcessor, ResponseProcessor {
         InputStream in = DhtServer.class.getClassLoader().getResourceAsStream("logger.properties");
         if (in != null) LogManager.getLogManager().readConfiguration(in);
         String address = IO.localIp();
-        logger.info("local ip:{}", address);
         DhtServer server = new DhtServer(DhtConfig.config(address, DhtConfig.SERVER_PORT));
         server.init();
+        logger.info("self:{}", server.self.getFullAddress());
         server.start();
     }
 }

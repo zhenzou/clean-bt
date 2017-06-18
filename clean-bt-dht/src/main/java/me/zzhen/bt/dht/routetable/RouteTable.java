@@ -8,10 +8,7 @@ import me.zzhen.bt.dht.NodeInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -29,12 +26,12 @@ public class RouteTable {
     /**
      * 路由表的节点数
      */
-    private int size;
+    private int length;
 
     /**
      * 容量
      */
-    private int maxSize;
+    private int capacity;
 
     /**
      * 前缀树，根节点,父节点为null
@@ -54,15 +51,15 @@ public class RouteTable {
      */
     private final ReentrantLock lock = new ReentrantLock();
 
-    public RouteTable(int size) {
-        Bucket init = new Bucket(0);
-        maxSize = size;
+    public RouteTable(int capacity) {
+        Bucket init = new Bucket(0, 8);
+        this.capacity = capacity;
         buckets.put(init.prefix, init);
         root.value = init;
     }
 
-    public int size() {
-        return size;
+    public int length() {
+        return length;
     }
 
     /**
@@ -71,8 +68,8 @@ public class RouteTable {
      * @param node
      */
     public void addNode(NodeInfo node) {
-        NodeId key = node.getId();
-        if (key == null) return;
+        NodeId id = node.getId();
+        if (id == null) return;
         try {
             lock.lock();
             //TODO
@@ -81,11 +78,11 @@ public class RouteTable {
                 wra.refresh();
                 return;
             }
-            if (size >= maxSize) return;
-            TreeNode item = findTreeNode(key);
+            if (length >= capacity) return;
+            TreeNode item = findTreeNode(id);
             if (item.value == null) return;
             if (addNodeToBucket(node, item)) {
-                size++;
+                length++;
             }
         } finally {
             lock.unlock();
@@ -109,10 +106,10 @@ public class RouteTable {
             repeat++;
             bucket.update(node);
             return false;
-        } else if (bucket.size() < 8) {
+        } else if (bucket.length() < 8) {
             NodeInfoWrapper wra = new NodeInfoWrapper(node, bucket);
             nodes.put(node.getFullAddress(), wra);
-            bucket.addNode(node);
+            bucket.addNode(wra);
             return true;
         } else if (bucket.checkRange(node.getId())) {
             Tuple<Bucket, Bucket> spit = bucket.split();
@@ -134,42 +131,50 @@ public class RouteTable {
     }
 
     /**
-     * 得到以Root节点为根节点的子树的总节点个数
+     * 找到id 当前对应的Bucket
+     *
+     * @param id
+     * @return
      */
-    public int size(TreeNode root) {
-        if (root == null) return 0;
-        int size = 0;
-        if (root.value != null) size += root.value.size();
-        size += size(root.left);
-        size += size(root.right);
-        return size;
+
+    private TreeNode findTreeNode(NodeId id) {
+        TreeNode item = root;
+        int index = 0;
+        while (item.value == null && index < 160) {
+            boolean prefix = id.prefix(index);
+            if (prefix) {
+                item = item.left;
+            } else {
+                item = item.right;
+            }
+            index++;
+        }
+        return item;
     }
 
-    /**
-     * 刷新，删除过期的不活越节点
-     */
-    public void refresh() {
-        try {
-            if (lock.tryLock() || lock.tryLock(10, TimeUnit.SECONDS)) {
-                nodes.entrySet().stream().forEach(entry -> {
-//            if(entry.g)
-                });
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } finally {
-            lock.unlock();
-        }
-    }
 
     /**
      * 根据ID删除对应的节点
      *
-     * @param key
+     * @param id
      */
-    private void removeById(NodeId key) {
-        TreeNode treeNode = findTreeNode(key);
-        treeNode.value.remove(key);
+    private void removeById(NodeId id) {
+        TreeNode treeNode = findTreeNode(id);
+        treeNode.value.remove(id);
+    }
+
+    /**
+     * Test
+     * <p>
+     * 得到以Root节点为根节点的子树的总节点个数
+     */
+    public int length(TreeNode root) {
+        if (root == null) return 0;
+        int size = 0;
+        if (root.value != null) size += root.value.length();
+        size += length(root.left);
+        size += length(root.right);
+        return size;
     }
 
     /**
@@ -188,12 +193,12 @@ public class RouteTable {
     /**
      * 在添加节点的过程中已经保证分裂后的节点的Bucket是空的
      *
-     * @param key
+     * @param id
      * @return 离key最近的K个节点
      */
-    public List<NodeInfo> closestKNodes(NodeId key, int k) {
-        TreeNode node = findTreeNode(key);
-        List<NodeInfo> infos = new ArrayList<>(8);
+    public List<NodeInfo> closestKNodes(NodeId id, int k) {
+        TreeNode node = findTreeNode(id);
+        List<NodeInfo> infos = new ArrayList<>(k);
         closestKNodes(node, infos, k);
         return infos;
     }
@@ -206,13 +211,16 @@ public class RouteTable {
      * @param k
      */
     private void closestKNodes(TreeNode node, List<NodeInfo> infos, int k) {
-        int size = size(node);
+        fillNode(node, infos, k);
+        int size = infos.size();
         while (size < k && node.parent != null) {
-            if (node == node.parent.left) size = size + size(node.parent.right) + 1;
-            else size = size + size(node.parent.left) + 1;
+            if (node == node.parent.left) {
+                fillNode(node.parent.right, infos, k);
+            } else {
+                fillNode(node.parent.left, infos, k);
+            }
             node = node.parent;
         }
-        addClosestNode(node, infos, k);
     }
 
     /**
@@ -222,11 +230,11 @@ public class RouteTable {
      * @param infos
      * @param k
      */
-    private void addClosestNode(TreeNode node, List<NodeInfo> infos, int k) {
+    private void fillNode(TreeNode node, List<NodeInfo> infos, int k) {
         if (node == null || infos.size() == k) return;
         if (node.value == null) {
-            addClosestNode(node.left, infos, k);
-            addClosestNode(node.right, infos, k);
+            fillNode(node.left, infos, k);
+            fillNode(node.right, infos, k);
         } else {
             for (NodeInfoWrapper wrapper : node.value.nodes) {
                 if (infos.size() >= k) break;
@@ -243,28 +251,6 @@ public class RouteTable {
 
 
     /**
-     * 找到key当前对应的节点
-     *
-     * @param key
-     * @return
-     */
-
-    private TreeNode findTreeNode(NodeId key) {
-        TreeNode item = root;
-        int index = 0;
-        while (item.value == null && index < 160) {
-            boolean prefix = key.prefix(index);
-            if (prefix) {
-                item = item.left;
-            } else {
-                item = item.right;
-            }
-            index++;
-        }
-        return item;
-    }
-
-    /**
      * 在整个路由表中删除key对应的DHT节点信息
      *
      * @param node
@@ -274,17 +260,8 @@ public class RouteTable {
         if (nodes.containsKey(address)) {
             NodeInfoWrapper remove = nodes.remove(address);
             if (remove.delete()) {
-                size--;
+                length--;
             }
         }
-//        TreeNode item = findTreeNode(node.getId());
-//        Bucket bucket = item.value;
-////        buckets.remove(bucket.prefix);
-//        if (bucket.remove(node.getId())) {
-////            removeById(node.getId());
-//            nodes.remove(node.getFullAddress());
-//            size--;
-//        }
-//        buckets.put(bucket.prefix, bucket);
     }
 }

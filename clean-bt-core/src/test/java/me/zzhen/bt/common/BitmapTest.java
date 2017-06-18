@@ -73,19 +73,4 @@ public class BitmapTest {
         assertEquals(false, bitmap1.get(4));
 
     }
-
-    @Test
-    public void random() {
-//        NodeKey key = NodeKey.genRandomKey();
-//        NodeKey pre = NodeKey.genRandomKey();
-//        Bitmap bits = key.getBits();
-//        Bitmap prefix = pre.getBits();
-//        for (int i = 0; i < 10; i++) {
-//            bits.set(i, prefix.get(i));
-//        }
-//        for (int i = 0; i < 10; i++) {
-//            assertEquals(prefix.get(i), bits.get(i));
-//            //            System.out.println(bits.get(i) + ":" + prefix.get(i));
-//        }
-    }
 }

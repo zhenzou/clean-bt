@@ -12,7 +12,7 @@ import me.zzhen.bt.dht.NodeInfo;
  *
  * @author zzhen zzzhen1994@gmail.com
  */
-public interface RequestProcessor {
+public interface RequestHandler {
 
     void onFindNodeReq(NodeInfo src, Node t, Node id);
 

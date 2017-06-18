@@ -4,6 +4,7 @@ import me.zzhen.bt.bencode.DictNode;
 import me.zzhen.bt.bencode.IntNode;
 import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.bencode.StringNode;
+import me.zzhen.bt.common.Channel;
 import me.zzhen.bt.dht.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,31 +41,38 @@ public class Krpc {
     /**
      * 处理请求
      */
-    private RequestProcessor requestProcessor;
+    private RequestHandler requestHandler;
 
     /**
      * 处理响应
      */
-    private ResponseProcessor responseProcessor;
+    private ResponseHandler responseHandler;
     /**
      * 主要的线程发送线程池
      */
-    private ExecutorService sender = Executors.newFixedThreadPool(2);
+    private ExecutorService sender = Executors.newFixedThreadPool(10);
+
+    private Channel<Received> received = Channel.simpleChannel(1024);
 
     public Krpc(NodeInfo self) throws SocketException {
         socket = new DatagramSocket();
         this.self = self;
-    }
-
-    public DictNode makeArg() {
-        DictNode node = new DictNode();
-        node.addNode("id", new StringNode(self.getId().getValue()));
-        return node;
+//        run();
     }
 
     public Krpc(DatagramSocket socket, NodeInfo self) {
         this.socket = socket;
         this.self = self;
+//        run();
+    }
+
+    public void run() {
+        new Thread(() -> {
+            Optional<Received> next;
+            while ((next = received.next()).isPresent()) {
+                process(next.get());
+            }
+        }).start();
     }
 
     /**
@@ -146,6 +154,18 @@ public class Krpc {
         send(req, target);
     }
 
+    class Received {
+        public final String address;
+        public final int port;
+        public final DictNode dict;
+
+        Received(String address, int port, DictNode dict) {
+            this.address = address;
+            this.port = port;
+            this.dict = dict;
+        }
+    }
+
     /**
      * 处理响应的方法,包括请求的响应和请求
      * nbvc lkjhncn m
@@ -154,7 +174,15 @@ public class Krpc {
      * @param port
      * @param dict
      */
-    public void response(InetAddress address, int port, DictNode dict) {
+    public void handler(InetAddress address, int port, DictNode dict) {
+//        received.push(new Received(address.getHostAddress(), port, dict));
+        process(new Received(address.getHostAddress(), port, dict));
+    }
+
+    public void process(Received received) {
+        DictNode dict = received.dict;
+        String address = received.address;
+        int port = received.port;
         if (Message.isResp(dict)) {
             Node t = dict.getNode("t");
             long tId;
@@ -178,16 +206,16 @@ public class Krpc {
                 }
                 switch (token.method) {
                     case METHOD_PING:
-                        responseProcessor.onPingResp(src);
+                        responseHandler.onPingResp(src);
                         break;
                     case METHOD_GET_PEERS:
-                        responseProcessor.onGetPeersResp(src, token.target, resp);
+                        responseHandler.onGetPeersResp(src, token.target, resp);
                         break;
                     case METHOD_FIND_NODE:
-                        responseProcessor.onFindNodeResp(src, token.target, resp);
+                        responseHandler.onFindNodeResp(src, token.target, resp);
                         break;
                     case METHOD_ANNOUNCE_PEER:
-                        responseProcessor.onAnnouncePeerResp(src, resp);
+                        responseHandler.onAnnouncePeerResp(src, resp);
                         break;
                     default:
                         break;
@@ -205,16 +233,16 @@ public class Krpc {
                 return;
             }
             Node method = dict.getNode("q");
-//            logger.info(method.toString() + "  request from " + address.getHostAddress() + ":" + port);
+//            logger.info(method.toString() + "  request from " + address + ":" + port);
             switch (method.toString()) {
                 case METHOD_PING:
-                    requestProcessor.onPingReq(src, dict);
+                    requestHandler.onPingReq(src, dict);
                     break;
                 case METHOD_GET_PEERS:
-                    requestProcessor.onGetPeerReq(src, t, arg.getNode("info_hash"));
+                    requestHandler.onGetPeerReq(src, t, arg.getNode("info_hash"));
                     break;
                 case METHOD_FIND_NODE:
-                    requestProcessor.onFindNodeReq(src, t, arg.getNode("target"));
+                    requestHandler.onFindNodeReq(src, t, arg.getNode("target"));
                     break;
                 case METHOD_ANNOUNCE_PEER:
                     int i = Integer.parseInt(arg.getNode("implied_port").toString());
@@ -222,7 +250,7 @@ public class Krpc {
                     if (i == 0) {
                         p = Integer.parseInt(arg.getNode("port").toString());
                     }
-                    requestProcessor.onAnnouncePeerReq(src, p, t, arg.getNode("info_hash"));
+                    requestHandler.onAnnouncePeerReq(src, p, t, arg.getNode("info_hash"));
                     break;
                 default:
                     error(src, t, id, Message.ERRNO_UNKNOWN, "unknown method");
@@ -232,7 +260,6 @@ public class Krpc {
             //TODO
         }
     }
-
 
     /**
      * 请求不合法，响应错误信息
@@ -259,12 +286,19 @@ public class Krpc {
     }
 
 
-    public void setRequestProcessor(RequestProcessor requestProcessor) {
-        this.requestProcessor = requestProcessor;
+    public void setRequestHandler(RequestHandler requestHandler) {
+        this.requestHandler = requestHandler;
     }
 
 
-    public void setResponseProcessor(ResponseProcessor responseProcessor) {
-        this.responseProcessor = responseProcessor;
+    public void setResponseHandler(ResponseHandler responseHandler) {
+        this.responseHandler = responseHandler;
     }
+
+    public DictNode makeArg() {
+        DictNode node = new DictNode();
+        node.addNode("id", new StringNode(self.getId().getValue()));
+        return node;
+    }
+
 }

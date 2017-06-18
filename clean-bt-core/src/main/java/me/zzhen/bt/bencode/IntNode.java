@@ -31,7 +31,6 @@ public class IntNode implements Node {
 
     /**
      * 返回UTF-8编码的字节数组，如果异常则返回默认编码数组
-     *
      */
     @Override
     public byte[] encode() {
@@ -45,7 +44,7 @@ public class IntNode implements Node {
 
     @Override
     public byte[] decode() {
-        return Utils.int2Bytes(Integer.valueOf(value));
+        return value.getBytes();
     }
 
     @Override

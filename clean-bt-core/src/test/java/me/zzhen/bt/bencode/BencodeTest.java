@@ -25,9 +25,6 @@ public class BencodeTest {
         String dic1 = "d3:keyi10ee";
         DictNode dict = Bencode.decodeDict(new ByteArrayInputStream(dic1.getBytes()));
         assertEquals(dict.getNode("key").toString(), "10");
-//        InputStream file = new FileInputStream("/media/Software/Chicago.Med.torrent");
-//        DictNode bt = Bencode.decodeDict(file);
-//        System.out.println(bt.getNode("announce").toString());
     }
 
     @Test

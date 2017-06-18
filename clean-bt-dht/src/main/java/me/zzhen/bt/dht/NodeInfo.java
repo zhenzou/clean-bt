@@ -96,7 +96,7 @@ public class NodeInfo {
     }
 
     /**
-     * @return nodeinfo的编码，ID IP/Port 一共26个字节
+     * @return node info的编码，ID IP/Port 一共26个字节
      */
     public byte[] compactNodeInfo() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -111,7 +111,7 @@ public class NodeInfo {
     }
 
     /**
-     * @return nodeinfo的编码 IP/Port 一共6个字节
+     * @return node info的编码 IP/Port 一共6个字节
      */
     public byte[] compactIpPort() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -133,8 +133,7 @@ public class NodeInfo {
 
         if (port != nodeInfo.port) return false;
         if (address != null ? !address.equals(nodeInfo.address) : nodeInfo.address != null) return false;
-        if (!id.equals(nodeInfo.id)) return false;
-        return address.equals(nodeInfo.address);
+        return id.equals(nodeInfo.id) && address.equals(nodeInfo.address);
     }
 
     @Override

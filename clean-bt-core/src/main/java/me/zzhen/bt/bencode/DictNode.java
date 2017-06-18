@@ -7,6 +7,7 @@ import java.io.PushbackInputStream;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * /**
@@ -65,20 +66,12 @@ public class DictNode implements Node {
 
     @Override
     public byte[] decode() {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        baos.write('{');
-        try {
-            for (Map.Entry<String, Node> entry : value.entrySet()) {
-                baos.write(entry.getKey().getBytes());
-                baos.write(':');
-                baos.write(entry.getValue().decode());
-                baos.write(',');
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        baos.write('}');
-        return baos.toByteArray();
+        String format = "{%s}";
+        String content = String.join(",",
+                value.entrySet()
+                        .stream()
+                        .map((entry -> entry.getKey() + ":" + new String(entry.getValue().decode()))).collect(Collectors.toList()));
+        return String.format(format, content).getBytes();
     }
 
     /**
