@@ -35,9 +35,9 @@ import java.util.stream.Collectors;
  * Project:CleanBT
  *
  * @author zzhen zzzhen1994@gmail.com
- *         Create Time: 2016/10/17.
- *         Version :
- *         Description:
+ * Create Time: 2016/10/17.
+ * Version :
+ * Description:
  */
 public class EditorApp extends Application {
 
@@ -149,16 +149,16 @@ public class EditorApp extends Application {
         }
         try {
             torrentProperty.setValue(TorrentFile.fromFile(file));
+            TreeNode<FileTreeItemModel> nodeRoot = buildNodeTree();
+            itemRoot = buildItemTree(nodeRoot);
+            fileTree.setRoot(itemRoot);
+            if (isFirst) {
+                centerArea.getChildren().add(fileTree);
+                isFirst = false;
+            }
         } catch (IOException | DecoderException e) {
             errorDialog.setContentText(e.getMessage());
             errorDialog.showAndWait();
-        }
-        TreeNode<FileTreeItemModel> nodeRoot = buildNodeTree();
-        itemRoot = buildItemTree(nodeRoot);
-        fileTree.setRoot(itemRoot);
-        if (isFirst) {
-            centerArea.getChildren().add(fileTree);
-            isFirst = false;
         }
     }
 

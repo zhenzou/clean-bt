@@ -32,19 +32,19 @@ public class RouteTableTest {
     @Test
     public void addNode() throws Exception {
         RouteTable routes = init();
-        assertEquals(1024, routes.length());
+        assertEquals(1024, routes.size());
         String ip = "10.0.0.";
         String id = "1234567890123456";
         int start = 1;
         NodeInfo info = new NodeInfo(ip + start, 6881, new NodeId((id + String.format("%04d", start)).getBytes()));
         routes.addNode(info);
-        assertEquals(1024, routes.length());
+        assertEquals(1024, routes.size());
     }
 
     @Test
     public void closest8Nodes() throws Exception {
         RouteTable routes = init();
-        assertEquals(1024, routes.length());
+        assertEquals(1024, routes.size());
         String ip = "10.0.0.";
         String id = "1234567890123456";
         int start = 1;
@@ -61,7 +61,7 @@ public class RouteTableTest {
     @Test
     public void closestKNodes() throws Exception {
         RouteTable routes = init();
-        assertEquals(1024, routes.length());
+        assertEquals(1024, routes.size());
         String ip = "10.0.0.";
         String id = "1234567890123456";
         int start = 1;
@@ -81,13 +81,13 @@ public class RouteTableTest {
     @Test
     public void remove() throws Exception {
         RouteTable routes = init();
-        assertEquals(1024, routes.length());
+        assertEquals(1024, routes.size());
         String ip = "10.0.0.";
         String id = "1234567890123456";
         routes.remove(new NodeInfo(ip + 1, 6881, new NodeId((id + String.format("%04d", 1)).getBytes())));
         routes.remove(new NodeInfo(ip + 2, 6881, new NodeId((id + String.format("%04d", 2)).getBytes())));
         routes.remove(new NodeInfo(ip + 3, 6881, new NodeId((id + String.format("%04d", 3)).getBytes())));
-        assertEquals(1021, routes.length());
+        assertEquals(1021, routes.size());
     }
 
 }

@@ -1,10 +1,8 @@
 package me.zzhen.bt.dht;
 
-import lombok.EqualsAndHashCode;
-import org.jetbrains.annotations.NotNull;
-
 import java.time.Instant;
-import java.util.PriorityQueue;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Project:CleanBT
@@ -15,74 +13,61 @@ import java.util.PriorityQueue;
  */
 public interface Blacklist {
 
-    static Blacklist defaultBlacklist(int size) {
-        return new DefaultBlacklist(size);
+    static Blacklist defaultBlacklist(int size, long expired) {
+        return new DefaultBlacklist(size, expired);
     }
 
     boolean is(String ip, int port);
 
-    void put(String item, int port);
+    void put(String ip, int port);
 
-    boolean remove(String item, int port);
+    void remove(String item, int port);
 
     int length();
 }
 
-/**
- * 特殊情况，equals 和 compareTo的结果不一定一样
- */
-@EqualsAndHashCode(exclude = "ts")
-class BlacklistItem implements Comparable<BlacklistItem> {
-    public final String ip;
-    public final int port;
-    private final long ts = Instant.now().getEpochSecond();
+class DefaultBlacklist implements Blacklist {
+    private Map<String, Long> list;
+    private final int size;
+    private final long expired;
 
-    public BlacklistItem(String ip, int port) {
-        this.ip = ip;
-        this.port = port;
-    }
-
-    @Override
-    public int compareTo(@NotNull BlacklistItem o) {
-        if (ts > o.ts) {
-            return 1;
-        } else if (ts < o.ts) {
-            return -1;
-        } else {
-            return 0;
-        }
-    }
-}
-
-class DefaultBlacklist extends PriorityQueue<BlacklistItem> implements Blacklist {
-
-    private int size;
-
-    public DefaultBlacklist(int size) {
-        super();
+    public DefaultBlacklist(int size, long expired) {
+        list = new HashMap<>();
         this.size = size;
+        this.expired = expired;
     }
 
     @Override
-    public boolean is(String item, int port) {
-        return contains(new BlacklistItem(item, port));
-    }
-
-    @Override
-    public void put(String item, int port) {
-        if (size() >= size) {
-            poll();
+    public boolean is(String ip, int port) {
+        String key = key(ip, port);
+        Long ts = list.get(key);
+        if (ts == null) {
+            return false;
+        } else {
+            if (ts - Instant.now().getEpochSecond() > expired) {
+                list.remove(key);
+                return false;
+            }
         }
-        add(new BlacklistItem(item, port));
+        return true;
     }
 
     @Override
-    public boolean remove(String item, int port) {
-        return super.remove(new BlacklistItem(item, port));
+    public void put(String ip, int port) {
+        list.put(key(ip, port), Instant.now().getEpochSecond());
+    }
+
+    @Override
+    public void remove(String item, int port) {
+        list.remove(key(item, port));
     }
 
     @Override
     public int length() {
-        return size;
+        return list.size();
+    }
+
+    private String key(String ip, int port) {
+        return ip + ":" + port;
     }
 }

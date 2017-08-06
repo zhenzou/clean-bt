@@ -30,7 +30,7 @@ public class Bitmap {
         this.data = data;
     }
 
-    public boolean get(int index) {
+    public boolean at(int index) {
         if (index >= size || index < 0) throw new IllegalArgumentException("index out of size for this bitmap ");
         return Utils.bitAt(data[index / 8], index % 8) == 1;
     }

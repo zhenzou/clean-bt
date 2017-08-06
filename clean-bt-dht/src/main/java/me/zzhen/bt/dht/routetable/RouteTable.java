@@ -8,14 +8,15 @@ import me.zzhen.bt.dht.NodeInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Project:CleanBT
- * Create Time: 2016/10/29.
- * Description：
- * TODO 重构,更加可读，性能更好
+ * XIT
  *
  * @author zzhen zzzhen1994@gmail.com
  */
@@ -45,7 +46,6 @@ public class RouteTable {
 
     private Map<String, NodeInfoWrapper> nodes = new HashMap<>();
 
-
     /**
      * 在添加节点以及刷新的时候需要加锁
      */
@@ -58,7 +58,7 @@ public class RouteTable {
         root.value = init;
     }
 
-    public int length() {
+    public int size() {
         return length;
     }
 
@@ -67,26 +67,27 @@ public class RouteTable {
      *
      * @param node
      */
-    public void addNode(NodeInfo node) {
+    public boolean addNode(NodeInfo node) {
         NodeId id = node.getId();
-        if (id == null) return;
+        if (id == null) return false;
         try {
             lock.lock();
-            //TODO
-            NodeInfoWrapper wra = nodes.get(node.getFullAddress());
-            if (wra != null) {
-                wra.refresh();
-                return;
-            }
-            if (length >= capacity) return;
-            TreeNode item = findTreeNode(id);
-            if (item.value == null) return;
-            if (addNodeToBucket(node, item)) {
-                length++;
+            if (length >= capacity) return false;
+            NodeInfoWrapper wrapper = nodes.get(node.fullAddress());
+            if (wrapper != null) {
+                wrapper.refresh();
+            } else {
+                TreeNode item = findTreeNode(id);
+                if (item == null || item.value == null) return false;
+                if (addNodeToBucket(node, item)) {
+                    length++;
+                    return true;
+                }
             }
         } finally {
             lock.unlock();
         }
+        return false;
     }
 
     public int repeat = 0;
@@ -101,14 +102,15 @@ public class RouteTable {
      */
     private boolean addNodeToBucket(NodeInfo node, TreeNode item) {
         Bucket bucket = item.value;
-        NodeId key = node.getId();
+        NodeId id = node.getId();
+
         if (bucket.contains(node)) {
             repeat++;
             bucket.update(node);
             return false;
         } else if (bucket.length() < 8) {
             NodeInfoWrapper wra = new NodeInfoWrapper(node, bucket);
-            nodes.put(node.getFullAddress(), wra);
+            nodes.put(node.fullAddress(), wra);
             bucket.addNode(wra);
             return true;
         } else if (bucket.checkRange(node.getId())) {
@@ -124,7 +126,7 @@ public class RouteTable {
             item.value = null;
             buckets.put(spit._1.prefix, spit._1);
             buckets.put(spit._2.prefix, spit._2);
-            if (left.value.checkRange(key)) return addNodeToBucket(node, left);
+            if (left.value.checkRange(id)) return addNodeToBucket(node, left);
             else return addNodeToBucket(node, right);
         }
         return false;
@@ -168,12 +170,12 @@ public class RouteTable {
      * <p>
      * 得到以Root节点为根节点的子树的总节点个数
      */
-    public int length(TreeNode root) {
+    public int size(TreeNode root) {
         if (root == null) return 0;
         int size = 0;
         if (root.value != null) size += root.value.length();
-        size += length(root.left);
-        size += length(root.right);
+        size += size(root.left);
+        size += size(root.right);
         return size;
     }
 
@@ -253,15 +255,36 @@ public class RouteTable {
     /**
      * 在整个路由表中删除key对应的DHT节点信息
      *
+     * @param nodes
+     */
+    public void remove(NodeInfo... nodes) {
+        try {
+            lock.lock();
+            for (NodeInfo node : nodes) {
+                remove(node);
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * 在整个路由表中删除key对应的DHT节点信息
+     *
      * @param node
      */
     public void remove(NodeInfo node) {
-        String address = node.getFullAddress();
-        if (nodes.containsKey(address)) {
-            NodeInfoWrapper remove = nodes.remove(address);
-            if (remove.delete()) {
-                length--;
+        try {
+            lock.lock();
+            String address = node.fullAddress();
+            if (nodes.containsKey(address)) {
+                NodeInfoWrapper remove = nodes.remove(address);
+                if (remove.delete()) {
+                    length--;
+                }
             }
+        } finally {
+            lock.unlock();
         }
     }
 }

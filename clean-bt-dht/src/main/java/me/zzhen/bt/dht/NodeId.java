@@ -71,7 +71,7 @@ public class NodeId implements Comparable<NodeId> {
      * @return 第 i 个 bit的值 0 or 1
      */
     public boolean prefix(int i) {
-        return value.get(i);
+        return value.at(i);
     }
 
     @Override

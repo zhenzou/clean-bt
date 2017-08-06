@@ -1,9 +1,7 @@
 package me.zzhen.bt.dht.krpc;
 
 import me.zzhen.bt.bencode.*;
-import me.zzhen.bt.dht.DhtServer;
 import me.zzhen.bt.dht.NodeId;
-import me.zzhen.bt.dht.Token;
 import me.zzhen.bt.dht.TokenManager;
 
 /**
@@ -22,9 +20,9 @@ public class Message {
     public static final int ERRNO_UNKNOWN = 204;
 
 
-    public final String method;
+    public final String address;
+    public final int port;
     public final DictNode arg;
-    public final Token token;
 
     /**
      * TODO 将现在的请求参数改为使用Message，增加类型
@@ -33,10 +31,10 @@ public class Message {
      * @param arg
      * @param token
      */
-    public Message(String method, DictNode arg, Token token) {
-        this.method = method;
+    Message(String address, int port, DictNode arg) {
+        this.address = address;
+        this.port = port;
         this.arg = arg;
-        this.token = token;
     }
 
 

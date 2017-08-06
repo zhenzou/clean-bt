@@ -1,5 +1,6 @@
 package me.zzhen.bt.dht;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -55,7 +56,11 @@ public class TokenManager {
      * 删除过期的token
      */
     public static void clearTokens() {
-//        tokens.entrySet().removeIf(entry -> !entry.getValue().isLive());
+        tokens.entrySet().removeIf(entry -> !isTokenValid(entry.getValue()));
+    }
+
+    public static boolean isTokenValid(Token token) {
+        return token.lastUpdate - Instant.now().getEpochSecond() < 15 * 60;
     }
 
     /**

@@ -49,33 +49,14 @@ public class NodeInfo {
         InetAddress address = Utils.getAddrFromBytes(bytes, 20);
         NodeId key = new NodeId(keydata);
         int port = Utils.bytes2Int(bytes, 24, 2);
-        return new NodeInfo(address, port, key);
+        return new NodeInfo(address.getHostAddress(), port, key);
     }
 
-
     /**
-     * 一般Bootstrap RouteTreeNode 初始化使用
-     *
      * @param host
-     * @param port
-     */
-    public NodeInfo(String host, int port) {
-        this(host, port, null);
-    }
-
-
-    /**
-     * @param address
      * @param port
      * @param id
      */
-    public NodeInfo(InetAddress address, int port, NodeId id) {
-        this.port = port;
-        this.id = id;
-        this.address = address.getHostAddress();
-    }
-
-
     public NodeInfo(String host, int port, NodeId id) {
         this.address = host;
         this.port = port;
@@ -91,7 +72,7 @@ public class NodeInfo {
         return id;
     }
 
-    public String getFullAddress() {
+    public String fullAddress() {
         return address + ":" + port;
     }
 
@@ -150,7 +131,6 @@ public class NodeInfo {
             "address='" + address + '\'' +
             ", port=" + port +
             ", id=" + String.valueOf(id) +
-            ", address=" + address +
             '}';
     }
 

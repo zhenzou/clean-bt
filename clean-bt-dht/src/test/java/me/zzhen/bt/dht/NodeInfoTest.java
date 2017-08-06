@@ -22,16 +22,16 @@ public class NodeInfoTest {
     @Test
     public void getFullAddress() throws Exception {
         NodeInfo node = new NodeInfo("101.236.3.198", 6881, NodeId.randomId());
-        assertEquals("101.236.3.198:6881", node.getFullAddress());
+        assertEquals("101.236.3.198:6881", node.fullAddress());
         InetAddress localHost = InetAddress.getLoopbackAddress();
-        node = new NodeInfo(localHost, 6881, NodeId.randomId());
-        assertEquals("127.0.0.1:6881", node.getFullAddress());
+        node = new NodeInfo(localHost.getHostAddress(), 6881, NodeId.randomId());
+        assertEquals("127.0.0.1:6881", node.fullAddress());
     }
 
     @Test
     public void compactNodeInfo() throws Exception {
         InetAddress localHost = InetAddress.getLoopbackAddress();
-        NodeInfo node = new NodeInfo(localHost, 6881, NodeId.defaultId());
+        NodeInfo node = new NodeInfo(localHost.getHostAddress(), 6881, NodeId.defaultId());
         byte[] bytes = node.compactNodeInfo();
     }
 

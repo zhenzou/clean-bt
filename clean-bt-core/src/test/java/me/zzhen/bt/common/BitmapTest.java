@@ -18,10 +18,10 @@ public class BitmapTest {
     @Test
     public void get() throws Exception {
         Bitmap bitmap = new Bitmap(10);
-        assertEquals(false, bitmap.get(9));
-        assertEquals(false, bitmap.get(8));
-        assertEquals(false, bitmap.get(7));
-        assertEquals(false, bitmap.get(0));
+        assertEquals(false, bitmap.at(9));
+        assertEquals(false, bitmap.at(8));
+        assertEquals(false, bitmap.at(7));
+        assertEquals(false, bitmap.at(0));
     }
 
     @Test
@@ -30,14 +30,14 @@ public class BitmapTest {
         bitmap.set(0);
         bitmap.set(3);
         bitmap.set(5);
-        assertEquals(true, bitmap.get(0));
-        assertEquals(true, bitmap.get(3));
-        assertEquals(true, bitmap.get(5));
-        assertEquals(false, bitmap.get(4));
-        assertEquals(false, bitmap.get(1));
+        assertEquals(true, bitmap.at(0));
+        assertEquals(true, bitmap.at(3));
+        assertEquals(true, bitmap.at(5));
+        assertEquals(false, bitmap.at(4));
+        assertEquals(false, bitmap.at(1));
         bitmap.unset(0);
-        assertEquals(false, bitmap.get(0));
-        assertEquals(true, bitmap.get(5));
+        assertEquals(false, bitmap.at(0));
+        assertEquals(true, bitmap.at(5));
     }
 
     @Test
@@ -58,19 +58,19 @@ public class BitmapTest {
         Bitmap bitmap1 = new Bitmap(11);
         bitmap1.or(bitmap);
         bitmap1.set(10);
-        assertEquals(true, bitmap1.get(0));
-        assertEquals(true, bitmap1.get(3));
-        assertEquals(true, bitmap1.get(5));
-        assertEquals(false, bitmap1.get(4));
-        assertEquals(false, bitmap1.get(9));
-        assertEquals(true, bitmap1.get(10));
+        assertEquals(true, bitmap1.at(0));
+        assertEquals(true, bitmap1.at(3));
+        assertEquals(true, bitmap1.at(5));
+        assertEquals(false, bitmap1.at(4));
+        assertEquals(false, bitmap1.at(9));
+        assertEquals(true, bitmap1.at(10));
 
         bitmap.or(bitmap1);
-        assertEquals(true, bitmap.get(0));
-        assertEquals(true, bitmap1.get(3));
-        assertEquals(true, bitmap1.get(5));
-        assertEquals(false, bitmap1.get(1));
-        assertEquals(false, bitmap1.get(4));
+        assertEquals(true, bitmap.at(0));
+        assertEquals(true, bitmap1.at(3));
+        assertEquals(true, bitmap1.at(5));
+        assertEquals(false, bitmap1.at(1));
+        assertEquals(false, bitmap1.at(4));
 
     }
 }

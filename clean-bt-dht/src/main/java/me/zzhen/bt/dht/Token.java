@@ -25,7 +25,7 @@ public class Token {
     /**
      * token生成的时间
      */
-    public final long time = Instant.now().toEpochMilli();
+    public final long lastUpdate = Instant.now().toEpochMilli();
 
     /**
      * id 对应的请求的方法
@@ -42,24 +42,5 @@ public class Token {
         this.id = id;
         this.method = method;
         this.isToken = isToken;
-    }
-
-    /**
-     * @return 当前token是否有效
-     */
-    public boolean isLive() {
-        final Instant now = Instant.now();
-        if (isToken) return time + (DhtConfig.TOKEN_TIMEOUT * 60) > now.getEpochSecond();
-        return time + (DhtConfig.T_TIMEOUT * 60) > now.getEpochSecond();
-    }
-
-    @Override
-    public String toString() {
-        return "Token{" +
-            "target=" + target +
-            ", id=" + id +
-            ", time=" + time +
-            ", method='" + method + '\'' +
-            '}';
     }
 }

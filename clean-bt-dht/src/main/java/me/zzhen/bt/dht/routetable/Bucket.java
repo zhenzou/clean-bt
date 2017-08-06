@@ -36,8 +36,8 @@ public class Bucket {
      */
     private long lastActive = Instant.now().getEpochSecond();
 
-    public Bucket(int size, int capacity) {
-        prefix = new Bitmap(size);
+    public Bucket(int bitSize, int capacity) {
+        prefix = new Bitmap(bitSize);
         this.capacity = capacity;
         nodes = new ArrayList<>(capacity);
     }
@@ -94,7 +94,7 @@ public class Bucket {
         Bitmap bits = key.getBits();
         int size = prefix.size;
         for (int i = 0; i < size; i++) {
-            bits.set(i, prefix.get(i));
+            bits.set(i, prefix.at(i));
         }
         return key;
     }
@@ -107,7 +107,7 @@ public class Bucket {
     public boolean checkRange(NodeId id) {
         int len = id.getBits().size;
         for (int i = 0; i < prefix.size && i < len; i++) {
-            if (id.prefix(i) != prefix.get(i)) return false;
+            if (id.prefix(i) != prefix.at(i)) return false;
         }
         return true;
     }
@@ -156,7 +156,7 @@ public class Bucket {
      */
     public Optional<NodeInfo> getNode(NodeId id) {
         Optional<NodeInfoWrapper> first = nodes.stream().filter(node -> node.node.getId().equals(id)).findFirst();
-        return first.map(wrapper -> Optional.of(wrapper.node)).orElse(Optional.empty());
+        return first.map(wrapper -> wrapper.node);
     }
 
     /**
@@ -184,13 +184,13 @@ public class Bucket {
      * @param node
      */
     public void update(NodeInfo node) {
-        nodes.stream().filter(wrapper -> wrapper.node.equals(node)).findFirst().ifPresent(NodeInfoWrapper::refresh);
-        lastActive = Instant.now().getEpochSecond();
+        nodes.forEach(n -> { if (n.node.fullAddress().equals(node.fullAddress())) n.refresh(); });
+        refresh();
     }
 
 
     /**
-     * 刷新指定节点的活动时间,同时也刷新当前bucket的活动时间
+     * 刷新当前bucket的活动时间
      *
      * @param node
      */

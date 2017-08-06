@@ -50,29 +50,18 @@ public class Krpc {
     /**
      * 主要的线程发送线程池
      */
-    private ExecutorService sender = Executors.newFixedThreadPool(10);
+    private ExecutorService sender = Executors.newFixedThreadPool(4);
+    private ExecutorService processor = Executors.newFixedThreadPool(1);
 
-    private Channel<Received> received = Channel.simpleChannel(1024);
 
     public Krpc(NodeInfo self) throws SocketException {
         socket = new DatagramSocket();
         this.self = self;
-//        run();
     }
 
     public Krpc(DatagramSocket socket, NodeInfo self) {
         this.socket = socket;
         this.self = self;
-//        run();
-    }
-
-    public void run() {
-        new Thread(() -> {
-            Optional<Received> next;
-            while ((next = received.next()).isPresent()) {
-                process(next.get());
-            }
-        }).start();
     }
 
     /**
@@ -124,10 +113,12 @@ public class Krpc {
         makeArg.addNode("port", new IntNode(DhtConfig.SERVER_PORT));
         makeArg.addNode("id", new StringNode(self.getId().getValue()));
         req.addNode("a", makeArg);
-//        request(req, null, METHOD_ANNOUNCE_PEER);
     }
 
     public void send(DictNode data, NodeInfo target) {
+        if (target.fullAddress().equals(self.fullAddress())) {
+            return;
+        }
         sender.execute(() -> {
             byte[] encode = data.encode();
             try {
@@ -154,18 +145,6 @@ public class Krpc {
         send(req, target);
     }
 
-    class Received {
-        public final String address;
-        public final int port;
-        public final DictNode dict;
-
-        Received(String address, int port, DictNode dict) {
-            this.address = address;
-            this.port = port;
-            this.dict = dict;
-        }
-    }
-
     /**
      * 处理响应的方法,包括请求的响应和请求
      * nbvc lkjhncn m
@@ -174,45 +153,46 @@ public class Krpc {
      * @param port
      * @param dict
      */
-    public void handler(InetAddress address, int port, DictNode dict) {
-//        received.push(new Received(address.getHostAddress(), port, dict));
-        process(new Received(address.getHostAddress(), port, dict));
+    public void handle(InetAddress address, int port, DictNode dict) {
+        processor.execute(() -> {
+            Message message = new Message(address.getHostAddress(), port, dict);
+            if (Message.isResp(dict)) {
+                handleResponse(message);
+            } else if (Message.isReq(dict)) {
+                handleRequest(message);
+            } else if (Message.isErr(dict)) {
+                //TODO
+            } else {
+                logger.warn("unrecognized data");
+            }
+        });
     }
 
-    public void process(Received received) {
-        DictNode dict = received.dict;
-        String address = received.address;
-        int port = received.port;
-        if (Message.isResp(dict)) {
-            Node t = dict.getNode("t");
-            long tId;
+    public void handleResponse(Message message) {
+        Node t = message.arg.getNode("t");
+        long token;
+        try {
+            token = Long.parseLong(t.toString());
+        } catch (NumberFormatException e) {
+            logger.warn("resp token :{}", t.toString());
+            return;
+        }
+        Optional<Token> optional = TokenManager.getToken(token);
+        optional.ifPresent(tk -> {
+            DictNode resp = (DictNode) message.arg.getNode("r");
+            Node id = resp.getNode("id");
+            NodeInfo src = null;
             try {
-                tId = Long.parseLong(t.toString());
-            } catch (NumberFormatException e) {
-                logger.warn("resp token :{}", t.toString());
-                return;
-            }
-            //            long tId = Long.parseLong(dict.getNode("t").toString());
-            Optional<Token> optional = TokenManager.getToken(tId);
-            optional.ifPresent(token -> {
-                DictNode resp = (DictNode) dict.getNode("r");
-                Node id = resp.getNode("id");
-                byte[] ids = id.decode();
-                NodeInfo src = new NodeInfo(address, port, new NodeId(ids));
-
-                if (!checkId(id)) {
-                    error(src, t, id, Message.ERRNO_PROTOCOL, "invalid id");
-                    return;
-                }
-                switch (token.method) {
+                src = new NodeInfo(message.address, message.port, new NodeId(id.decode()));
+                switch (tk.method) {
                     case METHOD_PING:
                         responseHandler.onPingResp(src);
                         break;
                     case METHOD_GET_PEERS:
-                        responseHandler.onGetPeersResp(src, token.target, resp);
+                        responseHandler.onGetPeersResp(src, tk.target, resp);
                         break;
                     case METHOD_FIND_NODE:
-                        responseHandler.onFindNodeResp(src, token.target, resp);
+                        responseHandler.onFindNodeResp(src, tk.target, resp);
                         break;
                     case METHOD_ANNOUNCE_PEER:
                         responseHandler.onAnnouncePeerResp(src, resp);
@@ -220,44 +200,45 @@ public class Krpc {
                     default:
                         break;
                 }
-            });
-        } else if (Message.isReq(dict)) {
-            Node t = dict.getNode("t");
-            DictNode arg = (DictNode) dict.getNode("a");
-            Node id = arg.getNode("id");
+            } catch (IllegalArgumentException e) {
+                error(src, t, Message.ERRNO_PROTOCOL, "invalid id");
+            }
+        });
+    }
 
-            NodeId key = new NodeId(id.decode());
-            NodeInfo src = new NodeInfo(address, port, key);
-            if (!checkId(id)) {
-                error(src, t, id, Message.ERRNO_PROTOCOL, "invalid id");
-                return;
-            }
-            Node method = dict.getNode("q");
-//            logger.info(method.toString() + "  request from " + address + ":" + port);
-            switch (method.toString()) {
-                case METHOD_PING:
-                    requestHandler.onPingReq(src, dict);
-                    break;
-                case METHOD_GET_PEERS:
-                    requestHandler.onGetPeerReq(src, t, arg.getNode("info_hash"));
-                    break;
-                case METHOD_FIND_NODE:
-                    requestHandler.onFindNodeReq(src, t, arg.getNode("target"));
-                    break;
-                case METHOD_ANNOUNCE_PEER:
-                    int i = Integer.parseInt(arg.getNode("implied_port").toString());
-                    int p = src.port;
-                    if (i == 0) {
-                        p = Integer.parseInt(arg.getNode("port").toString());
-                    }
-                    requestHandler.onAnnouncePeerReq(src, p, t, arg.getNode("info_hash"));
-                    break;
-                default:
-                    error(src, t, id, Message.ERRNO_UNKNOWN, "unknown method");
-                    break;
-            }
-        } else if (Message.isErr(dict)) {
-            //TODO
+    public void handleRequest(Message message) {
+        Node t = message.arg.getNode("t");
+        DictNode arg = (DictNode) message.arg.getNode("a");
+
+        NodeId id;
+        try {
+            id = new NodeId(arg.getNode("id").decode());
+        } catch (IllegalArgumentException e) {
+            logger.warn(e.getMessage());
+            return;
+        }
+        NodeInfo src = new NodeInfo(message.address, message.port, id);
+        switch (message.arg.getNode("q").toString()) {
+            case METHOD_PING:
+                requestHandler.onPingReq(src, message.arg);
+                break;
+            case METHOD_GET_PEERS:
+                requestHandler.onGetPeerReq(src, t, arg.getNode("info_hash"));
+                break;
+            case METHOD_FIND_NODE:
+                requestHandler.onFindNodeReq(src, t, arg.getNode("target"));
+                break;
+            case METHOD_ANNOUNCE_PEER:
+                int i = Integer.parseInt(arg.getNode("implied_port").toString());
+                int p = src.port;
+                if (i == 0) {
+                    p = Integer.parseInt(arg.getNode("port").toString());
+                }
+                requestHandler.onAnnouncePeerReq(src, p, arg.getNode("token"), arg.getNode("info_hash"));
+                break;
+            default:
+                error(src, t, Message.ERRNO_UNKNOWN, "unknown method");
+                break;
         }
     }
 
@@ -266,25 +247,13 @@ public class Krpc {
      *
      * @param src
      * @param t
-     * @param id
      * @param errno
      * @param msg
      */
-    public void error(NodeInfo src, Node t, Node id, int errno, String msg) {
+    public void error(NodeInfo src, Node t, int errno, String msg) {
         DictNode errMsg = Message.makeErr(t, errno, msg);
         send(errMsg, src);
     }
-
-    /**
-     * 检测请求中id值是否合法
-     *
-     * @param id
-     * @return 是否是合法的id
-     */
-    private boolean checkId(Node id) {
-        return id.decode().length == 20;
-    }
-
 
     public void setRequestHandler(RequestHandler requestHandler) {
         this.requestHandler = requestHandler;

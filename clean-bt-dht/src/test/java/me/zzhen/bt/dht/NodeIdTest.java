@@ -27,7 +27,7 @@ public class NodeIdTest {
         Bitmap bits = key.getBits();
         Bitmap prefix = pre.getBits();
         for (int i = 0; i < 10; i++) {
-            bits.set(i, prefix.get(i));
+            bits.set(i, prefix.at(i));
         }
         for (int i = 0; i < 10; i++) {
             assertEquals(pre.prefix(i), key.prefix(i));

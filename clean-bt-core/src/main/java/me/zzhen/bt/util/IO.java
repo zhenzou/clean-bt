@@ -116,4 +116,20 @@ public interface IO {
     static String localIp() throws IOException {
         return new String(Https.get("http://icanhazip.com")).trim();
     }
+
+    static void checkedWrite(OutputStream out, byte[] data) {
+        try {
+            out.write(data);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    static void checkedWrite(OutputStream out, byte[] data, int offset, int length) {
+        try {
+            out.write(data, offset, length);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

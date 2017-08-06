@@ -5,6 +5,7 @@ import me.zzhen.bt.dht.krpc.Krpc;
 import me.zzhen.bt.dht.krpc.Message;
 import me.zzhen.bt.dht.krpc.RequestHandler;
 import me.zzhen.bt.dht.krpc.ResponseHandler;
+import me.zzhen.bt.dht.meta.MetadataFetcher;
 import me.zzhen.bt.dht.routetable.RouteTable;
 import me.zzhen.bt.util.IO;
 import me.zzhen.bt.util.Utils;
@@ -12,20 +13,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.*;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.LogManager;
-import java.util.stream.Collectors;
 
 /**
  * Project:CleanBT
@@ -54,11 +49,6 @@ public class DhtServer implements RequestHandler, ResponseHandler {
     public RouteTable routes;
 
     /**
-     * 保存全部的DHT节点信息，便于操作
-     */
-    private Map<String, NodeInfo> nodes = new HashMap<>();
-
-    /**
      * 全局黑名单 IP:PORT
      */
     private volatile Blacklist blacklist;
@@ -71,49 +61,62 @@ public class DhtServer implements RequestHandler, ResponseHandler {
     /**
      * 全局Socket,负责请求和响应
      */
-    private DatagramSocket socket;
+    private final DatagramSocket socket;
 
     private ScheduledExecutorService executors = Executors.newScheduledThreadPool(1);
 
     /**
      * 获取MetaData的线程池
      */
-    private ExecutorService fetcher = Executors.newFixedThreadPool(1);
+    private final MetadataFetcher fetcher;
 
     /**
      * DHT 网络启动节点
      */
     public static final NodeInfo[] BOOTSTRAP_NODES = {
-            new NodeInfo("router.bittorrent.com", 6881),
-            new NodeInfo("router.utorrent.com", 6881),
-            new NodeInfo("dht.transmissionbt.com", 6881)
+        new NodeInfo("router.bittorrent.com", 6881, null),
+        new NodeInfo("router.utorrent.com", 6881, null),
+        new NodeInfo("dht.transmissionbt.com", 6881, null)
     };
 
-    public DhtServer(DhtConfig config) {
+    public DhtServer(DhtConfig config) throws SocketException {
         this.config = config;
+        self = new NodeInfo(config.serverIp, config.serverPort, NodeId.defaultId());
+        fetcher = new MetadataFetcher(1024, self);
+        blacklist = Blacklist.defaultBlacklist(config.blacklistSize, config.blacklistExpired);
+        routes = new RouteTable(config.routeTableSize);
+        socket = new DatagramSocket(config.serverPort);
+        krpc = new Krpc(socket, self);
+        krpc.setRequestHandler(this);
+        krpc.setResponseHandler(this);
+        //定时清理无效节点
+        executors.scheduleAtFixedRate(this::refresh, config.refireshInterval, config.refireshInterval, TimeUnit.SECONDS);
+        //定时清理过期Token
+        executors.scheduleAtFixedRate(TokenManager::clearTokens, config.tokenTimeout, config.tokenTimeout, TimeUnit.SECONDS);
     }
 
     private void listen() {
         new Thread(() -> {
             try {
                 byte[] bytes = new byte[4096];
-                do {
+                while (true) {
                     DatagramPacket packet = new DatagramPacket(bytes, bytes.length);
-                    DictNode dict = null;
+                    DictNode dict;
                     try {
                         socket.receive(packet);
                         int length = packet.getLength();
-                        dict = Bencode.decodeDict(new ByteArrayInputStream(bytes, 0, length));
                         InetAddress address = packet.getAddress();
                         int port = packet.getPort();
-                        krpc.handler(address, port, dict);
+                        if (address.getHostAddress().equals(config.serverIp)
+                            || inBlacklist(address.getHostAddress(), port)) {
+                            continue;
+                        }
+                        dict = Bencode.decodeDict(new ByteArrayInputStream(bytes, 0, length));
+                        krpc.handle(address, port, dict);
                     } catch (RuntimeException | IOException e) {
-                        logger.error(e.getMessage());
-//                        if (dict != null) {
-//                            logger.error("data:{}", dict.toString());
-//                        }
+                        logger.warn(e.getMessage());
                     }
-                } while (true);
+                }
             } finally {
                 socket.close();
             }
@@ -124,18 +127,19 @@ public class DhtServer implements RequestHandler, ResponseHandler {
      * 刷新路由表的不获取的节点
      */
     private void refresh() {
-        if (routes.length() == 0) {
+        if (routes.size() == 0) {
             join();
         }
-        if (isCrawlMode()) {
-            //定时,自动向邻居节点发送find_node请求
-            List<NodeInfo> nodes = routes.closestKNodes(self.getId(), config.getAutoFindSize());
-            logger.info("refresh len:{}", nodes.size());
-            logger.info("routes len before:{}", routes.length());
-            nodes.forEach(node -> krpc.findNode(node, self.getId()));
-            nodes.forEach(node -> routes.remove(node));
-            logger.info("routes len after:{}", routes.length());
-        }
+        //定时,自动向邻居节点发送find_node请求
+        List<NodeInfo> nodes = routes.closestKNodes(self.getId(), config.autoFindSize);
+        logger.info("refresh len:{}", nodes.size());
+        logger.info("routes len before:{}", routes.size());
+        nodes.forEach(node -> krpc.findNode(node, id(node.id.getValue())));
+        nodes.forEach(node -> krpc.getPeers(node, id(node.id.getValue())));
+        NodeInfo[] infos = new NodeInfo[nodes.size()];
+        nodes.toArray(infos);
+        routes.remove(infos);
+        logger.info("routes len after:{}", routes.size());
     }
 
     private void join() {
@@ -144,36 +148,14 @@ public class DhtServer implements RequestHandler, ResponseHandler {
         }
     }
 
-    public void init() {
-        try {
-            self = new NodeInfo(config.serverIp, config.serverPort, NodeId.defaultId());
-            blacklist = Blacklist.defaultBlacklist(config.getBlacklistSize());
-            routes = new RouteTable(config.getRouteTableSize());
-            socket = new DatagramSocket(config.serverPort);
-            krpc = new Krpc(socket, self);
-            krpc.setRequestHandler(this);
-            krpc.setResponseHandler(this);
-            PeerManager.init();
-            //定时清理无效节点
-            executors.scheduleAtFixedRate(this::refresh, config.getAutoFind(), config.getAutoFind(), TimeUnit.SECONDS);
-            //定时清理过期Token
-            executors.scheduleAtFixedRate(TokenManager::clearTokens, config.getTTimeout(), config.getTTimeout(), TimeUnit.MINUTES);
-        } catch (SocketException e) {
-            logger.error(e.getMessage());
-            e.printStackTrace();
-            System.exit(2);
-        }
-    }
-
     /**
      * 启动默认配置的Server和Client
      * 必须先初始化
-     *
-     * @return
      */
     public void start() {
         listen();
         join();
+        new Thread(fetcher).start();
     }
 
     public NodeInfo self() {
@@ -185,7 +167,7 @@ public class DhtServer implements RequestHandler, ResponseHandler {
      * 为了爬虫模式优化
      *
      * @param id
-     * @return
+     * @return a node id close to id
      */
     public NodeId id(byte[] id) {
         byte[] value = self.getId().getValue();
@@ -197,16 +179,12 @@ public class DhtServer implements RequestHandler, ResponseHandler {
         routes.addNode(node);
     }
 
-    public boolean isBlackItem(String address, int port) {
+    public boolean inBlacklist(String address, int port) {
         return blacklist.is(address, port);
     }
 
     public void addBlackItem(String address, int port) {
         blacklist.put(address, port);
-    }
-
-    public boolean isCrawlMode() {
-        return config.getMode() == DhtConfig.CRAWL_MODE;
     }
 
     /**
@@ -218,31 +196,21 @@ public class DhtServer implements RequestHandler, ResponseHandler {
      */
     @Override
     public void onFindNodeReq(NodeInfo src, Node t, Node id) {
-        DictNode resp = Message.makeResp(t);
-        List<NodeInfo> infos = new ArrayList<>();
-        infos.add(self());
-        NodeId nodeId = new NodeId(id.decode());
-        List<NodeInfo> close = routes.closest8Nodes(new NodeId(id.decode()));
-
-        if (close.size() == 8) infos.addAll(close.subList(0, 7));
-        else infos.addAll(close);
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        for (NodeInfo info : infos) {
-            try {
-                baos.write(info.compactNodeInfo());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            if (isCrawlMode()) {
-                krpc.findNode(info, nodeId);
-            }
-        }
-        StringNode nodes = new StringNode(baos.toByteArray());
-        DictNode arg = krpc.makeArg();
-        arg.addNode("nodes", nodes);
-        resp.addNode("r", arg);
-        krpc.send(resp, src);
-
+        addNode(src);
+//        DictNode resp = Message.makeResp(t);
+//        List<NodeInfo> infos = new ArrayList<>();
+//        infos.add(self());
+//        NodeId nodeId = new NodeId(id.decode());
+//        List<NodeInfo> close = routes.closest8Nodes(nodeId);
+//        if (close.size() == 8) infos.addAll(close.subList(0, 7));
+//        else infos.addAll(close);
+//        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//        infos.forEach((info) -> IO.checkedWrite(baos, info.compactNodeInfo()));
+//        StringNode nodes = new StringNode(baos.toByteArray());
+//        DictNode arg = krpc.makeArg();
+//        arg.addNode("nodes", nodes);
+//        resp.addNode("r", arg);
+//        krpc.send(resp, src);
     }
 
     /**
@@ -254,27 +222,21 @@ public class DhtServer implements RequestHandler, ResponseHandler {
      */
     @Override
     public void onAnnouncePeerReq(NodeInfo src, int port, Node t, Node infoHash) {
-        logger.info("info_hash:" + Utils.toHex(infoHash.decode()));
-//        logger.info("Address:" + src.getFullAddress());
-//        if (!isBlackItem(src.address, src.port)) {
-//            //检测响应token是否过期
-//            TokenManager.getToken(Long.parseLong(token.toString())).ifPresent(tt -> {
-//                if (tt.isToken && tt.method.equals(Krpc.METHOD_GET_PEERS)) {
-//                    fetcher.execute(new MetadataWorker(src.address, src.port, id.decode()));
-//                }
-//            });
-//
-//        } else {
-//            logger.info("this is a black item");
-//        }
-        fetcher.execute(new MetadataWorker(src.address, port, infoHash.decode()));
+        addNode(src);
+        logger.debug("info_hash:" + Utils.toHex(infoHash.decode()));
+        logger.debug("Address:" + src.fullAddress());
+        //检测响应token是否过期
+//        TokenManager.getToken(Long.parseLong(t.toString())).ifPresent(tt -> {
+//            if (tt.isToken && tt.method.equals(Krpc.METHOD_GET_PEERS)) {
+//                fetcher.commit(src.address, port, infoHash.decode());
+//            }
+//        });
+        fetcher.commit(src.address, port, infoHash.decode());
 
-        if (isCrawlMode()) {
-            DictNode resp = Message.makeResp(t);
-            DictNode arg = krpc.makeArg();
-            resp.addNode("r", arg);
-            krpc.send(resp, src);
-        }
+        DictNode resp = Message.makeResp(t);
+        DictNode arg = krpc.makeArg();
+        resp.addNode("r", arg);
+        krpc.send(resp, src);
     }
 
     /**
@@ -285,6 +247,7 @@ public class DhtServer implements RequestHandler, ResponseHandler {
      */
     @Override
     public void onPingReq(NodeInfo src, Node t) {
+        addNode(src);
         DictNode resp = Message.makeResp(t);
         krpc.send(resp, src);
     }
@@ -298,33 +261,11 @@ public class DhtServer implements RequestHandler, ResponseHandler {
      */
     @Override
     public void onGetPeerReq(NodeInfo src, Node t, Node id) {
+        addNode(src);
         DictNode resp = Message.makeResp(t);
         DictNode arg = krpc.makeArg();
-        if (isCrawlMode()) {
-            arg.addNode("nodes", new StringNode(""));
-        } else {
-            List<InetSocketAddress> peers = PeerManager.PM.getPeers(new NodeId(id.decode()));
-            if (peers != null) {
-                ListNode values = new ListNode();
-                for (InetSocketAddress peer : peers) {
-                    StringNode node = new StringNode(PeerManager.compact(peer));
-                    values.addNode(node);
-                }
-                arg.addNode("values", values);
-            } else {
-                List<NodeInfo> infos = routes.closest8Nodes(new NodeId(id.decode()));
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                for (NodeInfo info : infos) {
-                    try {
-                        baos.write(info.compactNodeInfo());
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-                StringNode nodes = new StringNode(baos.toByteArray());
-                arg.addNode("nodes", nodes);
-            }
-        }
+        arg.addNode("id", new StringNode(id(id.decode()).getValue()));
+        arg.addNode("nodes", new StringNode(""));
         Token token = TokenManager.newTokenToken(new NodeId(id.decode()), Krpc.METHOD_GET_PEERS);
         arg.addNode("token", new StringNode(token.id + ""));
         resp.addNode("r", arg);
@@ -333,6 +274,7 @@ public class DhtServer implements RequestHandler, ResponseHandler {
 
     @Override
     public void onFindNodeResp(NodeInfo src, NodeId target, DictNode resp) {
+        addNode(src);
         StringNode nodes = (StringNode) resp.getNode("nodes");
         if (nodes == null) return;
         byte[] decode = nodes.decode();
@@ -346,11 +288,9 @@ public class DhtServer implements RequestHandler, ResponseHandler {
             NodeInfo node = NodeInfo.fromBytes(decode, i);
             if (node.getId().equals(target)) {
                 found = true;
-                logger.info("found node :" + node.getFullAddress());
+                logger.info("found node :" + node.fullAddress());
             }
-            if (!node.getFullAddress().equals(self.getFullAddress())) {
-//                krpc.findNode(node, target);
-                logger.info(node.getFullAddress());
+            if (!node.fullAddress().equals(self.fullAddress())) {
                 addNode(node);
             }
         }
@@ -370,31 +310,27 @@ public class DhtServer implements RequestHandler, ResponseHandler {
      */
     @Override
     public void onAnnouncePeerResp(NodeInfo src, DictNode resp) {
-
+        addNode(src);
     }
 
     @Override
     public void onPingResp(NodeInfo src) {
-        routes.addNode(src);
+        addNode(src);
     }
 
     @Override
     public void onGetPeersResp(NodeInfo src, NodeId target, DictNode resp) {
+        addNode(src);
         ListNode values = (ListNode) resp.getNode("values");
         if (values == null) {
             StringNode nodes = (StringNode) resp.getNode("nodes");
             byte[] decode = nodes.decode();
+            if (decode.length % 26 != 0) return;
             for (int i = 0; i < decode.length; i += 26) {
-                NodeInfo nodeInfo = NodeInfo.fromBytes(decode, i);
-                krpc.getPeers(nodeInfo, target);
+                NodeInfo info = NodeInfo.fromBytes(decode, i);
+                addNode(info);
+                krpc.getPeers(info, target);
             }
-        } else {
-            logger.info("nodes :" + values.getValue().size());
-            List<InetSocketAddress> peers = values.getValue().stream().map(node -> {
-                byte[] bytes = node.decode();
-                return new InetSocketAddress(Utils.getAddrFromBytes(bytes, 0), Utils.bytes2Int(bytes, 4, 2));
-            }).collect(Collectors.toList());
-            PeerManager.PM.addAllPeer(target, peers);
         }
     }
 
@@ -404,8 +340,7 @@ public class DhtServer implements RequestHandler, ResponseHandler {
         if (in != null) LogManager.getLogManager().readConfiguration(in);
         String address = IO.localIp();
         DhtServer server = new DhtServer(DhtConfig.config(address, DhtConfig.SERVER_PORT));
-        server.init();
-        logger.info("self:{}", server.self.getFullAddress());
+        logger.info("self:{}", server.self.fullAddress());
         server.start();
     }
 }

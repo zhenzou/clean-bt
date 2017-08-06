@@ -15,7 +15,7 @@ public class TreeNode<T> {
 
     private List<TreeNode<T>> children = new ArrayList<>();
     private TreeNode<T> parent;
-    private T value;
+    private final T value;
 
     public TreeNode(T value) {
         this.value = value;
@@ -58,8 +58,6 @@ public class TreeNode<T> {
 
     /**
      * 根节点没有parent节点
-     *
-     * @return
      */
     public boolean isRoot() {
         return parent == null;
@@ -67,8 +65,6 @@ public class TreeNode<T> {
 
     /**
      * 没有子节点即叶子节点
-     *
-     * @return
      */
     public boolean isLeaf() {
         return children.isEmpty();
@@ -78,11 +74,11 @@ public class TreeNode<T> {
         return value;
     }
 
-    public void setValue(T value) {
-        this.value = value;
-    }
-
-
+    /**
+     * for test
+     *
+     * @param tree tree to print
+     */
     public static <T> void printTree(TreeNode<T> tree) {
         int len = tree.getChildren().size();
         if (tree.getChildren().size() == 0) {
