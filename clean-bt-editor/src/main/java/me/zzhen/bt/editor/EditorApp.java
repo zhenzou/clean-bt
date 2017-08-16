@@ -123,6 +123,7 @@ public class EditorApp extends Application {
         File file = chooser.showSaveDialog(primaryStage);
         if (file != null) {
             ListNode infoRoot = new ListNode();
+            torrentProperty.getValue().settInfoName(new StringNode(itemRoot.getValue().getName()));
             itemRoot.getChildren().forEach(item -> {
                 ListNode path = new ListNode();
                 transformTreeItemNode(infoRoot, item, path);
