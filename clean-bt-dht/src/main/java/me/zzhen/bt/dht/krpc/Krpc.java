@@ -4,7 +4,6 @@ import me.zzhen.bt.bencode.DictNode;
 import me.zzhen.bt.bencode.IntNode;
 import me.zzhen.bt.bencode.Node;
 import me.zzhen.bt.bencode.StringNode;
-import me.zzhen.bt.common.Channel;
 import me.zzhen.bt.dht.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
