@@ -1,10 +1,10 @@
-#CleanBT
+# CleanBT
 A Simple torrent editor powered by JavaFX.
 
-#License
+# License
 CleanBT
 
-Copyright (c) 2016 zzzhen (https://coding.net/u/zzzhen).
+Copyright (c) 2016 zhenzou (https://github.com/zhenzou).
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
