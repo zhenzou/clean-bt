@@ -166,7 +166,7 @@ public class EditorApp extends Application {
     /**
      * 重命名所有文件
      *
-     * @param item
+     * @param item item
      */
     private void randomNameAll(TreeItem<FileTreeItemModel> item) {
         item.getValue().setName(randomName(item.getValue().getName()));
@@ -195,10 +195,10 @@ public class EditorApp extends Application {
             dic.addNode("path", new ListNode(Arrays.asList(nodes)));
             dic.addNode("length", new IntNode(item.getValue().getLength()));
             infoRoot.addNode(dic);
-            path.removeNode(size - 1);//回退
+            path.removeNode(size - 1);
         } else {
             children.forEach(node -> transformTreeItemNode(infoRoot, node, path));
-            path.removeNode(path.size() - 1);//回退
+            path.removeNode(path.size() - 1);
         }
     }
 
@@ -206,6 +206,7 @@ public class EditorApp extends Application {
      * 将文件树转换成FX中的TreeView的节点
      *
      * @param fileTree
+     * @return TreeItem
      */
     private TreeItem<FileTreeItemModel> buildItemTree(TreeNode<FileTreeItemModel> fileTree) {
         TreeItem<FileTreeItemModel> root = new TreeItem<>(fileTree.getValue());
@@ -242,12 +243,11 @@ public class EditorApp extends Application {
      */
     private void addNodeToTree(TreeNode<FileTreeItemModel> treeRoot, DictNode file) {
         int index = 0;
-        ListNode path = null;
-        if (file.getNode("path.utf-8") != null) {
-            path = (ListNode) file.getNode("path.utf-8");
-        } else {
+        ListNode path = (ListNode) file.getNode("path.utf-8");
+        if (path == null) {
             path = (ListNode) file.getNode("path");
         }
+
         long length = Long.parseLong(file.getNode("length").toString());
         int size = path.size();
         while (index < size) {
@@ -292,20 +292,20 @@ public class EditorApp extends Application {
             if (empty) {
                 setText("");
                 setGraphic(null);
-            } else {
-                if (isEditing()) {
-                    editorViewHolder.editor.setText(item.getName());
-                    setText(null);
-                } else {
-                    if (isEdited) {
-                        setText(editorViewHolder.editor.getText());
-                        item.setName(editorViewHolder.editor.getText());
-                    } else {
-                        setText(item.getName());
-                    }
-                }
-                setGraphic(getTreeItem().getGraphic());
+                return;
             }
+            if (isEditing()) {
+                editorViewHolder.editor.setText(item.getName());
+                setText(null);
+            } else {
+                if (isEdited) {
+                    setText(editorViewHolder.editor.getText());
+                    item.setName(editorViewHolder.editor.getText());
+                } else {
+                    setText(item.getName());
+                }
+            }
+            setGraphic(getTreeItem().getGraphic());
         }
 
         @Override
@@ -320,14 +320,25 @@ public class EditorApp extends Application {
      */
     private final class FileTreeItemModel {
 
+        /**
+         * 文件原名，便于复原
+         */
         private String originalName;
+
+        /**
+         * 当前名称，初始化的时候与originalName一样
+         */
         private String name;
-        private long length;// 0 文件夹
+
+        /**
+         * 文件大小，文件夹大小为0
+         */
+        private long length;
 
         public FileTreeItemModel(String name, long length) {
+            this.originalName = name;
             this.name = name;
             this.length = length;
-            originalName = name;
         }
 
         public FileTreeItemModel(String name, String length) {
@@ -383,7 +394,7 @@ public class EditorApp extends Application {
      * 节点编辑的UI，共享
      */
     static class EditorViewHolder extends HBox {
-        final static EditorViewHolder EDITOR_VIEW_HOLDER = new EditorViewHolder();
+        static final EditorViewHolder EDITOR_VIEW_HOLDER = new EditorViewHolder();
         final Button okBtn;
         final Button cancelBtn;
         final Button randomBtn;
@@ -420,7 +431,7 @@ public class EditorApp extends Application {
         }
     }
 
-    static String randomName(String origin) {
+    private static String randomName(String origin) {
         String extName = Utils.getExtName(origin);
         return Utils.uuid() + "." + extName;
     }
