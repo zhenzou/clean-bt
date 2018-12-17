@@ -8,10 +8,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 
 /**
- * Project:CleanBT
- * Create Time: 2016/10/25.
- * Description:
  * 应用层工具类，很多都没有检测参数的合法性；如果调用这些方法出现错误，只能说明应用的设计出现问题
+ * Create Time: 2016/10/25.
  *
  * @author zzhen zzzhen1994@gmail.com
  */

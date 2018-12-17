@@ -31,13 +31,8 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * /**
- * Project:CleanBT
- *
  * @author zzhen zzzhen1994@gmail.com
  * Create Time: 2016/10/17.
- * Version :
- * Description:
  */
 public class EditorApp extends Application {
 

@@ -1,13 +1,8 @@
 package me.zzhen.bt.bencode;
 
 /**
- * /**
- * Project:CleanBT
- *
  * @author zzhen zzzhen1994@gmail.com
- *         Create Time: 2016/10/16.
- *         Version :
- *         Description:
+ * Create Time: 2016/10/16.
  */
 
 public class DecoderException extends RuntimeException {

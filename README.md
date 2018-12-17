@@ -1,8 +1,8 @@
-# CleanBT
+# clean-bt
 A Simple torrent editor powered by JavaFX.
 
 # License
-CleanBT
+clean-bt
 
 Copyright (c) 2016 zhenzou (https://github.com/zhenzou).
 

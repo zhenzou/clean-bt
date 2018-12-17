@@ -3,12 +3,10 @@ package me.zzhen.bt.util;
 import java.io.*;
 
 /**
- * Project:CleanBT
- * Create Time: 16-12-13.
- * Description:
  * 一些工具那个方法，都没有检测输入
  *
  * @author zzhen zzzhen1994@gmail.com
+ * Create Time: 16-12-13.
  */
 public interface IO {
 

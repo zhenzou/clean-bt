@@ -1,9 +1,7 @@
 package me.zzhen.bt.common;
 
 /**
- * Project:CleanBT
  * Create Time: 16-12-15.
- * Description:
  *
  * @author zzhen zzzhen1994@gmail.com
  */

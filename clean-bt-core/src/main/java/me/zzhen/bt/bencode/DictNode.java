@@ -2,21 +2,14 @@ package me.zzhen.bt.bencode;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.PushbackInputStream;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * /**
- * Project:CleanBT
- *
  * @author zzhen zzzhen1994@gmail.com
- *         Create Time: 2016/10/16.
- *         Version :
- *         Description:
+ * Create Time: 2016/10/16.
  */
 public class DictNode implements Node {
 
@@ -67,10 +60,9 @@ public class DictNode implements Node {
     @Override
     public byte[] decode() {
         String format = "{%s}";
-        String content = String.join(",",
-                value.entrySet()
-                        .stream()
-                        .map((entry -> entry.getKey() + ":" + new String(entry.getValue().decode()))).collect(Collectors.toList()));
+        String content = value.entrySet()
+                .stream()
+                .map((entry -> entry.getKey() + ":" + new String(entry.getValue().decode()))).collect(Collectors.joining(","));
         return String.format(format, content).getBytes();
     }
 

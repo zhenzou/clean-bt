@@ -1,17 +1,10 @@
 package me.zzhen.bt.bencode;
 
-import me.zzhen.bt.util.Utils;
-
-import java.io.*;
+import java.io.UnsupportedEncodingException;
 
 /**
- * /**
- * Project:CleanBT
- *
  * @author zzhen zzzhen1994@gmail.com
- *         Create Time: 2016/10/16.
- *         Version :
- *         Description:
+ * Create Time: 2016/10/16.
  */
 public class IntNode implements Node {
 
@@ -35,11 +28,11 @@ public class IntNode implements Node {
     @Override
     public byte[] encode() {
         try {
-            return (String.valueOf(INT_START) + value + INT_END).getBytes("UTF-8");
+            return (INT_START + value + INT_END).getBytes("UTF-8");
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
-        return (String.valueOf(INT_START) + value + INT_END).getBytes();
+        return (INT_START + value + INT_END).getBytes();
     }
 
     @Override

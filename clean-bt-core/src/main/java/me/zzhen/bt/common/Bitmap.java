@@ -5,9 +5,7 @@ import me.zzhen.bt.util.Utils;
 import java.util.Arrays;
 
 /**
- * Project:CleanBT
  * Create Time: 16-12-25.
- * Description:
  *
  * @author zzhen zzzhen1994@gmail.com
  */

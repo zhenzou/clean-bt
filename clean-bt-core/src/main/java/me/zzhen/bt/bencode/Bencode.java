@@ -4,11 +4,8 @@ import java.io.*;
 import java.util.List;
 
 /**
- * Project:CleanBT
- * Create Time: 17-5-22.
- * Description:
- *
  * @author zzhen zzzhen1994@gmail.com
+ * Create Time: 17-5-22.
  */
 public class Bencode {
     public static List<Node> decode(byte[] input) throws IOException {

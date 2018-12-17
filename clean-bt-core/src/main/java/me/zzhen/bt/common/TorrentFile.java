@@ -5,7 +5,10 @@ import me.zzhen.bt.util.IO;
 import me.zzhen.bt.util.Utils;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
@@ -13,13 +16,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * /**
- * Project:CleanBT
- *
  * @author zzhen zzzhen1994@gmail.com
- *         Create Time: 2016/10/17.
- *         Version :
- *         Description:
+ * Create Time: 2016/10/17.
  */
 public final class TorrentFile {
 
@@ -49,7 +47,19 @@ public final class TorrentFile {
     public static final String PATH_UTF8 = "path.utf8";
     public static final String FILE_HASH = "filehash";               //可选， 文件 hash。
     public static final String ED2K = "ed2k";
+    private String fileName;
+    private Node announce;
+    private Node nodes;
+    private ListNode announces;
+    private Node creationData;
+    private Node comment;
+    private Node createdBy;
+    private Node encoding;
+    private DictNode info;
 
+    private TorrentFile() {
+
+    }
 
     public static TorrentFile fromBytes(byte[] bytes) throws IOException, DecoderException {
         Decoder decoder = new Decoder(new ByteArrayInputStream(bytes));
@@ -69,19 +79,13 @@ public final class TorrentFile {
         return ret;
     }
 
-
-    private String fileName;
-    private Node announce;
-    private Node nodes;
-    private ListNode announces;
-    private Node creationData;
-    private Node comment;
-    private Node createdBy;
-    private Node encoding;
-    private DictNode info;
-
-    private TorrentFile() {
-
+    public static void main(String[] args) {
+        try {
+            TorrentFile torrentFile = TorrentFile.fromFile(new File("/media/Software/The.Big.Bang.Theory.torrent"));
+            System.out.println(torrentFile.getMagnet());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public String getFileName() {
@@ -159,7 +163,7 @@ public final class TorrentFile {
     }
 
     public void setCreationData(Node date) {
-        creationData = (IntNode) date;
+        creationData = date;
     }
 
     public String getComment() {
@@ -417,16 +421,6 @@ public final class TorrentFile {
                 case ED2K:
                     break;
             }
-        }
-    }
-
-
-    public static void main(String[] args) {
-        try {
-            TorrentFile torrentFile = TorrentFile.fromFile(new File("/media/Software/The.Big.Bang.Theory.torrent"));
-            System.out.println(torrentFile.getMagnet());
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 }

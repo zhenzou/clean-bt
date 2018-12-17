@@ -4,10 +4,7 @@ import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon;
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView;
 
 /**
- * Project:CleanBT
  * Create Time: 16-12-10.
- * Description:
- *
  * @author zzhen zzzhen1994@gmail.com
  */
 public interface Icon {

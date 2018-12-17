@@ -2,19 +2,13 @@ package me.zzhen.bt.bencode;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.PushbackInputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Project:CleanBT
- *
  * @author zzhen zzzhen1994@gmail.com
- *         Create Time: 2016/10/16.
- *         Version :
- *         Description:
+ * Create Time: 2016/10/16.
  */
 public class ListNode implements Node {
 
@@ -24,7 +18,6 @@ public class ListNode implements Node {
     private List<Node> value = new ArrayList<>();
 
     public ListNode() {
-
     }
 
     public ListNode(List<Node> value) {
@@ -63,8 +56,8 @@ public class ListNode implements Node {
         value.forEach(node -> {
             try {
                 baos.write(node.encode());
-            } catch (IOException e) {
-                e.printStackTrace();
+            } catch (IOException ignore) {
+                // ignore
             }
         });
         baos.write((byte) LIST_END);
@@ -74,9 +67,8 @@ public class ListNode implements Node {
     @Override
     public byte[] decode() {
         String format = "[%s]";
-        String content = String.join(",",
-                value.stream()
-                        .map((item -> new String(item.decode()))).collect(Collectors.toList()));
+        String content = value.stream()
+                .map((item -> new String(item.decode()))).collect(Collectors.joining(","));
         return String.format(format, content).getBytes();
     }
 
